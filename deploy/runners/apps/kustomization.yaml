@@ -44,6 +44,7 @@ resources:
 - verdify-platform-ci-pg.yaml
 - verdify-platform-ci-tools.yaml
 - verdify-platform-ci.yaml
+- verdify-www-build.yaml
 - weather-build.yaml
 - weather-buildcheck.yaml
 - weather-ci.yaml

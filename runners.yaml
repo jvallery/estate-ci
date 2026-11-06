@@ -365,3 +365,11 @@ sets:
         max: 1
       buildcheck:
         max: 1
+  # verdify-www image build (BUILD-APPS, D-22; COORD 2026-11-06). Registers once
+  # jvallery/verdify-www is in runner App installation 179108157 (Jason). build
+  # needs the KSOPS Secret zot-push-verdify-www (zot principal ci-verdify-www,
+  # MIGRATE-INFRA agents#6165 batch; ACL verdifyconsultancy/verdify-www).
+  - repo: jvallery/verdify-www
+    profiles:
+      build:
+        max: 1
