@@ -348,6 +348,7 @@ CACHE_ARTIFACT = re.compile(r"^actions/(cache|upload-artifact|download-artifact)
 ALLOWED_CONTEXTS = {
     "github.repository", "github.ref", "github.ref_name", "github.sha", "github.event_name",
     "github.event.pull_request.number", "github.event.pull_request.head.sha",
+    "github.event.repository.name",  # ADR-0009 rule 5 (COORD 2026-11-06): runs-on label
     "github.workflow", "github.token",
 }
 ALLOWED_CONTEXT_ROOTS = ("inputs.", "needs.", "matrix.", "steps.", "env.", "jobs.", "vars.", "runner.")
