@@ -19,7 +19,7 @@ spec:
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: agents-ci
         minRunners: 0
-        maxRunners: 12
+        maxRunners: 16
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller
@@ -45,6 +45,16 @@ spec:
               labelSelector:
                 matchLabels:
                   estate-ci.vallery.net/profile: ci
+            affinity:
+              nodeAffinity:
+                preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                    - key: kubernetes.io/hostname
+                      operator: NotIn
+                      values:
+                      - vm-k3s-node5
             initContainers:
             - name: estate-ci-tools
               image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:fe6107cb7dab551e5afe90527fc084a4930a7433b6b733f38c6cc8a0330d6d5b

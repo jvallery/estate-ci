@@ -219,6 +219,12 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
             "topologySpreadConstraints": [{
                 "maxSkew": 1, "topologyKey": "kubernetes.io/hostname", "whenUnsatisfiable": "ScheduleAnyway",
                 "labelSelector": {"matchLabels": {"estate-ci.vallery.net/profile": label}}}],
+            # avoid_nodes: soft preference only (weight 100), so runners still
+            # land on a listed node when nothing else fits.
+            **({"affinity": {"nodeAffinity": {"preferredDuringSchedulingIgnoredDuringExecution": [{
+                "weight": 100, "preference": {"matchExpressions": [{
+                    "key": "kubernetes.io/hostname", "operator": "NotIn",
+                    "values": list(opts["avoid_nodes"])}]}}]}}} if opts.get("avoid_nodes") else {}),
             **({"initContainers": init_containers} if init_containers else {}),
             "containers": containers,
             "volumes": volumes,
