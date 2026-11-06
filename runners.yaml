@@ -198,7 +198,8 @@ sets:
     profiles:
       ci:
         # COORD 2026-11-06 ~18:1xZ (verdify#1402 waiting on capacity): 2 -> 3.
-        max: 3
+        # COORD 2026-11-06 ~19:1xZ (9 runs queued; #1437 migration 303 critical path): 3 -> 5.
+        max: 5
         job_image: mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779
         job_uid: 1001
         job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
