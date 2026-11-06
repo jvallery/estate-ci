@@ -1,0 +1,28 @@
+# expect: R3-forgejo-notes R2-id-token ~R3-context ~R3-forge-secret ~R2-inline-shell
+name: bad-r3
+on:
+  workflow_call:
+jobs:
+  a:
+    runs-on: demo-ci
+    permissions:
+      id-token: write
+    steps:
+      - run: echo "${{ github.actor }} ${{ secrets.CF_TOKEN }}"
+      - run: |
+          echo 1
+          echo 2
+          echo 3
+          echo 4
+          echo 5
+          echo 6
+          echo 7
+          echo 8
+          echo 9
+          echo 10
+          echo 11
+          echo 12
+          echo 13
+          echo 14
+          echo 15
+          echo 16

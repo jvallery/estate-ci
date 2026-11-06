@@ -33,12 +33,10 @@ jobs:
       # runner: <repo>-pg      # Postgres sidecar profile
       # postgres: true         # wait for it and export PGHOST/DATABASE_URL
 
-  # Must stay first: R1/R2 lint (ARC labels only, no marketplace actions).
+  # R1-R3 workflow lint (ARC labels only, no marketplace actions, no GitHub-only
+  # services). Context "workflow-lint / lint"; make it a required check.
   workflow-lint:
-    uses: jvallery/estate-ci/.github/workflows/checks.yml@<sha>
-    with:
-      name: workflow-lint
-      run: '"$ESTATE_CI/check-runner-labels.sh" .'
+    uses: jvallery/estate-ci/.github/workflows/lint.yml@<sha>
 
   # Build-only on PRs on the credential-free <repo>-buildcheck set.
   image:

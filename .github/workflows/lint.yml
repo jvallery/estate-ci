@@ -1,0 +1,50 @@
+# Reusable: lint the caller repository's workflows against estate CI rules R1-R3.
+#
+#   jobs:
+#     lint:
+#       uses: jvallery/estate-ci/.github/workflows/lint.yml@<sha>
+#
+# Check context: "lint / lint". Fails on GitHub-hosted or generic runner labels,
+# uses: other than actions/checkout@<sha> / jvallery/estate-ci/...@<sha> / ./local,
+# services:/container:, pull_request_target/workflow_run, environment:,
+# id-token: write, Actions cache/artifacts and ghcr.io. Rule list:
+# /opt/estate-ci/lint-workflows.py (deploy/foundation/bin in estate-ci).
+#
+# Portability (Forgejo/Gitea Actions): checkout + one script on the runner's
+# python3 (standard library only); it lints .forgejo/ and .gitea/ workflows too.
+# Vendored fallback: `run: python3 "$ESTATE_CI/lint-workflows.py" .`.
+name: estate-ci lint
+
+on:
+  workflow_call:
+    inputs:
+      strict:
+        description: Fail on warnings too (non-portable contexts, forge secrets, long inline shell)
+        type: boolean
+        default: false
+      runner:
+        description: Scale set label. Default "<repo>-ci"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ${{ inputs.runner != '' && inputs.runner || format('{0}-ci', github.event.repository.name) }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: lint workflows (R1-R3)
+        shell: bash
+        env:
+          STRICT: ${{ inputs.strict }}
+        run: |
+          set -euo pipefail
+          args=(.)
+          [[ "$STRICT" != true ]] || args+=(--strict)
+          python3 "$ESTATE_CI/lint-workflows.py" "${args[@]}"
