@@ -55,15 +55,25 @@ metadata:
 #   homeassistant-ci 2 (750m / 1536Mi, 4 CPU / 5Gi), homeassistant-ci-ha 1,
 #   homeassistant-ci-esphome 1 (1250m / 2560Mi, 5 CPU / 8Gi). Native side: these
 #   repos' repo-validate charges in agent-fleet-ci, lowered with each catalog row.
+# - COORD 2026-11-06 ~17:42Z (NATIVE-EXIT, agents#6164): docs-ci max 1 -> 3 and
+#   research-vault-ci max 2 -> 3: +3 pods, +2250m CPU / +5376Mi requests, +14 CPU
+#   / +18Gi limits, +24Gi / +96Gi ephemeral (docs-ci 2 x 750m / 2Gi req, 5 CPU /
+#   6Gi lim; research-vault-ci 1 x 750m / 1280Mi, 4 CPU / 6Gi; 8Gi / 32Gi
+#   ephemeral each). Native side, read live at 17:4xZ: agents#6164 scales
+#   native-ci-controller to 0 (250m / 2304Mi req, 2 CPU / 6Gi lim) and the
+#   native-candidate-validation egress proxy 2 -> 0 (2 x 100m / 128Mi, 500m /
+#   512Mi), which also ends native candidate pods (5 live: 3 small 1100m / 640Mi,
+#   2 large 3100m / 2688Mi): 9950m / 9856Mi requests given up >= the 2250m /
+#   5376Mi taken here.
 spec:
   hard:
-    pods: "47"
-    requests.cpu: "38250m"
-    requests.memory: 79616Mi
-    limits.cpu: "187"
-    limits.memory: 308Gi
-    requests.ephemeral-storage: 513Gi
-    limits.ephemeral-storage: 1642Gi
+    pods: "50"
+    requests.cpu: "40500m"
+    requests.memory: 84992Mi
+    limits.cpu: "201"
+    limits.memory: 326Gi
+    requests.ephemeral-storage: 537Gi
+    limits.ephemeral-storage: 1738Gi
     persistentvolumeclaims: "0"
     services.loadbalancers: "0"
     services.nodeports: "0"
