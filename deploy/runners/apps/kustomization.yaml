@@ -3,15 +3,30 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
 - agents-ci.yaml
+- ai-presentation-ci.yaml
+- backups-ci.yaml
+- cortex-ai-compute-build.yaml
+- cortex-ai-compute-ci.yaml
 - estate-ci-build.yaml
 - estate-ci-ci.yaml
+- home-dotfiles-ci.yaml
+- immich-config-ci.yaml
 - kepler-buildcheck.yaml
 - kepler-ci.yaml
 - memoryos-build.yaml
 - memoryos-buildcheck.yaml
+- monitoring-stack-build.yaml
+- monitoring-stack-ci.yaml
+- network-infra-build.yaml
+- network-infra-ci.yaml
+- orbit-ci.yaml
+- paige-companion-ci.yaml
+- proxmox-infrastructure-ci.yaml
 - research-vault-build.yaml
 - research-vault-ci.yaml
 - research-vault-pg.yaml
+- storage-infra-build.yaml
+- storage-infra-ci.yaml
 - verdify-ci.yaml
 - verdify-platform-build.yaml
 - verdify-platform-ci.yaml
@@ -19,3 +34,4 @@ resources:
 - weather-build.yaml
 - weather-buildcheck.yaml
 - weather-ci.yaml
+- wordpress-ci.yaml
