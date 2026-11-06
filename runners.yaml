@@ -47,6 +47,35 @@ sets:
       buildcheck:
         max: 1
         kaniko_resources: {cpu: "1", memory: 3Gi, limit_cpu: "3", limit_memory: 12Gi}
+  # Research Vault v2 (research-vault#200, second pilot; COORD 2026-11-06).
+  # Native steps -> profiles: lint-unit and manifests -> research-vault-ci,
+  # postgres -> research-vault-pg (2 shards, run one at a time), vault-server and
+  # vault-ci images -> research-vault-build. Every job runs in the vault-ci job
+  # image (the digest native pins in the agents registry record gh-1442052745).
+  # The pg sidecar is the production CNPG image (PostgreSQL 16.15 + pgvector
+  # 0.8.7), the same digest as research-vault deploy/k8s/database/cluster.yaml.
+  # Sizes: job = native check pod (500m request, 2 CPU / 4Gi limit), Kaniko =
+  # native standard build (1 CPU / 2Gi request) with the ADR-0003 12Gi limit. Capacity moved from
+  # agent-fleet-ci-foreign-budget, see deploy/foundation/quota.yaml.
+  # build mounts ci-runners/zot-push-research-vault (central KSOPS); its jobs stay
+  # off in the repo until that Secret exists.
+  - repo: jvallery/research-vault
+    profiles:
+      ci:
+        max: 2
+        job_image: registry.vallery.net/jvallery/vault-ci@sha256:5a4b84df9e93d04dadab9da714f456f8f1231aaa59954103081e6144d22ed964
+        job_uid: 1001
+        job_resources: {cpu: 500m, memory: 768Mi, limit_cpu: "2", limit_memory: 4Gi}
+      pg:
+        max: 1
+        job_image: registry.vallery.net/jvallery/vault-ci@sha256:5a4b84df9e93d04dadab9da714f456f8f1231aaa59954103081e6144d22ed964
+        job_uid: 1001
+        job_resources: {cpu: 500m, memory: 768Mi, limit_cpu: "2", limit_memory: 4Gi}
+        postgres_image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-b67681006859e657@sha256:09109f553eafc0ed17dccf0c8b3af77a6e1293707a2a14d8d6458a2de3a964eb
+        postgres_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "1", limit_memory: 2Gi}
+      build:
+        max: 1
+        kaniko_resources: {cpu: "1", memory: 2Gi, limit_cpu: "2", limit_memory: 12Gi}
   # estate-ci's own self-test (R1: no GitHub-hosted runners, even here), image
   # mirrors (mirrors.txt, crane copy) and the estate-ci-toolbox build. The build
   # set mounts zot-push-estate-ci (writer for jvallery/estate-ci/** only).
