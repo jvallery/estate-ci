@@ -143,7 +143,12 @@ sets:
   - repo: jvallery/agents
     profiles:
       ci:
-        max: 6  # COORD 2026-11-06: 6 during parity, 10 at the J-6 switch (quota move from native)
+        # COORD 2026-11-06 13:5xZ (Jason: max speed): 6 -> 12. Each runner requests 1.25 CPU / 2Gi
+        # (runner 250m/512Mi + job 1/1536Mi, measured job ~1 core / ~0.6Gi). +6 runners = +7.5 CPU /
+        # +12Gi against 17.2 CPU / 18.4Gi free worker requests and 19.5 CPU / 43Gi free ci-runners quota.
+        # N-1 was already short (ClusterN1RequestCapacityInsufficient cpu, about 25 CPU); this deepens it
+        # until the native agents slots move here at the J-6 switch.
+        max: 12
         job_image: registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2
         job_uid: 1001
         job_resources: {cpu: "1", memory: 1536Mi, limit_cpu: "4", limit_memory: 8Gi}
