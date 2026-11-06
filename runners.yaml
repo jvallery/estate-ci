@@ -76,6 +76,19 @@ sets:
       build:
         max: 1
         kaniko_resources: {cpu: "1", memory: 2Gi, limit_cpu: "2", limit_memory: 12Gi}
+  # kepler (jvallery/agents#6092, kepler#34). Job image = the python base the
+  # app ships on (app/Dockerfile), for unit/render (pip); static and secret-scan
+  # run in the runner container. build is added with the zot principal ci-kepler.
+  - repo: jvallery/kepler
+    profiles:
+      ci:
+        max: 2
+        job_image: docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
+        job_uid: 1001
+        job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 3Gi}
+      buildcheck:
+        max: 1
+        kaniko_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
   # estate-ci's own self-test (R1: no GitHub-hosted runners, even here), image
   # mirrors (mirrors.txt, crane copy) and the estate-ci-toolbox build. The build
   # set mounts zot-push-estate-ci (writer for jvallery/estate-ci/** only).

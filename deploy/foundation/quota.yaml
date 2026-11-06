@@ -21,15 +21,21 @@ metadata:
 #   21248Mi, limits.cpu 74 -> 57, limits.memory 116Gi -> 82Gi, pods 56 -> 52.
 #   Ephemeral storage is not a native quota dimension; the native check pods'
 #   emptyDirs (4Gi / 12Gi each) go away with them.
+# - jvallery/kepler (kepler#34): +3 pods, +2250m CPU / +4608Mi requests, +12 CPU
+#   / +16Gi limits, +36Gi / +120Gi ephemeral storage. That is the sum of its sets
+#   at maxRunners: kepler-ci 2 x (750m / 1536Mi req, 4 CPU / 5Gi lim),
+#   kepler-buildcheck 1 x (750m / 1536Mi, 4 CPU / 6Gi). The native side (kepler's
+#   repo-validate and repo-build charges in agent-fleet-ci) is lowered by the same
+#   amount in the agents PR that disables kepler's catalog row (runbook step 6).
 spec:
   hard:
-    pods: "16"
-    requests.cpu: "12"
-    requests.memory: 23808Mi
-    limits.cpu: "49"
-    limits.memory: 98Gi
-    requests.ephemeral-storage: 205Gi
-    limits.ephemeral-storage: 554Gi
+    pods: "19"
+    requests.cpu: "14250m"
+    requests.memory: 28416Mi
+    limits.cpu: "61"
+    limits.memory: 114Gi
+    requests.ephemeral-storage: 241Gi
+    limits.ephemeral-storage: 674Gi
     persistentvolumeclaims: "0"
     services.loadbalancers: "0"
     services.nodeports: "0"
