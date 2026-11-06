@@ -12,6 +12,9 @@ resources:
 - research-vault-ci.yaml
 - research-vault-pg.yaml
 - verdify-ci.yaml
+- verdify-platform-build.yaml
+- verdify-platform-ci.yaml
+- verdify-platform-pg.yaml
 - weather-build.yaml
 - weather-buildcheck.yaml
 - weather-ci.yaml

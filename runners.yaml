@@ -91,6 +91,31 @@ sets:
       buildcheck:
         max: 1
         kaniko_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
+  # verdify-platform (DASH, verdify-platform#1397). It transfers to jvallery first
+  # (D19), hence the jvallery URL. Native template (registry gh-1247193937):
+  # platform-static, platform-tests and firmware-logic -> verdify-platform-ci;
+  # campaign-qualification (private PostgreSQL 16) -> verdify-platform-pg with the
+  # Postgres sidecar on 127.0.0.1:5432; nine images -> verdify-platform-build.
+  # The job image is the one native repo-validate uses (agents-ci-tools, uid 1001)
+  # until the estate-ci toolbox replaces it. firmware-secretless-compile needs the
+  # esphome image; add a set for it if DASH keeps that check. Sized like
+  # research-vault. Quota moves in when native verdify slots are lowered.
+  - repo: jvallery/verdify-platform
+    profiles:
+      ci:
+        max: 2
+        job_image: registry.vallery.net/jvallery/agents-ci-tools@sha256:c581b862f3da5c79f71fc982455684350628bc4c9fa51dff77d3b8354cd8f214
+        job_uid: 1001
+        job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
+      pg:
+        max: 1
+        job_image: registry.vallery.net/jvallery/agents-ci-tools@sha256:c581b862f3da5c79f71fc982455684350628bc4c9fa51dff77d3b8354cd8f214
+        job_uid: 1001
+        job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
+        postgres_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "1", limit_memory: 2Gi}
+      build:
+        max: 1
+        kaniko_resources: {cpu: "1", memory: 2Gi, limit_cpu: "2", limit_memory: 12Gi}
   # estate-ci's own self-test (R1: no GitHub-hosted runners, even here), image
   # mirrors (mirrors.txt, crane copy) and the estate-ci-toolbox build. The build
   # set mounts zot-push-estate-ci (writer for jvallery/estate-ci/** only).
