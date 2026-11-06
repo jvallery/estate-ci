@@ -18,6 +18,9 @@ set -u
 name="${CI_SIDECAR_NAME:?CI_SIDECAR_NAME is required}"
 ex="${CI_EXCHANGE_DIR:-/exchange}/${name}"
 mkdir -p "$ex"
+# A root sidecar (kaniko) would leave its exchange dir root:root 0755, so the
+# runner (uid 1001) could not drop requests into it. Hand it to the runner.
+if [ "$(id -u)" = 0 ]; then chown "${CI_RUNNER_UID:-1001}:${CI_RUNNER_UID:-1001}" "$ex"; fi
 : > "$ex/.alive"
 echo "estate-ci sidecar agent '${name}' watching ${ex}"
 while :; do
