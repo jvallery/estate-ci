@@ -6,11 +6,13 @@ resources:
 - ai-presentation-ci.yaml
 - cortex-ai-compute-build.yaml
 - cortex-ai-compute-ci.yaml
+- docs-build.yaml
 - docs-ci.yaml
 - estate-ci-build.yaml
 - estate-ci-buildcheck.yaml
 - estate-ci-ci.yaml
 - home-dotfiles-ci.yaml
+- homeassistant-build.yaml
 - homeassistant-ci-esphome.yaml
 - homeassistant-ci-ha.yaml
 - homeassistant-ci.yaml
@@ -24,6 +26,7 @@ resources:
 - monitoring-stack-ci.yaml
 - network-infra-build.yaml
 - network-infra-ci.yaml
+- options-tracker-build.yaml
 - options-tracker-ci.yaml
 - orbit-ci.yaml
 - paige-companion-ci.yaml
