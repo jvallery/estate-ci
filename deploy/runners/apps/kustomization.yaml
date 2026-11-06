@@ -30,6 +30,7 @@ resources:
 - verdify-platform-build.yaml
 - verdify-platform-ci-dashboard.yaml
 - verdify-platform-ci-esphome.yaml
+- verdify-platform-ci-pg.yaml
 - verdify-platform-ci-tools.yaml
 - verdify-platform-ci.yaml
 - weather-build.yaml
