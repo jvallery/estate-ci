@@ -47,7 +47,9 @@ sets:
       buildcheck:
         max: 1
         kaniko_resources: {cpu: "1", memory: 3Gi, limit_cpu: "3", limit_memory: 12Gi}
-  # estate-ci's own self-test (R1: no GitHub-hosted runners, even here).
+  # estate-ci's own self-test (R1: no GitHub-hosted runners, even here), image
+  # mirrors (mirrors.txt, crane copy) and the estate-ci-toolbox build. The build
+  # set mounts zot-push-estate-ci (writer for jvallery/estate-ci/** only).
   - repo: jvallery/estate-ci
     profiles:
       ci:
@@ -55,6 +57,9 @@ sets:
         job_image: docker.io/library/python:3.13-slim@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc
         job_uid: 1001
         job_resources: {cpu: 500m, memory: 512Mi, limit_cpu: "2", limit_memory: 2Gi}
+      build:
+        max: 1
+        kaniko_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "3", limit_memory: 6Gi}
   # VerdifyConsultancy org-level set shared by its repos (crm, memoryos, ...).
   # Workflows pass runner: verdify-ci to checks.yml. No job image yet: steps run
   # in the runner container until the estate-ci toolbox image (estate-ci#3) lands.

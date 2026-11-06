@@ -1,0 +1,64 @@
+# Reusable: digest-preserving image mirrors into registry.vallery.net (crane copy, no Kaniko).
+#
+#   jobs:
+#     mirrors:
+#       uses: jvallery/estate-ci/.github/workflows/mirror.yml@<sha>
+#       with: {apply: ${{ github.event_name != 'pull_request' }}}
+#
+# The caller repo lists "<upstream>@sha256:<digest> <dest-repository>" lines in
+# mirrors.txt (see /opt/estate-ci/mirror.sh). apply: false (PRs) validates the
+# list and that every upstream digest resolves, on "<repo>-ci", with no
+# credential. apply: true copies missing digests on "<repo>-build" (default
+# branch push/dispatch only; the Pod mounts the repo's zot writer). The pinned
+# digest is the upstream digest, so moving a pin from a Kaniko-built
+# "FROM <upstream>@<digest>" mirror is a one-time path change (README).
+#
+# Portability (Forgejo/Gitea Actions): checkout + /opt/estate-ci/mirror.sh
+# (bash + crane); no cache, artifact, Environment or OIDC use.
+name: estate-ci mirror
+
+on:
+  workflow_call:
+    inputs:
+      file:
+        type: string
+        default: mirrors.txt
+      apply:
+        type: boolean
+        default: false
+      prefix:
+        description: Required destination prefix. Default "<owner>/<repo>/" (lower case); the zot ACL is the real limit
+        type: string
+        default: ""
+      runner:
+        description: Scale set label. Default "<repo>-build" (apply) or "<repo>-ci"
+        type: string
+        default: ""
+      timeout-minutes:
+        type: number
+        default: 120
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    name: mirror
+    runs-on: ${{ inputs.runner != '' && inputs.runner || format('{0}-{1}', github.event.repository.name, inputs.apply && 'build' || 'ci') }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: mirror
+        shell: bash
+        env:
+          FILE: ${{ inputs.file }}
+          APPLY: ${{ inputs.apply }}
+          PREFIX: ${{ inputs.prefix }}
+        run: |
+          set -euo pipefail
+          args=(--file "$FILE")
+          [[ -z "$PREFIX" ]] || args+=(--prefix "$PREFIX")
+          [[ "$APPLY" != true ]] || args+=(--apply)
+          "$ESTATE_CI/mirror.sh" "${args[@]}"

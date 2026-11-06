@@ -1,0 +1,23 @@
+# estate-ci's own image mirrors (mirrors.txt): runner, Kaniko and toolbox bases.
+# PRs validate the list on estate-ci-ci. The copy runs on estate-ci-build by
+# dispatch on main until the estate-ci zot writer (zot-push-estate-ci) is live;
+# then add `push: {branches: [main], paths: [mirrors.txt]}`.
+name: mirror-images
+
+on:
+  pull_request:
+    paths: [mirrors.txt, deploy/foundation/bin/mirror.sh, .github/workflows/mirror*.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-images-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  mirrors:
+    uses: ./.github/workflows/mirror.yml
+    with:
+      apply: ${{ github.event_name == 'workflow_dispatch' }}
