@@ -28,7 +28,10 @@ over.
 A VerdifyConsultancy repository that needs CI is transferred to jvallery first
 (REPO-MOVE) and gets its repo-level sets after the transfer. There are no
 VerdifyConsultancy or org-level scale sets, and no VerdifyConsultancy
-registration Secret is needed in `ci-runners`.
+registration Secret is needed in `ci-runners`. The transitional `verdify-ci` and memoryos org-level
+sets (estate-ci#12) are removed by CI-PLATFORM once the REPO-MOVE transfers
+are done. New work does not target them: on the Free plan the org's only
+runner group is open to every private repository in the organization.
 
 **Scale-set naming.** `<repo>-<profile>` (the name is the `runs-on` label).
 
