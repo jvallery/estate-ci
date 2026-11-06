@@ -88,7 +88,7 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
             {"name": "CI_EXCHANGE_DIR", "value": "/exchange"},
             {"name": "ESTATE_CI", "value": "/opt/estate-ci"},
         ],
-        "resources": res("250m", "512Mi", "2", "2Gi", "1Gi", "16Gi"),
+        "resources": res("100m", "256Mi", "2", "2Gi", "1Gi", "16Gi"),
         "securityContext": restricted(1001),
         "volumeMounts": [work, exchange, scripts],
     }
