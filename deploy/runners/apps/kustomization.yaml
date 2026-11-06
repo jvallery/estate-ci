@@ -4,7 +4,6 @@ kind: Kustomization
 resources:
 - agents-ci.yaml
 - ai-presentation-ci.yaml
-- backups-ci.yaml
 - cortex-ai-compute-build.yaml
 - cortex-ai-compute-ci.yaml
 - estate-ci-build.yaml

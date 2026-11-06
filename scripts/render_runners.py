@@ -65,7 +65,10 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
     scripts = {"name": "estate-ci-scripts", "mountPath": "/opt/estate-ci", "readOnly": True}
     runner = {
         "name": "runner",
-        "image": pinned(d["runner_image"], "runner_image"),
+        # runner_image (ci profiles): a runner image built FROM the stock
+        # actions-runner image with the repo's tools, so bare `run:` steps work
+        # unchanged (a label-swap migration) without a job sidecar.
+        "image": pinned(opts.get("runner_image", d["runner_image"]), "runner_image"),
         "command": ["/home/runner/run.sh"],
         "env": [
             {"name": "ACTIONS_RUNNER_HOOK_JOB_STARTED", "value": "/opt/estate-ci/job-started-guard.sh"},
@@ -80,6 +83,13 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
     }
     if profile == "ci" and not opts.get("job_image"):
         runner["resources"] = res("1", "1Gi", "4", "4Gi", "4Gi", "16Gi")
+    if opts.get("runner_resources"):
+        if profile != "ci":
+            raise RenderError(f"{base}: runner_resources is only for ci profiles")
+        rr = opts["runner_resources"]
+        runner["resources"] = res(rr["cpu"], rr["memory"], rr["limit_cpu"], rr["limit_memory"], "4Gi", "16Gi")
+    if opts.get("runner_image") and profile != "ci":
+        raise RenderError(f"{base}: runner_image is only for ci profiles")
     containers = [runner]
     volumes = [
         {"name": "work", "emptyDir": {"sizeLimit": "16Gi"}},
