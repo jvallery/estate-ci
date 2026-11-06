@@ -160,6 +160,9 @@ sets:
       build:
         max: 1
         kaniko_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "3", limit_memory: 6Gi}
+      buildcheck:
+        max: 1
+        kaniko_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "3", limit_memory: 6Gi}
   # MIGRATE-INFRA repos (jvallery/agents#6092). Every ci set runs its checks in a
   # job sidecar. Until the estate-ci-toolbox (estate-ci#16) publishes its first
   # digest, the job image is the image these repos' checks run in TODAY (the
