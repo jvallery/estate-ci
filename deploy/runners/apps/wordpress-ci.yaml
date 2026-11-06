@@ -87,7 +87,7 @@ spec:
                 mountPath: /opt/estate-ci
                 readOnly: true
             - name: job
-              image: registry.vallery.net/jvallery/agents-arc-runner-toolbox@sha256:2f1ffcfff92cb4dcca3dd86a6cb34d0654e5f5dd8265be02085c404edd29d03a
+              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:fe6107cb7dab551e5afe90527fc084a4930a7433b6b733f38c6cc8a0330d6d5b
               command:
               - /bin/sh
               - /opt/estate-ci/sidecar-agent.sh
