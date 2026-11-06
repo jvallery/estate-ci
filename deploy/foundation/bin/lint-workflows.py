@@ -24,7 +24,8 @@ Errors (exit 1):
                       (on: workflow_call) has no "Forgejo" notes header comment
 Warnings (exit 0 unless --strict):
   R3-context          an expression reads a context outside ADR-0009 rule 5
-  R3-forge-secret     secrets.* other than GITHUB_TOKEN (ADR-0009 rule 8)
+  R3-forge-secret     secrets.* other than GITHUB_TOKEN and the ADR-0009 E-2
+                      pin-bot key (ADR-0009 rule 8)
   R2-inline-shell     a run: block longer than 15 lines (keep logic in scripts)
 
 Standard library only: it runs on the stock runner image (python3, no pip).
@@ -351,6 +352,9 @@ ALLOWED_CONTEXTS = {
     "github.event.repository.name",  # ADR-0009 rule 5 (COORD 2026-11-06): runs-on label
     "github.workflow", "github.token",
 }
+# ADR-0009 rule 8 exceptions: the per-job token and E-2 (D-52) the vallery-pin-bot
+# key, which pin-bump.yml takes as a workflow_call secret.
+ALLOWED_SECRETS = {"secrets.GITHUB_TOKEN", "secrets.PIN_BOT_PRIVATE_KEY", "secrets.pin-bot-private-key"}
 ALLOWED_CONTEXT_ROOTS = ("inputs.", "needs.", "matrix.", "steps.", "env.", "jobs.", "vars.", "runner.")
 EXPR = re.compile(r"\$\{\{(.*?)\}\}", re.S)
 CTX_REF = re.compile(r"(?<![\w.'\"])((?:github|secrets)(?:\.[A-Za-z_][\w-]*|\[[^\]]*\])+)")
@@ -447,7 +451,7 @@ def lint_workflow(f: str, text: str, require_notes: bool):
             for ref in CTX_REF.findall(expr):
                 ref = re.sub(r"\[['\"]?([^\]'\"]*)['\"]?\]", r".\1", ref)
                 if ref.startswith("secrets."):
-                    if ref != "secrets.GITHUB_TOKEN":
+                    if ref not in ALLOWED_SECRETS:
                         out.append(Finding(f, n, "R3-forge-secret", f"{ref}: credentials live in Kubernetes Secrets mounted by the runner profile (ADR-0009 rule 8)", error=False))
                 elif ref not in ALLOWED_CONTEXTS:
                     out.append(Finding(f, n, "R3-context", f"{ref}: not a portable context (ADR-0009 rule 5); pass it via a script env var", error=False))
