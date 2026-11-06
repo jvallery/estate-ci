@@ -11,6 +11,7 @@ resources:
 - estate-ci-ci.yaml
 - home-dotfiles-ci.yaml
 - immich-config-ci.yaml
+- kepler-build.yaml
 - kepler-buildcheck.yaml
 - kepler-ci.yaml
 - memoryos-build.yaml

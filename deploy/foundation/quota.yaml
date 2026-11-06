@@ -44,15 +44,19 @@ metadata:
 #   limits, -8Gi / -32Gi ephemeral. proxmox-infrastructure, home-dotfiles and
 #   AI_presentation ci sets drop their job sidecar (runner image = toolbox, same
 #   CPU/memory): -12Gi / -48Gi ephemeral.
+# - jvallery/kepler build (kepler#34 step 6): +1 pod, +750m CPU / +1536Mi
+#   requests, +4 CPU / +6Gi limits, +20Gi / +56Gi ephemeral (kepler-build 1 x
+#   runner + Kaniko, same sizes as kepler-buildcheck). Native side: kepler's
+#   repo-build charge in agent-fleet-ci, lowered with its catalog row (step 6).
 spec:
   hard:
-    pods: "38"
-    requests.cpu: "30500m"
-    requests.memory: 62720Mi
-    limits.cpu: "147"
-    limits.memory: 254Gi
-    requests.ephemeral-storage: 429Gi
-    limits.ephemeral-storage: 1330Gi
+    pods: "39"
+    requests.cpu: "31250m"
+    requests.memory: 64256Mi
+    limits.cpu: "151"
+    limits.memory: 260Gi
+    requests.ephemeral-storage: 449Gi
+    limits.ephemeral-storage: 1386Gi
     persistentvolumeclaims: "0"
     services.loadbalancers: "0"
     services.nodeports: "0"
