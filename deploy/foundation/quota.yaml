@@ -95,15 +95,19 @@ metadata:
 #   container 500m / 768Mi req, 2 / 4Gi lim -> 2 / 2Gi req, 8 / 8Gi lim, max 4:
 #   +6 CPU / +5Gi requests, +24 CPU / +16Gi limits. Sum at max is now 110.5 CPU
 #   / 214.75Gi requests, 571 CPU / 873Gi limits.
+# - COORD/DASH 2026-11-06 ~20:2xZ (verdify release-4 critical path):
+#   verdify-platform-ci-tools max 2 -> 6, verdify-platform-ci-esphome 1 -> 2.
+#   Sum at max is now 106 pods, 114.75 CPU / 223.25Gi requests, 593 CPU /
+#   907Gi limits, 1110Gi / 3876Gi ephemeral.
 spec:
   hard:
-    pods: "105"
-    requests.cpu: "111"
-    requests.memory: 216Gi
-    limits.cpu: "575"
-    limits.memory: 876Gi
-    requests.ephemeral-storage: 1080Gi
-    limits.ephemeral-storage: 3720Gi
+    pods: "110"
+    requests.cpu: "115"
+    requests.memory: 224Gi
+    limits.cpu: "595"
+    limits.memory: 908Gi
+    requests.ephemeral-storage: 1112Gi
+    limits.ephemeral-storage: 3880Gi
     persistentvolumeclaims: "0"
     services.loadbalancers: "0"
     services.nodeports: "0"

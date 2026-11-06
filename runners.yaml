@@ -206,7 +206,8 @@ sets:
         job_uid: 1001
         job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
       ci-tools:
-        max: 2
+        # COORD/DASH 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 2 -> 6.
+        max: 6
         job_image: registry.vallery.net/jvallery/agents-ci-tools@sha256:c581b862f3da5c79f71fc982455684350628bc4c9fa51dff77d3b8354cd8f214
         job_uid: 1001
         job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
@@ -219,7 +220,8 @@ sets:
         job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
         postgres_image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-b67681006859e657@sha256:09109f553eafc0ed17dccf0c8b3af77a6e1293707a2a14d8d6458a2de3a964eb
       ci-esphome:
-        max: 1
+        # COORD/DASH 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 1 -> 2.
+        max: 2
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
         job_uid: 1001
         job_resources: {cpu: "1", memory: 2Gi, limit_cpu: "4", limit_memory: 8Gi}
