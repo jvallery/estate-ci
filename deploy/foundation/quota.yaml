@@ -77,12 +77,15 @@ metadata:
 #   requests.cpu 40.5 -> 60, requests.memory 83Gi -> 106Gi, limits.cpu 201 ->
 #   260, limits.memory 326Gi -> 400Gi, ephemeral 537Gi / 1738Gi -> 600Gi /
 #   2000Gi (node4-7 ephemeral allocatable ~1.1TiB).
+# - D-29 (Jason, 2026-11-06 ~19:0xZ): agents-ci max 16 -> 24 (+8 runners =
+#   +10 CPU / +16Gi requests, +64 CPU / +80Gi limits); limits.cpu 260 -> 320.
+#   Requests and limits.memory unchanged (COORD).
 spec:
   hard:
     pods: "70"
     requests.cpu: "60"
     requests.memory: 106Gi
-    limits.cpu: "260"
+    limits.cpu: "320"
     limits.memory: 400Gi
     requests.ephemeral-storage: 600Gi
     limits.ephemeral-storage: 2000Gi
