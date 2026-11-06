@@ -32,7 +32,6 @@ defaults:
 # GitHub App registration Secret per owner (Secret in namespace ci-runners).
 owners:
   jvallery: arc-github-app-jvallery
-  VerdifyConsultancy: arc-github-app-verdifyconsultancy
 
 # Scale sets. repo: owner/name registers at repository level (jvallery is a
 # user account). org: <owner> registers one org-level set shared by all repos
@@ -252,17 +251,10 @@ sets:
         job_image: *fleet-toolbox
         job_uid: 1001
         job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "2", limit_memory: 3Gi}
-  # VerdifyConsultancy org-level set shared by its repos (crm, memoryos, ...).
-  # Workflows pass runner: verdify-ci to checks.yml. No job image yet: steps run
-  # in the runner container until the estate-ci toolbox image (estate-ci#3) lands.
-  - org: VerdifyConsultancy
-    name: verdify
-    profiles:
-      ci:
-        max: 2
-  # memoryos image build (J-8, memoryos#39/#40). build needs the KSOPS Secret
-  # zot-push-memoryos (zot principal ci-memoryos, storage-infra#1387).
-  - repo: VerdifyConsultancy/memoryos
+  # memoryos image build (J-8, memoryos#39/#40); the repo moved to jvallery on
+  # 2026-11-06 (REPO-MOVE, D19). build needs the KSOPS Secret zot-push-memoryos
+  # (zot principal ci-memoryos, storage-infra#1387).
+  - repo: jvallery/memoryos
     profiles:
       build:
         max: 1
