@@ -78,7 +78,8 @@ sets:
       ci:
         # COORD GO-FAST 2026-11-06 ~18:0xZ (Jason first-hand: "Drive FAST"): 3 -> 4.
         # D-39 (Jason 2026-11-06 ~21:15Z): 4 -> 12.
-        max: 12
+        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 12 -> 16 (queue p90 7.5 min, busy hit 12).
+        max: 16
         job_image: registry.vallery.net/jvallery/vault-ci@sha256:afedf20188449a65eb77b1299ae61b40285d89996c9aef04524cfe567aaab009
         job_uid: 1001
         # COORD 2026-11-06 ~20:0xZ (Jason: accelerate RV2 CI): 'unit' took 30-36 min
@@ -87,7 +88,8 @@ sets:
       pg:
         # COORD 2026-11-06 ~18:4xZ (D5 critical path, Jason GO): 1 -> 3.
         # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
-        max: 9
+        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 9 -> 12 (running+pending hit 9; queue p90 7.5 min).
+        max: 12
         job_image: registry.vallery.net/jvallery/vault-ci@sha256:afedf20188449a65eb77b1299ae61b40285d89996c9aef04524cfe567aaab009
         job_uid: 1001
         job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "16", limit_memory: 8Gi}
@@ -95,7 +97,8 @@ sets:
         postgres_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "1", limit_memory: 2Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
+        # D-55 (Jason via COORD 2026-11-07 ~01:0xZ: RV2 needs more research-vault runners): 2 -> 3.
+        max: 3
         kaniko_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 12Gi}
   # kepler (jvallery/agents#6092, kepler#34). Job image = the python base the
   # app ships on (app/Dockerfile), for unit/render (pip); static and secret-scan
@@ -186,7 +189,8 @@ sets:
         job_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
       ci-ha:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
+        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (at max 65%; queue p50 28 min / 24h).
+        max: 3
         job_image: registry.vallery.net/jvallery/homeassistant-ci-homeassistant@sha256:ee28d5eaa7269fbbb3a8049f1bbd9723e784636cd3576be719c2471f9e704b90
         job_uid: 1001
         job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "16", limit_memory: 8Gi}
@@ -249,7 +253,8 @@ sets:
         postgres_image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-b67681006859e657@sha256:09109f553eafc0ed17dccf0c8b3af77a6e1293707a2a14d8d6458a2de3a964eb
       ci-esphome:
         # COORD/DASH 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 1 -> 2.
-        max: 2
+        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (at max 89%; queue p90 65 min / 24h).
+        max: 3
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
         job_uid: 1001
         job_resources: {cpu: 500m, memory: 1280Mi, limit_cpu: "16", limit_memory: 8Gi}
@@ -285,7 +290,8 @@ sets:
         # (COORD: 94% memory requested there).
         # D-29 (Jason, 2026-11-06 ~19:0xZ): 16 -> 24; ARC quota limits.cpu 260 -> 320.
         # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 24 -> 30 (+6 from weather-build/kepler-ci/verdify-platform-ci-pg; at max 100%, ~90 jobs queued).
-        max: 30
+        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 30 -> 37 (+7 on top of the rebalance; at max 100%, 148 jobs queued at 23:50Z).
+        max: 37
         avoid_nodes: [vm-k3s-node5]
         job_image: registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2
         job_uid: 1001
@@ -342,7 +348,8 @@ sets:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # ARC-RAISE rebalance 2 (Jason via COORD 2026-11-07 00:35Z, zero-sum): 6 -> 9 (+3 from verdify-platform-ci; at max, ~20 jobs queued incl. fleet-CI exit PRs ms#1444/#1446/#1449).
-        max: 9
+        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 9 -> 11 (+2 on top of rebalance 2; was at max 79%, queue p50 12 min).
+        max: 11
         job_image: *toolbox
         job_uid: 1001
         job_resources: {cpu: 500m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
@@ -354,7 +361,8 @@ sets:
     profiles:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
-        max: 6
+        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 6 -> 8 (at max 96%; queue p50 8 min, 136/197 jobs > 5 min).
+        max: 8
         job_image: *toolbox
         job_uid: 1001
         job_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
@@ -366,7 +374,8 @@ sets:
     profiles:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
-        max: 6
+        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 6 -> 8 (at max 100%; queue p50 28 min).
+        max: 8
         job_image: *toolbox
         job_uid: 1001
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
@@ -377,7 +386,8 @@ sets:
   - repo: jvallery/cortex-ai-compute
     profiles:
       ci:
-        max: 2
+        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (queue p50 3.5 min, p90 7.5 min).
+        max: 3
         job_image: *toolbox
         job_uid: 1001
         job_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
