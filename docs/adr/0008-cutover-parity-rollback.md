@@ -23,7 +23,7 @@ A repository is at parity when all of these hold:
 
 | Gate | Tier A: merge-gated or image-building | Tier B: static checks only |
 |---|---|---|
-| Runs compared | at least 5 PRs **and** 48 hours | at least 3 runs including one default-branch push |
+| Runs compared (fast path, D19) | 5 PRs where every Actions verdict agrees with native; **no minimum duration** | 3 runs including one default-branch push; no minimum duration |
 | Verdicts | every Actions verdict matches native, or each difference is explained and fixed | same |
 | Coverage | every native step has a named Actions job (or a documented, accepted removal) | same |
 | Wall time | p90 no worse than native's p90 (queue + run) | not gated |
@@ -53,13 +53,13 @@ A repository is at parity when all of these hold:
 
 | Wave | Repositories / work |
 |---|---|
-| W0 | Foundation: ci-runners, profiles, guard, toolbox image, mounted registry credential, forge wrapper, lint, observability. Pilot: weather. |
+| W0 | Foundation (then **jvallery/agents first**, D19: onto ARC as soon as its estate-ci delivery lands, to get off the ~17-minute native rounds; J-6 ruleset switch after fast-path parity): ci-runners, profiles, guard, toolbox image, mounted registry credential, forge wrapper, lint, observability. Pilot: weather. |
 | W1 | research-vault (starved on native today), verdify-platform (timed with the transfer) |
 | W2 | homeassistant, kepler, weather (merge-gated); build moves for storage-infra, cortex-ai-compute, monitoring-stack, network-infra |
 | W3 | docs, options-tracker, sentinel, verdify-www, sunshine_club, then the static-only repositories (Tier B) |
-| W4 | jvallery/agents itself (J-6), estate jobs re-homed (they can run any time after W0), then decommission |
+| W4 | Estate jobs re-homed (they can run any time after W0), then decommission. (jvallery/agents moved to W0 by D19.) |
 
-**Transfers.** A repository that moves owner (REPO-MOVE) cuts over either fully
+**Transfers.** ARC serves jvallery repositories only (D19), so a VerdifyConsultancy repository that needs CI transfers before its cutover. A repository that moves owner (REPO-MOVE) cuts over either fully
 before or fully after the transfer, never across it: the transfer changes the
 repository URL, the Argo repoURL, webhook and App installation, and the
 `runs-on` sets. Preferred: transfer first, then cut over on jvallery sets.

@@ -16,7 +16,7 @@ request can run arbitrary code on them.
 |---|---|
 | Fork PR runs code on a runner | Repository setting "require approval for all outside collaborators" on every repository; **and** the job-started guard (a ConfigMap script that a PR cannot change) refuses every fork PR on every profile. Fork contributions are re-pushed to a branch by a maintainer after review. |
 | `pull_request_target` / `workflow_run` run fork code with base privileges | Refused by the guard on every profile, and banned by the estate-ci lint. |
-| A job from another repository lands on a set | Each set accepts only its own repository (or `Owner/*` for an org set); the guard checks `GITHUB_REPOSITORY`. |
+| A job from another repository lands on a set | Each set accepts only its own jvallery repository (no org-level sets, D19); the guard checks `GITHUB_REPOSITORY`. |
 | PR code reads a write credential | Credentials exist only on trusted profiles (`build`, `ops`), whose guard admits only `push` or `workflow_dispatch` on the default branch of the same repository. PR builds use `build-check` (no credential). Branch protection/rulesets limit who can push to the default branch. |
 | Registry poisoning | Per-repository zot principal limited to its own paths; Argo CD deploys only digests committed to the default branch through a reviewed PR, so a pushed tag never deploys by itself. |
 | Runner escape or lateral movement | Pod Security baseline; no privileged containers, hostPath, host network or Docker socket; `automountServiceAccountToken: false` and no RBAC; one job per Pod (ephemeral runners); NetworkPolicy allowing only DNS, public 80/443 (private ranges excluded), the apps ingress for the registry and the registry origin. `ops` sets get one extra, named egress rule each. |

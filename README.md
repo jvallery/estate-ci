@@ -31,8 +31,8 @@ Tracking: jvallery/agents#6092 (FLEET-DECOM epic), jvallery/agents#6094 (this fo
 gha-runner-scale-set 0.14.2, cluster-wide) serves scale sets in namespace
 `ci-runners`. Each set is an Argo Application of the upstream chart with
 values rendered from `runners.yaml`; sets scale from 0. `jvallery` is a user
-account, so its sets are per repository; an organization (VerdifyConsultancy)
-can use one org-level set for all its repos. The scale-set name is the
+account, so its sets are per repository. Only jvallery repositories get sets
+(D19); VerdifyConsultancy repositories move to jvallery before they use CI. The scale-set name is the
 `runs-on` label: `<repo>-ci`, `<repo>-pg`, `<repo>-build`.
 
 | Profile | Pod | Use |
