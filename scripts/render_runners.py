@@ -88,17 +88,17 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
             {"name": "CI_EXCHANGE_DIR", "value": "/exchange"},
             {"name": "ESTATE_CI", "value": "/opt/estate-ci"},
         ],
-        "resources": res("250m", "512Mi", "2", "2Gi", "4Gi", "16Gi"),
+        "resources": res("250m", "512Mi", "2", "2Gi", "1Gi", "16Gi"),
         "securityContext": restricted(1001),
         "volumeMounts": [work, exchange, scripts],
     }
     if profile == "ci" and not opts.get("job_image"):
-        runner["resources"] = res("1", "1Gi", "4", "4Gi", "4Gi", "16Gi")
+        runner["resources"] = res("1", "1Gi", "4", "4Gi", "1Gi", "16Gi")
     if opts.get("runner_resources"):
         if profile != "ci":
             raise RenderError(f"{base}: runner_resources is only for ci profiles")
         rr = opts["runner_resources"]
-        runner["resources"] = res(rr["cpu"], rr["memory"], rr["limit_cpu"], rr["limit_memory"], "4Gi", "16Gi")
+        runner["resources"] = res(rr["cpu"], rr["memory"], rr["limit_cpu"], rr["limit_memory"], "1Gi", "16Gi")
     if opts.get("runner_image") and profile != "ci":
         raise RenderError(f"{base}: runner_image is only for ci profiles")
     containers = [runner]
@@ -149,8 +149,8 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
             "image": job_image,
             "command": ["/bin/sh", "/opt/estate-ci/sidecar-agent.sh"],
             "env": agent("job"),
-            "resources": res(jr.get("cpu", "1"), jr.get("memory", "2Gi"), jr.get("limit_cpu", "4"),
-                             jr.get("limit_memory", "6Gi"), "4Gi", "16Gi"),
+            "resources": res(jr.get("cpu", "250m"), jr.get("memory", "2Gi"), jr.get("limit_cpu", "16"),
+                             jr.get("limit_memory", "6Gi"), "2Gi", "16Gi"),
             "securityContext": restricted(uid),
             "volumeMounts": [work, exchange, scripts,
                              {"name": "estate-ci-tools", "mountPath": "/opt/estate-ci-tools", "readOnly": True},
@@ -188,8 +188,8 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
             # Kaniko must run as root to unpack image layers. It keeps the default
             # capability set and RuntimeDefault seccomp, which Pod Security
             # "baseline" admits. It holds only the registry PULL credential.
-            "resources": res(kr.get("cpu", "1"), kr.get("memory", "2Gi"), kr.get("limit_cpu", "3"),
-                             kr.get("limit_memory", "8Gi"), "16Gi", "40Gi"),
+            "resources": res(kr.get("cpu", "250m"), kr.get("memory", "2Gi"), kr.get("limit_cpu", "16"),
+                             kr.get("limit_memory", "8Gi"), "8Gi", "40Gi"),
             "volumeMounts": [work, exchange, scripts,
                              {"name": "registry-pull", "mountPath": "/kaniko/.docker", "readOnly": True}],
         })

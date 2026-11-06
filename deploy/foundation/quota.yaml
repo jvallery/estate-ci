@@ -99,15 +99,24 @@ metadata:
 #   verdify-platform-ci-tools max 2 -> 6, verdify-platform-ci-esphome 1 -> 2.
 #   Sum at max is now 106 pods, 114.75 CPU / 223.25Gi requests, 593 CPU /
 #   907Gi limits, 1110Gi / 3876Gi ephemeral.
+# - D-39 (Jason first-hand 2026-11-06 ~21:15Z, estate-ci#55): burstable runners.
+#   Job/kaniko/runner-as-job containers request measured use (72h per-pool p95
+#   working set, floor 250m / 512Mi) with limits.cpu 16 so a job can use idle
+#   cores; memory limits max(current, 1.5x observed max) within 8-16Gi.
+#   Ephemeral requests runner 4 -> 1Gi, job 4 -> 2Gi, kaniko 16 -> 8Gi (live
+#   mean 1.6Gi per CI pod; limits and emptyDir sizeLimits unchanged). Hot pools
+#   x3 maxRunners, all others >= 2. Sum at max: 214 pods, 132.5 CPU / 331.5Gi
+#   requests, 3907 CPU / 2254Gi limits, 910Gi / 7804Gi ephemeral; hard = sum
+#   + ~10%. The scheduler (node free requests) is the gate, not this quota.
 spec:
   hard:
-    pods: "110"
-    requests.cpu: "115"
-    requests.memory: 224Gi
-    limits.cpu: "595"
-    limits.memory: 908Gi
-    requests.ephemeral-storage: 1112Gi
-    limits.ephemeral-storage: 3880Gi
+    pods: "236"
+    requests.cpu: "146"
+    requests.memory: 365Gi
+    limits.cpu: "4300"
+    limits.memory: 2480Gi
+    requests.ephemeral-storage: 1000Gi
+    limits.ephemeral-storage: 8600Gi
     persistentvolumeclaims: "0"
     services.loadbalancers: "0"
     services.nodeports: "0"

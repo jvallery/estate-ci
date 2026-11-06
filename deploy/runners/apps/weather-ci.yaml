@@ -19,7 +19,7 @@ spec:
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: weather-ci
         minRunners: 0
-        maxRunners: 3
+        maxRunners: 9
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller
@@ -122,7 +122,7 @@ spec:
                 requests:
                   cpu: 250m
                   memory: 512Mi
-                  ephemeral-storage: 4Gi
+                  ephemeral-storage: 1Gi
                 limits:
                   cpu: '2'
                   memory: 2Gi
@@ -155,11 +155,11 @@ spec:
                 value: /exchange
               resources:
                 requests:
-                  cpu: '1'
-                  memory: 3Gi
-                  ephemeral-storage: 4Gi
+                  cpu: 500m
+                  memory: 2304Mi
+                  ephemeral-storage: 2Gi
                 limits:
-                  cpu: '4'
+                  cpu: '16'
                   memory: 8Gi
                   ephemeral-storage: 16Gi
               securityContext:

@@ -19,7 +19,7 @@ spec:
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: home-dotfiles-ci
         minRunners: 0
-        maxRunners: 1
+        maxRunners: 2
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller
@@ -63,12 +63,12 @@ spec:
                 value: /opt/estate-ci
               resources:
                 requests:
-                  cpu: 500m
-                  memory: 1Gi
-                  ephemeral-storage: 4Gi
+                  cpu: 250m
+                  memory: 512Mi
+                  ephemeral-storage: 1Gi
                 limits:
-                  cpu: '4'
-                  memory: 5Gi
+                  cpu: '16'
+                  memory: 8Gi
                   ephemeral-storage: 16Gi
               securityContext:
                 allowPrivilegeEscalation: false
