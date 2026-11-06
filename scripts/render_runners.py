@@ -180,6 +180,10 @@ def render(cfg: dict) -> dict[str, str]:
         for profile, opts in (entry.get("profiles") or {}).items():
             if profile not in SUFFIX:
                 raise RenderError(f"{base}: unknown profile {profile}")
+            if profile == "build" and "repo" not in entry:
+                # The push credential is per repository (ADR-0003); an org-wide
+                # set would hand one repo's credential to every repo in the org.
+                raise RenderError(f"{base}: the build profile needs a repo-level set")
             opts = opts or {}
             name = f"{base}-{SUFFIX[profile]}"
             if not NAME.match(name):

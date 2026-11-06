@@ -3,6 +3,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
 - estate-ci-ci.yaml
+- memoryos-build.yaml
+- memoryos-buildcheck.yaml
+- verdify-ci.yaml
 - weather-build.yaml
 - weather-buildcheck.yaml
 - weather-ci.yaml
