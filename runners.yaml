@@ -127,7 +127,7 @@ sets:
   - repo: jvallery/agents
     profiles:
       ci:
-        max: 4
+        max: 6  # COORD 2026-11-06: 6 during parity, 10 at the J-6 switch (quota move from native)
         job_image: registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2
         job_uid: 1001
         job_resources: {cpu: "1", memory: 1536Mi, limit_cpu: "4", limit_memory: 8Gi}
