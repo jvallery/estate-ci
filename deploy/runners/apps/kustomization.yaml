@@ -6,6 +6,9 @@ resources:
 - estate-ci-ci.yaml
 - memoryos-build.yaml
 - memoryos-buildcheck.yaml
+- research-vault-build.yaml
+- research-vault-ci.yaml
+- research-vault-pg.yaml
 - verdify-ci.yaml
 - weather-build.yaml
 - weather-buildcheck.yaml
