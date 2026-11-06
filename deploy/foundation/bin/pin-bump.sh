@@ -12,10 +12,13 @@
 # commit records "Estate-CI-Source: <sha>" so later runs can order themselves.
 #
 # Plain git for the branch and commit; forge-api.sh for the PR, the checks
-# dispatch and auto-merge (the only forge-specific part). The job token cannot
-# trigger workflows by itself on GitHub, so the checks workflow is dispatched on
-# the pin branch; its check runs land on the PR head. Run from the repository
-# root with push access (actions/checkout's default persisted token).
+# dispatch and auto-merge (the only forge-specific part). With APP_CLIENT_ID and
+# APP_PRIVATE_KEY (vallery-pin-bot, D-52) app-token.py mints a repo-scoped App
+# token into FORGE_TOKEN, so the PR starts pull_request workflows normally. A
+# job-token PR starts none, so --checks-workflow (fallback only) dispatches the
+# checks on the pin branch.
+# Run from the repository root with push access (actions/checkout's default
+# persisted token).
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 pins="" base=main checks="" automerge=false source_sha=""
@@ -30,6 +33,19 @@ while (($#)); do
   esac
 done
 [[ -n "$pins" ]] || { echo "no --pin given" >&2; exit 2; }
+
+# D-52: open the PR as the vallery-pin-bot App when its key is provided, so the
+# PR starts pull_request workflows; the token is repo-scoped and revoked on exit.
+if [[ -n "${APP_CLIENT_ID:-}" && -n "${APP_PRIVATE_KEY:-}" ]]; then
+  FORGE_TOKEN="$(python3 "$here/app-token.py" "$GITHUB_REPOSITORY")"
+  echo "::add-mask::$FORGE_TOKEN"
+  export FORGE_TOKEN
+  trap 'APP_TOKEN="$FORGE_TOKEN" python3 "$here/app-token.py" --revoke || true' EXIT
+  checks=""
+elif [[ -n "$checks" ]]; then
+  echo "::warning::no pin-bot App key; job-token PR with ${checks} dispatched on the pin branch (required checks will not attach)"
+fi
+unset APP_PRIVATE_KEY
 
 [[ -n "$source_sha" ]] || source_sha="$(git rev-parse HEAD)"
 git fetch -q origin "$base" '+refs/heads/estate-ci/pin-*:refs/remotes/origin/estate-ci/pin-*'

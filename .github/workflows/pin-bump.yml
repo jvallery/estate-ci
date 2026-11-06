@@ -1,19 +1,28 @@
-# Reusable: open a PR pinning new image digests in GitOps manifests, then
-# dispatch the repo's checks workflow on it (job-token PRs start no workflows).
+# Reusable: open a PR pinning new image digests in GitOps manifests.
 #
 #   jobs:
 #     pin:
 #       needs: [app]
 #       permissions: {contents: write, pull-requests: write, actions: write}
 #       uses: jvallery/estate-ci/.github/workflows/pin-bump.yml@<sha>
+#       secrets:
+#         pin-bot-private-key: ${{ secrets.PIN_BOT_PRIVATE_KEY }}
 #       with:
 #         pins: |
 #           deploy/k8s/kustomization.yaml registry.vallery.net/jvallery/weather-app ${{ needs.app.outputs.digest }}
 #
 # Each pins line is "<file> <image> <digest>"; lines with an empty digest
 # (image not rebuilt) are skipped. Rewrites kustomize images entries and inline
-# <image>@sha256: references. The caller's checks workflow must accept
-# workflow_dispatch.
+# <image>@sha256: references.
+#
+# PR identity (D-52): with the pin-bot-private-key secret and the repo variable
+# PIN_BOT_CLIENT_ID (GitHub App vallery-pin-bot), $ESTATE_CI/app-token.py mints
+# an installation token scoped to the calling repo only (revoked at step end)
+# and the PR is opened with it, so pull_request workflows
+# run and the PR's required checks attach normally. Without the secret it falls
+# back to the job token, which starts no workflows; the checks workflow is then
+# dispatched on the pin branch instead (it must accept workflow_dispatch), but
+# those runs do not satisfy the PR's required checks.
 #
 # Portability (Forgejo/Gitea Actions): plain git plus /opt/estate-ci/forge-api.sh
 # (FORGE=forgejo switches the API). Vendored fallback: checkout + one run step
@@ -27,7 +36,7 @@ on:
         type: string
         required: true
       checks-workflow:
-        description: Workflow file to dispatch on the pin branch ("" to skip)
+        description: Fallback only (no pin-bot secret) - workflow file to dispatch on the pin branch ("" to skip)
         type: string
         default: ci.yml
       base:
@@ -44,6 +53,10 @@ on:
         description: Scale set label. Default "<repo>-ci"
         type: string
         default: ""
+    secrets:
+      pin-bot-private-key:
+        description: vallery-pin-bot private key (repo secret PIN_BOT_PRIVATE_KEY)
+        required: false
     outputs:
       pr-url:
         value: ${{ jobs.pin.outputs.pr-url }}
@@ -68,6 +81,8 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          APP_CLIENT_ID: ${{ vars.PIN_BOT_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.pin-bot-private-key }}
           PINS: ${{ inputs.pins }}
           BASE: ${{ inputs.base }}
           CHECKS: ${{ inputs.checks-workflow }}
@@ -77,6 +92,6 @@ jobs:
           set -euo pipefail
           args=(--base "$BASE" --source-sha "$SOURCE_SHA")
           while IFS= read -r p; do [[ -z "${p// /}" ]] || args+=(--pin "$p"); done <<< "$PINS"
-          [[ -z "$CHECKS" ]] || args+=(--checks-workflow "$CHECKS")
+          [[ -z "$CHECKS" ]] || args+=(--checks-workflow "$CHECKS")  # ignored when the App key is set
           [[ "$AUTO_MERGE" != true ]] || args+=(--auto-merge)
           "$ESTATE_CI/pin-bump.sh" "${args[@]}"

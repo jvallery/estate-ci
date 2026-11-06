@@ -13,7 +13,7 @@ Tracking: jvallery/agents#6092 (FLEET-DECOM epic), jvallery/agents#6094 (this fo
 
 | Path | What |
 |---|---|
-| `deploy/foundation/bin/` | **All CI logic.** Mounted at `/opt/estate-ci` (`$ESTATE_CI`) in every runner Pod: `image-build.sh`, `pin-bump.sh` + `forge-api.sh`, `sidecar-run.sh`, `wait-postgres.sh`, `check-runner-labels.sh`, and the job guard. |
+| `deploy/foundation/bin/` | **All CI logic.** Mounted at `/opt/estate-ci` (`$ESTATE_CI`) in every runner Pod: `image-build.sh`, `pin-bump.sh` + `forge-api.sh` + `app-token.py`, `sidecar-run.sh`, `wait-postgres.sh`, `check-runner-labels.sh`, and the job guard. |
 | `.github/workflows/checks.yml` | Thin reusable wrapper: checkout + one repo command (optionally inside the repo's CI image, optionally with Postgres). |
 | `.github/workflows/image-build.yml` | Thin reusable wrapper over `image-build.sh`. |
 | `.github/workflows/pin-bump.yml` | Thin reusable wrapper over `pin-bump.sh`. |
@@ -80,14 +80,18 @@ container. PR jobs (other sets) never have it and Dockerfile `RUN` steps never
 see it. No GitHub Environments, OIDC, Actions cache or artifact service.
 
 **Pins.** `pin-bump.sh` rewrites digests (kustomize `images:` entries or
-inline `<image>@sha256:` references), pushes a branch and opens a PR with
-`GITHUB_TOKEN`. Because GitHub does not start workflows for `GITHUB_TOKEN`
-events, it then `workflow_dispatch`es the repo's checks workflow on the pin
-branch, so the PR head gets the same check runs required checks expect.
-Branch and commit are plain git; the PR, dispatch and auto-merge calls are in
-`forge-api.sh`, the one file to swap for another forge (`FORGE=forgejo` is
+inline `<image>@sha256:` references), pushes a branch and opens a PR. The PR is
+opened with an installation token of the GitHub App `vallery-pin-bot` (D-52;
+contents + pull_requests write, scoped per run to the calling repo), minted by
+`app-token.py` (stdlib, no third-party action) from the caller-passed secret `PIN_BOT_PRIVATE_KEY` and repo
+variable `PIN_BOT_CLIENT_ID`, so `pull_request` workflows run and required
+checks attach. Without them it falls back to `GITHUB_TOKEN`, which starts no
+workflows: the checks workflow is then `workflow_dispatch`ed on the pin branch,
+but the PR stays BLOCKED on required checks. Branch and commit are plain git;
+the PR, dispatch and auto-merge calls are in `forge-api.sh` (token from
+`FORGE_TOKEN`), the one file to swap for another forge (`FORGE=forgejo` is
 implemented against the Gitea/Forgejo API). Merging the PR is the deploy;
-Argo CD syncs it. No extra GitHub App is needed.
+Argo CD syncs it.
 
 **Registration.** Runners register with the dedicated least-privilege GitHub App
 `vallery-ci-runners` (J-10; App ID 5636090, installation 179108157 on `jvallery`,

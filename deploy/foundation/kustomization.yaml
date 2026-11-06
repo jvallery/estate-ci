@@ -20,6 +20,7 @@ configMapGenerator:
       - bin/pin-bump.sh
       - bin/pin-rewrite.py
       - bin/forge-api.sh
+      - bin/app-token.py
       - bin/wait-postgres.sh
       - bin/check-runner-labels.sh
       - bin/lint-workflows.py
