@@ -20,6 +20,9 @@ OUT = ROOT / "deploy" / "runners" / "apps"
 NAMESPACE = "ci-runners"
 SOURCE = "https://github.com/jvallery/estate-ci.git"
 SUFFIX = {"ci": "ci", "pg": "pg", "build": "build", "buildcheck": "buildcheck"}
+# Extra ci-profile sets for repos whose checks need more than one CI image:
+# profile key "ci-<variant>" renders set "<repo>-ci-<variant>" (a ci profile).
+CI_VARIANT = re.compile(r"^ci-[a-z0-9]{1,12}$")
 DIGEST_REF = re.compile(r"^[a-z0-9.\-]+(:[0-9]+)?(/[a-z0-9._\-]+)+(:[A-Za-z0-9._\-]+)?@sha256:[0-9a-f]{64}$")
 NAME = re.compile(r"^[a-z0-9]([a-z0-9-]{0,43}[a-z0-9])?$")
 class _NoAliasDumper(yaml.SafeDumper):
@@ -55,7 +58,8 @@ def restricted(uid: int | None = None) -> dict:
     return sc
 
 
-def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str) -> dict:
+def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, label: str | None = None) -> dict:
+    label = label or profile
     exchange = {"name": "exchange", "mountPath": "/exchange"}
     work = {"name": "work", "mountPath": "/home/runner/_work"}
     scripts = {"name": "estate-ci-scripts", "mountPath": "/opt/estate-ci", "readOnly": True}
@@ -143,7 +147,7 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str) ->
         volumes.append({"name": "zot-push", "secret": {
             "secretName": push_secret, "items": [{"key": ".dockerconfigjson", "path": "config.json"}]}})
     return {
-        "metadata": {"labels": {"estate-ci.vallery.net/profile": profile}},
+        "metadata": {"labels": {"estate-ci.vallery.net/profile": label}},
         "spec": {
             "automountServiceAccountToken": False,
             "restartPolicy": "Never",
@@ -153,7 +157,7 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str) ->
             # Soft spread only: a hard hostname spread strands runners (agents#5560).
             "topologySpreadConstraints": [{
                 "maxSkew": 1, "topologyKey": "kubernetes.io/hostname", "whenUnsatisfiable": "ScheduleAnyway",
-                "labelSelector": {"matchLabels": {"estate-ci.vallery.net/profile": profile}}}],
+                "labelSelector": {"matchLabels": {"estate-ci.vallery.net/profile": label}}}],
             "containers": containers,
             "volumes": volumes,
         },
@@ -177,15 +181,16 @@ def render(cfg: dict) -> dict[str, str]:
             expected = f"{owner}/*"
         if owner not in owners:
             raise RenderError(f"no registration secret for owner {owner}")
-        for profile, opts in (entry.get("profiles") or {}).items():
+        for key, opts in (entry.get("profiles") or {}).items():
+            profile = "ci" if CI_VARIANT.match(key) else key
             if profile not in SUFFIX:
-                raise RenderError(f"{base}: unknown profile {profile}")
+                raise RenderError(f"{base}: unknown profile {key}")
             if profile == "build" and "repo" not in entry:
                 # The push credential is per repository (ADR-0003); an org-wide
                 # set would hand one repo's credential to every repo in the org.
                 raise RenderError(f"{base}: the build profile needs a repo-level set")
             opts = opts or {}
-            name = f"{base}-{SUFFIX[profile]}"
+            name = f"{base}-{key if profile != key else SUFFIX[profile]}"
             if not NAME.match(name):
                 raise RenderError(f"scale set name {name!r} is invalid or longer than 45 characters")
             values = {
@@ -195,7 +200,7 @@ def render(cfg: dict) -> dict[str, str]:
                 "minRunners": 0,
                 "maxRunners": int(opts.get("max", d["max"][profile])),
                 "controllerServiceAccount": d["controller_service_account"],
-                "template": pod_template(d, profile, opts, expected, base),
+                "template": pod_template(d, profile, opts, expected, base, key),
             }
             app = {
                 "apiVersion": "argoproj.io/v1alpha1",

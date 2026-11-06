@@ -9,6 +9,8 @@
 #   build       runner + Kaniko sidecar + the repo's zot push secret
 #               (zot-push-<repo>); default-branch push/dispatch only    suffix -build
 #   buildcheck  runner + Kaniko sidecar, no push credential (PR builds)  suffix -buildcheck
+#   ci-<v>      another ci set with its own job_image, for repos whose checks
+#               need several CI images (e.g. homeassistant)                suffix -ci-<v>
 # Sizes are requests -> limits per Pod. The namespace ResourceQuota
 # (deploy/foundation/quota.yaml) is the hard envelope across all sets.
 defaults:
