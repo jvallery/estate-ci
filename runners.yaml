@@ -371,5 +371,12 @@ sets:
   # MIGRATE-INFRA agents#6165 batch; ACL verdifyconsultancy/verdify-www).
   - repo: jvallery/verdify-www
     profiles:
+      # BUILD-APPS (verdify-www#57): release gate npm ci && npm run qa:ci-local
+      # (node + kustomize from the toolbox), the plan step and the pin step.
+      ci:
+        max: 1
+        job_image: *toolbox
+        job_uid: 1001
+        job_resources: {cpu: 500m, memory: 1536Mi, limit_cpu: "3", limit_memory: 4Gi}
       build:
         max: 1
