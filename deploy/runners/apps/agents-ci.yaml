@@ -166,7 +166,7 @@ spec:
               resources:
                 requests:
                   cpu: 500m
-                  memory: 1Gi
+                  memory: 256Mi
                   ephemeral-storage: 2Gi
                 limits:
                   cpu: '16'
