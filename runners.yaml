@@ -213,6 +213,15 @@ sets:
         # COORD 2026-11-06: runner CPU limit 2 -> 4 to cut the ~2.4 min full-history checkout.
         # Limits only; requests stay at the runner default (250m / 512Mi), so no scheduling cost.
         runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "4", limit_memory: 2Gi}
+      # BUILD-AGENTS (D-22): the 12 images native event-ci built on push to main
+      # (agents .github/workflows/build.yml, ci/images.tsv). Mounts
+      # ci-runners/zot-push-agents (principal ci-agents, exact jvallery/agents-* paths
+      # in storage-infra). Native's standard build profile was 2Gi -> 10Gi Kaniko
+      # memory; 12Gi limit adds headroom for the research-runtime and argocd images.
+      # No buildcheck set: native never built agents images on PRs.
+      build:
+        max: 2
+        kaniko_resources: {cpu: "1", memory: 3Gi, limit_cpu: "3", limit_memory: 12Gi}
   # estate-ci's own self-test (R1: no GitHub-hosted runners, even here), image
   # mirrors (mirrors.txt, crane copy) and the estate-ci-toolbox build. The build
   # set mounts zot-push-estate-ci (writer for jvallery/estate-ci/** only).
