@@ -62,8 +62,11 @@ removes the heaviest builds (vLLM and GPUStack mirrors) from the build budget.
    512 MiB; job sidecars and Kaniko request the measured p50 working set of the
    repo's native runs and limit at about 1.5 × p95. Kaniko memory limits are
    set per image (12 GiB default, more only with measured evidence).
-3. **Low priority.** Runner Pods use a negative PriorityClass, so production
-   workloads preempt CI, never the reverse. Pods tolerate no taints (node8
+3. **Never preempting.** Runner Pods use `ci-runner` (value 0, preemptionPolicy
+   Never): they never evict anything and wait for capacity, and only tiers above
+   the default (estate-app and up) can preempt them. A negative class made them
+   the first victims of every default-priority pod, killing jobs mid-run
+   (2026-11-06). Pods tolerate no taints (node8
    stays Frigate-only; control-plane nodes stay cordoned).
 4. **Soft spread only.** No hard hostname anti-affinity (it strands runners);
    a preferred spread across workers is enough.

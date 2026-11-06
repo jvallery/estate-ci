@@ -162,10 +162,11 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
         "spec": {
             "automountServiceAccountToken": False,
             "restartPolicy": "Never",
-            # CI is the lowest tier and never preempts: at the global default
-            # (estate-default, 0) runner bursts preempted the fleet's
-            # arc-pr-validation (-1000) runners mid-job (2026-11-06).
-            "priorityClassName": "ci-preemptible",
+            # ci-runner (0, preemptionPolicy Never): runners never preempt (at
+            # estate-default they preempted fleet runners mid-job, #33), and
+            # default workloads cannot preempt them (at ci-preemptible, -1000,
+            # they were preempted mid-job while workers sat at 99% memory).
+            "priorityClassName": "ci-runner",
             "imagePullSecrets": [{"name": "zot-pull"}],
             "securityContext": {"fsGroup": 1001, "fsGroupChangePolicy": "OnRootMismatch",
                                 "seccompProfile": {"type": "RuntimeDefault"}},
