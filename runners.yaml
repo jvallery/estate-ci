@@ -11,6 +11,8 @@
 #   buildcheck  runner + Kaniko sidecar, no push credential (PR builds)  suffix -buildcheck
 #   ci-<v>      another ci set with its own job_image, for repos whose checks
 #               need several CI images (e.g. homeassistant)                suffix -ci-<v>
+# ci options: runner_image (a runner image built FROM the stock actions-runner,
+# so bare run: steps get the repo's tools) and runner_resources override the defaults.
 # Sizes are requests -> limits per Pod. The namespace ResourceQuota
 # (deploy/foundation/quota.yaml) is the hard envelope across all sets.
 defaults:
@@ -169,6 +171,13 @@ sets:
   # build: the 4 repos whose images native CI builds today (19 images);
   # build mounts ci-runners/zot-push-<repo>. No buildcheck sets: native
   # never built images on PRs (pr_validation: false), so neither do these.
+  # Label-swap repos (COORD ruling 2026-11-06 03:07Z: do not rewrite steps):
+  # proxmox-infrastructure, home-dotfiles and AI_presentation run their
+  # existing bare `run:` steps in the runner container, so their ci set uses
+  # the fleet toolbox (built FROM the stock actions-runner image; adds
+  # gitleaks, ruby, pip, kustomize) as runner_image and has no job sidecar.
+  # runner_resources equal the former runner+job totals, so the quota is
+  # unchanged (its ephemeral-storage envelope gains 3 x 4Gi/16Gi of slack).
   - repo: jvallery/monitoring-stack
     profiles:
       ci:
@@ -213,23 +222,20 @@ sets:
     profiles:
       ci:
         max: 1
-        job_image: *fleet-toolbox
-        job_uid: 1001
-        job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
+        runner_image: *fleet-toolbox
+        runner_resources: {cpu: 750m, memory: 1536Mi, limit_cpu: "4", limit_memory: 6Gi}
   - repo: jvallery/home-dotfiles
     profiles:
       ci:
         max: 1
-        job_image: *fleet-toolbox
-        job_uid: 1001
-        job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "2", limit_memory: 3Gi}
+        runner_image: *fleet-toolbox
+        runner_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "4", limit_memory: 5Gi}
   - repo: jvallery/AI_presentation
     profiles:
       ci:
         max: 1
-        job_image: *fleet-toolbox
-        job_uid: 1001
-        job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "2", limit_memory: 3Gi}
+        runner_image: *fleet-toolbox
+        runner_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "4", limit_memory: 5Gi}
   - repo: jvallery/backups
     profiles:
       ci:
