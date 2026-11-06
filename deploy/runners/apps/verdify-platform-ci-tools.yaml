@@ -45,6 +45,63 @@ spec:
               labelSelector:
                 matchLabels:
                   estate-ci.vallery.net/profile: ci-tools
+            initContainers:
+            - name: estate-ci-tools
+              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:fe6107cb7dab551e5afe90527fc084a4930a7433b6b733f38c6cc8a0330d6d5b
+              command:
+              - /bin/sh
+              - -ec
+              - mkdir -p /tools/bin && cd /usr/local/bin && cp kubectl kustomize helm kubeconform yq /tools/bin/
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                  ephemeral-storage: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+                  ephemeral-storage: 1Gi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                  - ALL
+                runAsNonRoot: true
+                runAsUser: 1001
+                runAsGroup: 1001
+              volumeMounts:
+              - name: estate-ci-tools
+                mountPath: /tools
+            - name: estate-ci-nss
+              image: registry.vallery.net/jvallery/agents-ci-tools@sha256:c581b862f3da5c79f71fc982455684350628bc4c9fa51dff77d3b8354cd8f214
+              command:
+              - /bin/sh
+              - -ec
+              - 'for f in passwd group; do if [ -r /etc/$f ]; then cat /etc/$f > /nss/$f; else : > /nss/$f; fi; done; cut -d: -f3 /nss/passwd | grep -qx "$JOB_UID" || echo "runner:x:$JOB_UID:$JOB_UID:estate-ci
+                runner:/home/runner:/bin/sh" >> /nss/passwd; cut -d: -f3 /nss/group | grep -qx "$JOB_UID" || echo "runner:x:$JOB_UID:" >> /nss/group'
+              env:
+              - name: JOB_UID
+                value: '1001'
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 32Mi
+                  ephemeral-storage: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 128Mi
+                  ephemeral-storage: 256Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                  - ALL
+                runAsNonRoot: true
+                runAsUser: 1001
+                runAsGroup: 1001
+              volumeMounts:
+              - name: estate-ci-nss
+                mountPath: /nss
             containers:
             - name: runner
               image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232
@@ -121,6 +178,17 @@ spec:
               - name: estate-ci-scripts
                 mountPath: /opt/estate-ci
                 readOnly: true
+              - name: estate-ci-tools
+                mountPath: /opt/estate-ci-tools
+                readOnly: true
+              - name: estate-ci-nss
+                mountPath: /etc/passwd
+                subPath: passwd
+                readOnly: true
+              - name: estate-ci-nss
+                mountPath: /etc/group
+                subPath: group
+                readOnly: true
             volumes:
             - name: work
               emptyDir:
@@ -132,6 +200,12 @@ spec:
               configMap:
                 name: estate-ci-scripts
                 defaultMode: 365
+            - name: estate-ci-tools
+              emptyDir:
+                sizeLimit: 1Gi
+            - name: estate-ci-nss
+              emptyDir:
+                sizeLimit: 1Mi
   destination:
     server: https://kubernetes.default.svc
     namespace: ci-runners

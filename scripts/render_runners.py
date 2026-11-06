@@ -59,6 +59,16 @@ def restricted(uid: int | None = None) -> dict:
     return sc
 
 
+TOOLBOX_CLIS = ("kubectl", "kustomize", "helm", "kubeconform", "yq")
+# Copy the job image's passwd/group and add the job uid (and its gid) if absent.
+NSS_SCRIPT = (
+    'for f in passwd group; do if [ -r /etc/$f ]; then cat /etc/$f > /nss/$f; else : > /nss/$f; fi; done; '
+    'cut -d: -f3 /nss/passwd | grep -qx "$JOB_UID" || '
+    'echo "runner:x:$JOB_UID:$JOB_UID:estate-ci runner:/home/runner:/bin/sh" >> /nss/passwd; '
+    'cut -d: -f3 /nss/group | grep -qx "$JOB_UID" || echo "runner:x:$JOB_UID:" >> /nss/group'
+)
+
+
 def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, label: str | None = None) -> dict:
     label = label or profile
     exchange = {"name": "exchange", "mountPath": "/exchange"}
@@ -101,19 +111,54 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
     def agent(name: str) -> list[dict]:
         return [{"name": "CI_SIDECAR_NAME", "value": name}, {"name": "CI_EXCHANGE_DIR", "value": "/exchange"}]
 
+    init_containers: list[dict] = []
     if opts.get("job_image"):
         jr = opts.get("job_resources", {})
         uid = int(opts.get("job_uid", 1001))
+        job_image = pinned(opts["job_image"], "job_image")
+        # Runner-environment parity for arbitrary job images (verdify-platform
+        # #1402, 2026-11-06), without rebuilding them:
+        #  - nss: the image's own /etc/passwd and /etc/group plus an entry for
+        #    the job uid when it has none (initdb and other getpwuid() callers
+        #    refuse an unnamed uid). Built by the job image itself, as that uid.
+        #  - tools: the toolbox's static Go CLIs (kubectl, kustomize, helm,
+        #    kubeconform, yq; pinned and checksummed in the toolbox build),
+        #    APPENDED to PATH by sidecar-agent.sh, so the image's own tools win.
+        init_containers += [
+            {
+                "name": "estate-ci-tools",
+                "image": pinned(d["toolbox"], "toolbox"),
+                "command": ["/bin/sh", "-ec", "mkdir -p /tools/bin && cd /usr/local/bin && "
+                            "cp " + " ".join(TOOLBOX_CLIS) + " /tools/bin/"],
+                "resources": res("50m", "64Mi", "500m", "256Mi", "256Mi", "1Gi"),
+                "securityContext": restricted(1001),
+                "volumeMounts": [{"name": "estate-ci-tools", "mountPath": "/tools"}],
+            },
+            {
+                "name": "estate-ci-nss",
+                "image": job_image,
+                "command": ["/bin/sh", "-ec", NSS_SCRIPT],
+                "env": [{"name": "JOB_UID", "value": str(uid)}],
+                "resources": res("50m", "32Mi", "500m", "128Mi", "64Mi", "256Mi"),
+                "securityContext": restricted(uid),
+                "volumeMounts": [{"name": "estate-ci-nss", "mountPath": "/nss"}],
+            },
+        ]
         containers.append({
             "name": "job",
-            "image": pinned(opts["job_image"], "job_image"),
+            "image": job_image,
             "command": ["/bin/sh", "/opt/estate-ci/sidecar-agent.sh"],
             "env": agent("job"),
             "resources": res(jr.get("cpu", "1"), jr.get("memory", "2Gi"), jr.get("limit_cpu", "4"),
                              jr.get("limit_memory", "6Gi"), "4Gi", "16Gi"),
             "securityContext": restricted(uid),
-            "volumeMounts": [work, exchange, scripts],
+            "volumeMounts": [work, exchange, scripts,
+                             {"name": "estate-ci-tools", "mountPath": "/opt/estate-ci-tools", "readOnly": True},
+                             {"name": "estate-ci-nss", "mountPath": "/etc/passwd", "subPath": "passwd", "readOnly": True},
+                             {"name": "estate-ci-nss", "mountPath": "/etc/group", "subPath": "group", "readOnly": True}],
         })
+        volumes += [{"name": "estate-ci-tools", "emptyDir": {"sizeLimit": "1Gi"}},
+                    {"name": "estate-ci-nss", "emptyDir": {"sizeLimit": "1Mi"}}]
     if profile == "pg" or (profile == "ci" and opts.get("postgres") is True):
         pr = opts.get("postgres_resources", {})
         containers.append({
@@ -174,6 +219,7 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
             "topologySpreadConstraints": [{
                 "maxSkew": 1, "topologyKey": "kubernetes.io/hostname", "whenUnsatisfiable": "ScheduleAnyway",
                 "labelSelector": {"matchLabels": {"estate-ci.vallery.net/profile": label}}}],
+            **({"initContainers": init_containers} if init_containers else {}),
             "containers": containers,
             "volumes": volumes,
         },

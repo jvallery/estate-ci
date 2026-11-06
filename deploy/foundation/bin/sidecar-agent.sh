@@ -18,6 +18,9 @@ set -u
 name="${CI_SIDECAR_NAME:?CI_SIDECAR_NAME is required}"
 ex="${CI_EXCHANGE_DIR:-/exchange}/${name}"
 mkdir -p "$ex"
+# Toolbox CLIs copied in by the estate-ci-tools init container (job sidecars
+# only). Appended, so the job image's own tools keep precedence.
+if [ -d /opt/estate-ci-tools/bin ]; then PATH="${PATH}:/opt/estate-ci-tools/bin"; export PATH; fi
 # A root sidecar (kaniko) would leave its exchange dir root:root 0755, so the
 # runner (uid 1001) could not drop requests into it. Hand it to the runner.
 if [ "$(id -u)" = 0 ]; then chown "${CI_RUNNER_UID:-1001}:${CI_RUNNER_UID:-1001}" "$ex"; fi
