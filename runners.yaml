@@ -22,9 +22,10 @@ defaults:
   toolbox: &toolbox registry.vallery.net/jvallery/estate-ci/toolbox@sha256:fe6107cb7dab551e5afe90527fc084a4930a7433b6b733f38c6cc8a0330d6d5b
   chart_version: 0.14.2
   controller_service_account: {namespace: arc-systems, name: arc-gha-rs-controller}
-  runner_image: ghcr.io/actions/actions-runner:2.338.2@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232
-  # Mirror of gcr.io/kaniko-project/executor:v1.23.2-debug (the image native CI already uses).
-  kaniko_image: registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e
+  # Stock actions-runner 2.338.2, mirrored by mirrors.txt (same index digest as upstream).
+  runner_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232
+  # gcr.io/kaniko-project/executor:v1.23.2-debug, mirrored by mirrors.txt (same digest native CI uses).
+  kaniko_image: registry.vallery.net/jvallery/estate-ci/mirror/gcr.io/kaniko-project/executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e
   # CloudNativePG PostgreSQL (includes pgvector), mirrored in zot.
   postgres_image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-777ad6774e00fff6@sha256:d66df406385b9f3c43c47e94fe3a0002278ef56d21b82a8c9d3a22f91aa9c3f0
   max:

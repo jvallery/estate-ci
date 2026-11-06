@@ -47,7 +47,7 @@ spec:
                   estate-ci.vallery.net/profile: build
             containers:
             - name: runner
-              image: ghcr.io/actions/actions-runner:2.338.2@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232
+              image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232
               command:
               - /home/runner/run.sh
               env:
@@ -90,7 +90,7 @@ spec:
                 mountPath: /run/secrets/zot-push
                 readOnly: true
             - name: kaniko
-              image: registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e
+              image: registry.vallery.net/jvallery/estate-ci/mirror/gcr.io/kaniko-project/executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e
               command:
               - /busybox/sh
               - /opt/estate-ci/sidecar-agent.sh
