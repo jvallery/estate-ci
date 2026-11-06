@@ -14,6 +14,8 @@
 # Sizes are requests -> limits per Pod. The namespace ResourceQuota
 # (deploy/foundation/quota.yaml) is the hard envelope across all sets.
 defaults:
+  # Temporary (MIGRATE-INFRA): fleet toolbox, replaced by the estate-ci toolbox (estate-ci#16).
+  fleet_toolbox: &fleet-toolbox registry.vallery.net/jvallery/agents-arc-runner-toolbox@sha256:2f1ffcfff92cb4dcca3dd86a6cb34d0654e5f5dd8265be02085c404edd29d03a
   chart_version: 0.14.2
   controller_service_account: {namespace: arc-systems, name: arc-gha-rs-controller}
   runner_image: ghcr.io/actions/actions-runner:2.338.2@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232
@@ -143,6 +145,113 @@ sets:
       build:
         max: 1
         kaniko_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "3", limit_memory: 6Gi}
+  # MIGRATE-INFRA repos (jvallery/agents#6092). Every ci set runs its checks in a
+  # job sidecar. Until the estate-ci-toolbox (estate-ci#16) publishes its first
+  # digest, the job image is the image these repos' checks run in TODAY (the
+  # runner image of their github-runners validation-standard sets), so parity runs
+  # compare like with like; switch every *fleet-toolbox use to the estate-ci
+  # toolbox in one PR once it exists. Sizes follow today's validation-standard
+  # runner (1 CPU / 1Gi request, 4Gi limit) scaled per repo; max is the
+  # concurrency the repo needs, well under today's per-repo 8.
+  # build: the 4 repos whose images native CI builds today (19 images);
+  # build mounts ci-runners/zot-push-<repo>. No buildcheck sets: native
+  # never built images on PRs (pr_validation: false), so neither do these.
+  - repo: jvallery/monitoring-stack
+    profiles:
+      ci:
+        max: 2
+        job_image: *fleet-toolbox
+        job_uid: 1001
+        job_resources: {cpu: 750m, memory: 1536Mi, limit_cpu: "3", limit_memory: 6Gi}
+      build:
+        max: 1
+        kaniko_resources: {cpu: "1", memory: 2Gi, limit_cpu: "3", limit_memory: 8Gi}
+  - repo: jvallery/network-infra
+    profiles:
+      ci:
+        max: 2
+        job_image: *fleet-toolbox
+        job_uid: 1001
+        job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
+      build:
+        max: 1
+        kaniko_resources: {cpu: "1", memory: 2Gi, limit_cpu: "3", limit_memory: 8Gi}
+  - repo: jvallery/storage-infra
+    profiles:
+      ci:
+        max: 2
+        job_image: *fleet-toolbox
+        job_uid: 1001
+        job_resources: {cpu: 750m, memory: 1536Mi, limit_cpu: "3", limit_memory: 6Gi}
+      build:
+        max: 1
+        kaniko_resources: {cpu: "1", memory: 2Gi, limit_cpu: "3", limit_memory: 8Gi}
+  - repo: jvallery/cortex-ai-compute
+    profiles:
+      ci:
+        max: 2
+        job_image: *fleet-toolbox
+        job_uid: 1001
+        job_resources: {cpu: 750m, memory: 2Gi, limit_cpu: "3", limit_memory: 6Gi}
+      build:
+        max: 1
+        kaniko_resources: {cpu: "1", memory: 2Gi, limit_cpu: "3", limit_memory: 12Gi}
+  - repo: jvallery/proxmox-infrastructure
+    profiles:
+      ci:
+        max: 1
+        job_image: *fleet-toolbox
+        job_uid: 1001
+        job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
+  - repo: jvallery/home-dotfiles
+    profiles:
+      ci:
+        max: 1
+        job_image: *fleet-toolbox
+        job_uid: 1001
+        job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "2", limit_memory: 3Gi}
+  - repo: jvallery/AI_presentation
+    profiles:
+      ci:
+        max: 1
+        job_image: *fleet-toolbox
+        job_uid: 1001
+        job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "2", limit_memory: 3Gi}
+  - repo: jvallery/backups
+    profiles:
+      ci:
+        max: 1
+        job_image: *fleet-toolbox
+        job_uid: 1001
+        job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "2", limit_memory: 3Gi}
+  - repo: jvallery/immich-config
+    profiles:
+      ci:
+        max: 1
+        job_image: *fleet-toolbox
+        job_uid: 1001
+        job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "2", limit_memory: 3Gi}
+  - repo: jvallery/orbit
+    profiles:
+      ci:
+        max: 1
+        job_image: *fleet-toolbox
+        job_uid: 1001
+        job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "2", limit_memory: 3Gi}
+  - repo: jvallery/paige-companion
+    profiles:
+      ci:
+        max: 1
+        job_image: *fleet-toolbox
+        job_uid: 1001
+        job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "2", limit_memory: 3Gi}
+  - repo: jvallery/wordpress
+    profiles:
+      ci:
+        max: 1
+        job_image: *fleet-toolbox
+        job_uid: 1001
+        job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "2", limit_memory: 3Gi}
   # VerdifyConsultancy org-level set shared by its repos (crm, memoryos, ...).
   # Workflows pass runner: verdify-ci to checks.yml. No job image yet: steps run
   # in the runner container until the estate-ci toolbox image (estate-ci#3) lands.

@@ -27,15 +27,27 @@ metadata:
 #   kepler-buildcheck 1 x (750m / 1536Mi, 4 CPU / 6Gi). The native side (kepler's
 #   repo-validate and repo-build charges in agent-fleet-ci) is lowered by the same
 #   amount in the agents PR that disables kepler's catalog row (runbook step 6).
+# - MIGRATE-INFRA repos (jvallery/agents#6092: monitoring-stack, network-infra,
+#   storage-infra, cortex-ai-compute, proxmox-infrastructure, home-dotfiles,
+#   AI_presentation, backups, immich-config, orbit, paige-companion, wordpress):
+#   +20 pods, +16750m CPU / +35328Mi requests, +90 CPU / +145Gi limits,
+#   +208Gi / +736Gi ephemeral storage = the sum of their sets at maxRunners
+#   (12 ci sets, 16 pods; 4 build sets). Their checks run today on the
+#   github-runners validation-standard sets (8 per repo, 1 CPU / 1Gi request each,
+#   arc-runner-budget/arc-standard-runner-budget) and their 19 image builds in
+#   agent-fleet-ci repo-build; those budgets drop by the same amount in the agents
+#   delete-set PR that removes each repo's legacy set and catalog row (runbook
+#   steps 6-7). The four repos that ran on GitHub-hosted runners add no native
+#   capacity to give back.
 spec:
   hard:
-    pods: "19"
-    requests.cpu: "14250m"
-    requests.memory: 28416Mi
-    limits.cpu: "61"
-    limits.memory: 114Gi
-    requests.ephemeral-storage: 241Gi
-    limits.ephemeral-storage: 674Gi
+    pods: "39"
+    requests.cpu: "31000m"
+    requests.memory: 63744Mi
+    limits.cpu: "151"
+    limits.memory: 259Gi
+    requests.ephemeral-storage: 449Gi
+    limits.ephemeral-storage: 1410Gi
     persistentvolumeclaims: "0"
     services.loadbalancers: "0"
     services.nodeports: "0"
