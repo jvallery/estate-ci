@@ -52,7 +52,8 @@ sets:
         job_resources: {cpu: 500m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
-        max: 6
+        # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 6 -> 4 (donor: 24 h peak 1 runner).
+        max: 4
         kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "16", limit_memory: 12Gi}
       buildcheck:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
@@ -103,7 +104,8 @@ sets:
     profiles:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
-        max: 6
+        # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 6 -> 5 (donor: 24 h peak busy 1, peak pods 2-3).
+        max: 5
         job_image: docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
         job_uid: 1001
         job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
@@ -237,7 +239,8 @@ sets:
       ci-pg:
         # COORD 2026-11-06 ~18:1xZ (verdify#1402 waiting on capacity): 1 -> 3.
         # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
-        max: 9
+        # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 9 -> 6 (donor: no runner in 24 h).
+        max: 6
         postgres: true
         job_image: registry.vallery.net/jvallery/agents-ci-tools@sha256:c581b862f3da5c79f71fc982455684350628bc4c9fa51dff77d3b8354cd8f214
         job_uid: 1001
@@ -280,7 +283,8 @@ sets:
         # memory requests 10.4/12.4/18.9/12.0Gi. Soft preference away from node5
         # (COORD: 94% memory requested there).
         # D-29 (Jason, 2026-11-06 ~19:0xZ): 16 -> 24; ARC quota limits.cpu 260 -> 320.
-        max: 24
+        # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 24 -> 30 (+6 from weather-build/kepler-ci/verdify-platform-ci-pg; at max 100%, ~90 jobs queued).
+        max: 30
         avoid_nodes: [vm-k3s-node5]
         job_image: registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2
         job_uid: 1001
