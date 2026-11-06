@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: estate-ci-runner-verdify-platform-pg
+  name: estate-ci-runner-verdify-platform-ci-esphome
   namespace: argocd
   annotations:
     estate-ci.vallery.net/repository: jvallery/verdify-platform
@@ -13,11 +13,11 @@ spec:
     chart: gha-runner-scale-set
     targetRevision: 0.14.2
     helm:
-      releaseName: verdify-platform-pg
+      releaseName: verdify-platform-ci-esphome
       valuesObject:
         githubConfigUrl: https://github.com/jvallery/verdify-platform
         githubConfigSecret: arc-github-app-jvallery
-        runnerScaleSetName: verdify-platform-pg
+        runnerScaleSetName: verdify-platform-ci-esphome
         minRunners: 0
         maxRunners: 1
         controllerServiceAccount:
@@ -26,7 +26,7 @@ spec:
         template:
           metadata:
             labels:
-              estate-ci.vallery.net/profile: pg
+              estate-ci.vallery.net/profile: ci-esphome
           spec:
             automountServiceAccountToken: false
             restartPolicy: Never
@@ -43,7 +43,7 @@ spec:
               whenUnsatisfiable: ScheduleAnyway
               labelSelector:
                 matchLabels:
-                  estate-ci.vallery.net/profile: pg
+                  estate-ci.vallery.net/profile: ci-esphome
             containers:
             - name: runner
               image: ghcr.io/actions/actions-runner:2.338.2@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232
@@ -55,7 +55,7 @@ spec:
               - name: CI_EXPECTED_REPOSITORY
                 value: jvallery/verdify-platform
               - name: CI_RUNNER_PROFILE
-                value: pg
+                value: ci
               - name: CI_EXCHANGE_DIR
                 value: /exchange
               - name: ESTATE_CI
@@ -86,7 +86,7 @@ spec:
                 mountPath: /opt/estate-ci
                 readOnly: true
             - name: job
-              image: registry.vallery.net/jvallery/agents-ci-tools@sha256:c581b862f3da5c79f71fc982455684350628bc4c9fa51dff77d3b8354cd8f214
+              image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
               command:
               - /bin/sh
               - /opt/estate-ci/sidecar-agent.sh
@@ -97,12 +97,12 @@ spec:
                 value: /exchange
               resources:
                 requests:
-                  cpu: 500m
-                  memory: 1Gi
+                  cpu: '1'
+                  memory: 2Gi
                   ephemeral-storage: 4Gi
                 limits:
-                  cpu: '2'
-                  memory: 4Gi
+                  cpu: '4'
+                  memory: 8Gi
                   ephemeral-storage: 16Gi
               securityContext:
                 allowPrivilegeEscalation: false
@@ -120,38 +120,6 @@ spec:
               - name: estate-ci-scripts
                 mountPath: /opt/estate-ci
                 readOnly: true
-            - name: postgres
-              image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-777ad6774e00fff6@sha256:d66df406385b9f3c43c47e94fe3a0002278ef56d21b82a8c9d3a22f91aa9c3f0
-              command:
-              - /bin/sh
-              - -ec
-              args:
-              - bin=$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1); $bin/initdb -D /pg/data -U postgres --auth=trust -E UTF8 >/dev/null; exec $bin/postgres -D /pg/data -k /pg -c listen_addresses=127.0.0.1
-                -c fsync=off -c full_page_writes=off -c synchronous_commit=off -c max_connections=200
-              resources:
-                requests:
-                  cpu: 500m
-                  memory: 1Gi
-                  ephemeral-storage: 1Gi
-                limits:
-                  cpu: '1'
-                  memory: 2Gi
-                  ephemeral-storage: 2Gi
-              securityContext:
-                allowPrivilegeEscalation: false
-                capabilities:
-                  drop:
-                  - ALL
-                runAsNonRoot: true
-                runAsUser: 26
-                runAsGroup: 26
-              readinessProbe:
-                tcpSocket:
-                  port: 5432
-                periodSeconds: 2
-              volumeMounts:
-              - name: pg
-                mountPath: /pg
             volumes:
             - name: work
               emptyDir:
@@ -163,9 +131,6 @@ spec:
               configMap:
                 name: estate-ci-scripts
                 defaultMode: 365
-            - name: pg
-              emptyDir:
-                sizeLimit: 10Gi
   destination:
     server: https://kubernetes.default.svc
     namespace: ci-runners
