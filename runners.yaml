@@ -101,6 +101,47 @@ sets:
       build:
         max: 1
         kaniko_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
+  # MIGRATE-APPS repos (jvallery/agents#6092). Checks run in the estate-ci
+  # toolbox; homeassistant adds sets for its two CI images (ci-<variant>).
+  # Max runners kept low while workers are CPU-tight; jobs queue instead.
+  - repo: jvallery/docs
+    profiles:
+      ci:
+        max: 1
+        job_image: *toolbox
+        job_uid: 1001
+        job_resources: {cpu: 500m, memory: 1536Mi, limit_cpu: "3", limit_memory: 4Gi}
+  - repo: jvallery/options-tracker
+    profiles:
+      ci:
+        max: 1
+        job_image: *toolbox
+        job_uid: 1001
+        job_resources: {cpu: 500m, memory: 1536Mi, limit_cpu: "3", limit_memory: 4Gi}
+  - repo: jvallery/sentinel
+    profiles:
+      ci:
+        max: 2
+        job_image: *toolbox
+        job_uid: 1001
+        job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 3Gi}
+  - repo: jvallery/homeassistant
+    profiles:
+      ci:
+        max: 2
+        job_image: *toolbox
+        job_uid: 1001
+        job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 3Gi}
+      ci-ha:
+        max: 1
+        job_image: registry.vallery.net/jvallery/homeassistant-ci-homeassistant@sha256:ee28d5eaa7269fbbb3a8049f1bbd9723e784636cd3576be719c2471f9e704b90
+        job_uid: 1001
+        job_resources: {cpu: "1", memory: 2Gi, limit_cpu: "3", limit_memory: 6Gi}
+      ci-esphome:
+        max: 1
+        job_image: registry.vallery.net/jvallery/homeassistant-ci-esphome@sha256:034609288b8085f540677f856bd70cc877791e4a50f6f87fadff21b854a948cf
+        job_uid: 1001
+        job_resources: {cpu: "1", memory: 2Gi, limit_cpu: "3", limit_memory: 6Gi}
   # verdify-platform (DASH, verdify-platform#1397/#1402). It transfers to jvallery
   # first (D19), hence the jvallery URL. Sets follow #1402's job map, all uid 1001
   # (ci/gha/lib.sh makes a private writable HOME):

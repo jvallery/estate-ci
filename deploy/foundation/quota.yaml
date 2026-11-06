@@ -48,15 +48,22 @@ metadata:
 #   requests, +4 CPU / +6Gi limits, +20Gi / +56Gi ephemeral (kepler-build 1 x
 #   runner + Kaniko, same sizes as kepler-buildcheck). Native side: kepler's
 #   repo-build charge in agent-fleet-ci, lowered with its catalog row (step 6).
+# - MIGRATE-APPS checks (docs#22, options-tracker#167, sentinel#612,
+#   homeassistant#1114): +8 pods, +7 CPU / +15360Mi requests, +36 CPU / +48Gi
+#   limits, +64Gi / +256Gi ephemeral. Sets at maxRunners: docs-ci 1,
+#   options-tracker-ci 1 (750m / 2Gi req, 5 CPU / 6Gi lim each), sentinel-ci 2,
+#   homeassistant-ci 2 (750m / 1536Mi, 4 CPU / 5Gi), homeassistant-ci-ha 1,
+#   homeassistant-ci-esphome 1 (1250m / 2560Mi, 5 CPU / 8Gi). Native side: these
+#   repos' repo-validate charges in agent-fleet-ci, lowered with each catalog row.
 spec:
   hard:
-    pods: "39"
-    requests.cpu: "31250m"
-    requests.memory: 64256Mi
-    limits.cpu: "151"
-    limits.memory: 260Gi
-    requests.ephemeral-storage: 449Gi
-    limits.ephemeral-storage: 1386Gi
+    pods: "47"
+    requests.cpu: "38250m"
+    requests.memory: 79616Mi
+    limits.cpu: "187"
+    limits.memory: 308Gi
+    requests.ephemeral-storage: 513Gi
+    limits.ephemeral-storage: 1642Gi
     persistentvolumeclaims: "0"
     services.loadbalancers: "0"
     services.nodeports: "0"
