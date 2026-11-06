@@ -58,6 +58,8 @@ spec:
                 value: build
               - name: CI_EXCHANGE_DIR
                 value: /exchange
+              - name: ESTATE_CI
+                value: /opt/estate-ci
               resources:
                 requests:
                   cpu: 250m
@@ -76,15 +78,15 @@ spec:
                 runAsUser: 1001
                 runAsGroup: 1001
               volumeMounts:
-              - &id001
-                name: work
+              - name: work
                 mountPath: /home/runner/_work
-              - &id002
-                name: exchange
+              - name: exchange
                 mountPath: /exchange
-              - &id003
-                name: estate-ci-scripts
+              - name: estate-ci-scripts
                 mountPath: /opt/estate-ci
+                readOnly: true
+              - name: zot-push
+                mountPath: /run/secrets/zot-push
                 readOnly: true
             - name: kaniko
               image: registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e
@@ -108,9 +110,13 @@ spec:
                   memory: 12Gi
                   ephemeral-storage: 40Gi
               volumeMounts:
-              - *id001
-              - *id002
-              - *id003
+              - name: work
+                mountPath: /home/runner/_work
+              - name: exchange
+                mountPath: /exchange
+              - name: estate-ci-scripts
+                mountPath: /opt/estate-ci
+                readOnly: true
               - name: registry-pull
                 mountPath: /kaniko/.docker
                 readOnly: true
@@ -128,6 +134,12 @@ spec:
             - name: registry-pull
               secret:
                 secretName: zot-pull
+                items:
+                - key: .dockerconfigjson
+                  path: config.json
+            - name: zot-push
+              secret:
+                secretName: zot-push-weather
                 items:
                 - key: .dockerconfigjson
                   path: config.json

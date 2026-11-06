@@ -51,18 +51,19 @@ Owner: jvallery/storage-infra. Follow its zot principal procedure
    resourceVersion-fenced JSON patch; reconcile only the registry-origin
    ConfigMap/StatefulSet at the merged revision (zot restarts: announce in steer,
    check no other lane is pushing, one Ready pod, PVC UID unchanged).
-3. Store the consumer copy in the repo, never printing it:
-   `gh api -X PUT repos/<owner>/<repo>/environments/registry -f 'deployment_branch_policy[protected_branches]=false' -F 'deployment_branch_policy[custom_branch_policies]=true'`,
-   `gh api -X POST repos/<owner>/<repo>/environments/registry/deployment-branch-policies -f name=main`,
-   then pipe the values into
-   `gh secret set ESTATE_CI_REGISTRY_USERNAME --env registry -R <owner>/<repo>` and
-   `... ESTATE_CI_REGISTRY_PASSWORD ...`.
+3. Seal the consumer copy into central KSOPS, never printing it: a
+   `kubernetes.io/dockerconfigjson` Secret `zot-push-<r>` (key `.dockerconfigjson`,
+   auth for `registry-origin.registry-origin.svc.cluster.local:5000`) in
+   jvallery/agents `platform/gitops/secrets-ksops/estate-ci/`, added to that
+   bundle's generator (agents PR, COORD-ASK; delivered by `estate-ci-secrets`).
+   The renderer mounts it only into `<r>-build` runner containers. No GitHub
+   secrets or environments are involved (R2).
 4. Prove value-blind: an upload start to the repo's path is 202; to another
    repo's path 401/403.
 
 ## 3. Runners (PR to jvallery/estate-ci)
 
-Add the repo to `runners.yaml` (`profiles: {ci: {...}, pg: {...}, build: {...}}`),
+Add the repo to `runners.yaml` (`profiles: {ci: {...}, pg: {...}, build: {...}, buildcheck: {...}}`),
 run `python3 scripts/render_runners.py`, and open a PR. In the same PR, raise
 `deploy/foundation/quota.yaml` by what the new sets need, and write the matching
 decrease of the repo's native budget in the PR body (it lands in step 6).
@@ -83,7 +84,11 @@ Keep the job ids and names stable: they become the required check contexts
 (`<job id> / <name>`). In this phase:
 
 - `ci.yml` runs on PRs and `main` next to native CI. Native stays required.
-- `build.yml` is either absent or `push: false` (native still pushes and pins).
+- `build.yml` is either absent or `push: false` on `<r>-buildcheck` (native still pushes and pins).
+- Every workflow must pass `"$ESTATE_CI/check-runner-labels.sh" .` (R1/R2):
+  ARC labels only, `actions/checkout` and estate-ci workflows only. Replace
+  `actions/setup-*`, cache and marketplace actions with repo scripts or a
+  `job_image` that already contains the toolchain.
 - Concurrency: `cancel-in-progress` on PRs only (see the example). That replaces
   native's supersession and re-plan logic; a moved `main` does not rerun anything (L1).
 
@@ -134,11 +139,39 @@ Remove the repo's legacy `github-runners` scale set and auth Application (if it
 had one) and its native catalog row, in the agents delete-set that FLEET-DECOM
 runs through COORD.
 
+## Forgejo/Gitea Actions portability checklist (R3)
+
+Run through this for every migrated repo; it is what keeps the later forge
+move a re-registration rather than a rewrite.
+
+- [ ] Every `runs-on` is an estate ARC label; `check-runner-labels.sh` passes.
+- [ ] Only `actions/checkout` and `jvallery/estate-ci` workflows in `uses:`
+      (Forgejo mirrors `actions/checkout`; nothing else needs a GitHub-hosted action).
+- [ ] All logic is in repo scripts (`ci/*.sh`, Makefile, task file) or
+      `$ESTATE_CI/*.sh`; each workflow step is one command.
+- [ ] No GitHub Environments, OIDC, Actions cache, artifacts, GHCR, Pages,
+      `pull_request_target` or `workflow_run` in the build path. Outputs that
+      persist go to registry.vallery.net or Garage.
+- [ ] Step outputs via `$GITHUB_OUTPUT` only (Forgejo supports it); contexts
+      limited to `github.*`, `inputs.*`, `needs.*`, `steps.*`, `secrets.*`.
+- [ ] Secrets the build needs come from Kubernetes (runner Pod mounts), not from
+      forge secret stores; the job token is used only for git push and
+      `forge-api.sh` calls.
+- [ ] Pin PRs use `pin-bump.sh` (plain git + `forge-api.sh`; `FORGE=forgejo`).
+- [ ] Cross-repo reusable workflows: if the target forge cannot call them,
+      vendor the job (checkout + one `run:` line calling `$ESTATE_CI/...`).
+      Every estate-ci workflow header shows its vendored form.
+- [ ] `concurrency` / `cancel-in-progress`: verify on the target forge; where
+      unsupported, superseded PR runs finish instead of cancelling (harmless,
+      costs runner time).
+- [ ] Required checks are listed by job name, so a forge's branch protection
+      can name the same contexts.
+
 ## Rollback per step
 
 | Step | Undo |
 |---|---|
-| 2 | Revert the ACL PR, re-reconcile registry-origin, remove the htpasswd entry after no consumer remains, delete the environment secrets. |
+| 2 | Revert the ACL PR, re-reconcile registry-origin, remove the htpasswd entry after no consumer remains, remove `zot-push-<r>` from the estate-ci KSOPS bundle. |
 | 3 | Revert the estate-ci PR; Argo leaves the set (prune off): delete the Application `estate-ci-runner-<r>-*` by UID. |
 | 4 | Delete the workflow files. |
 | 5 | Re-PUT the saved ruleset/protection JSON. |

@@ -13,10 +13,10 @@ Tracking: jvallery/agents#6092 (FLEET-DECOM epic), jvallery/agents#6094 (this fo
 
 | Path | What |
 |---|---|
-| `.github/workflows/checks.yml` | Reusable: run one check command (optionally inside the repo's CI image, optionally with Postgres). |
-| `.github/workflows/image-build.yml` | Reusable: Kaniko build in-cluster; on push, crane push to zot and output the digest. |
-| `.github/workflows/pin-bump.yml` | Reusable: open a PR that rewrites digest pins in GitOps manifests, then dispatch the repo's checks on it. |
-| `actions/sidecar-run`, `actions/setup-crane` | Composite actions for custom jobs on estate-ci runners. |
+| `deploy/foundation/bin/` | **All CI logic.** Mounted at `/opt/estate-ci` (`$ESTATE_CI`) in every runner Pod: `image-build.sh`, `pin-bump.sh` + `forge-api.sh`, `sidecar-run.sh`, `wait-postgres.sh`, `check-runner-labels.sh`, and the job guard. |
+| `.github/workflows/checks.yml` | Thin reusable wrapper: checkout + one repo command (optionally inside the repo's CI image, optionally with Postgres). |
+| `.github/workflows/image-build.yml` | Thin reusable wrapper over `image-build.sh`. |
+| `.github/workflows/pin-bump.yml` | Thin reusable wrapper over `pin-bump.sh`. |
 | `runners.yaml` | The runner registry: which repos get which scale sets. |
 | `scripts/render_runners.py` | Renders `runners.yaml` into `deploy/runners/apps/` (one Argo Application per scale set). |
 | `deploy/foundation/` | Namespace `ci-runners`, ResourceQuota/LimitRange, NetworkPolicies, the runner scripts ConfigMap. |
@@ -36,11 +36,12 @@ can use one org-level set for all its repos. The scale-set name is the
 |---|---|---|
 | `ci` | runner (1 CPU / 1Gi → 4 CPU / 4Gi); optional `job` sidecar running the repo's own CI image | lint, unit tests, render/regen checks |
 | `pg` | runner + Postgres sidecar on `127.0.0.1:5432` (emptyDir, fsync off; CNPG image with pgvector) [+ job] | database-backed suites; no PVC or CNPG cluster per run |
-| `build` | runner + Kaniko sidecar | image builds |
+| `build` | runner + Kaniko sidecar + the repo's zot push secret | image build + push; default-branch push/dispatch only |
+| `buildcheck` | runner + Kaniko sidecar, no credential | PR image builds (no push) |
 
 There is no Docker daemon, container socket, privileged container, hostPath,
 Kubernetes API token or RBAC in a runner Pod. Sidecars are driven through a
-Pod-local file exchange (`deploy/foundation/files/sidecar-agent.sh`): the
+Pod-local file exchange (`deploy/foundation/bin/sidecar-agent.sh`, client `sidecar-run.sh`): the
 runner writes a script into a shared emptyDir, the sidecar runs it and streams
 the log and exit code back. That gives "run this step in my CI image" and
 "build this image" without Docker-in-Docker or Kubernetes container mode.
@@ -52,7 +53,8 @@ runs the same Kaniko image in baseline `agent-fleet-ci`). Everything else runs
 as non-root with all capabilities dropped. A job-started hook
 (`job-started-guard.sh`, from a ConfigMap, so a PR cannot change it) refuses
 jobs from another repository, fork pull requests, `pull_request_target` and
-`workflow_run` events, and non-build events on build runners.
+`workflow_run` events, and anything but a default-branch push or dispatch on a
+`build` runner.
 
 **Network.** Runner Pods accept no ingress. Egress: DNS, public 80/443 (private
 ranges excluded), the split-horizon apps ingress `192.168.7.10:443` (how
@@ -62,23 +64,26 @@ ranges excluded), the split-horizon apps ingress `192.168.7.10:443` (how
 (`deploy/foundation/quota.yaml`). It starts at pilot size and grows only by
 what each cutover removes from the repo's native-ci budget.
 
-**Builds and the registry.** Kaniko builds to a tarball with `--no-push`,
-holding only the cluster pull credential. On a push to the default branch the
-build job enters the caller's GitHub environment `registry` (deployment
-branches: default branch only), whose secrets `ESTATE_CI_REGISTRY_USERNAME`
-and `ESTATE_CI_REGISTRY_PASSWORD` are that repo's own zot principal (write
-access to only its image paths, in storage-infra's zot ACL). The runner
-container pushes the tarball with crane to the zot origin as
-`<image>:gha-<sha12>`, reads the digest back, and outputs
-`registry.vallery.net/<image>@sha256:…`. PR jobs never get the write
-credential, and Dockerfile `RUN` steps never see it.
+**Builds and the registry.** `image-build.sh` drives Kaniko to build a
+tarball with `--no-push`; Kaniko holds only the cluster pull credential. With
+`--push` (only possible on the `<repo>-build` set) the runner container pushes
+the tarball with crane to the zot origin as `<image>:gha-<sha12>`, reads the
+digest back and outputs `registry.vallery.net/<image>@sha256:…`. The push
+credential is that repo's own zot principal (write to only its image paths, in
+storage-infra's zot ACL), delivered by central KSOPS as
+`ci-runners/zot-push-<repo>` and mounted only into that repo's `build` runner
+container. PR jobs (other sets) never have it and Dockerfile `RUN` steps never
+see it. No GitHub Environments, OIDC, Actions cache or artifact service.
 
-**Pins.** `pin-bump.yml` rewrites digests (kustomize `images:` entries or
+**Pins.** `pin-bump.sh` rewrites digests (kustomize `images:` entries or
 inline `<image>@sha256:` references), pushes a branch and opens a PR with
 `GITHUB_TOKEN`. Because GitHub does not start workflows for `GITHUB_TOKEN`
 events, it then `workflow_dispatch`es the repo's checks workflow on the pin
 branch, so the PR head gets the same check runs required checks expect.
-Merging the PR is the deploy; Argo CD syncs it. No extra GitHub App is needed.
+Branch and commit are plain git; the PR, dispatch and auto-merge calls are in
+`forge-api.sh`, the one file to swap for another forge (`FORGE=forgejo` is
+implemented against the Gitea/Forgejo API). Merging the PR is the deploy;
+Argo CD syncs it. No extra GitHub App is needed.
 
 **Registration.** Runners register with the existing GitHub App
 `vallery-agent-fleet-ci` (installations on `jvallery` and
@@ -98,7 +103,19 @@ After that, onboarding a repo touches only this repository and the repo itself.
 so a new push to a PR cancels its superseded run, and runs on `main` queue
 instead of cancelling each other.
 
+## Estate CI rules (COORD CI DESIGN RULES, 2026-11-06)
+
+- **R1** Every job runs on an ARC set; no GitHub-hosted runner labels anywhere
+  (this repo's own `self-test` runs on `estate-ci-ci`). `check-runner-labels.sh`
+  enforces it: every repo's CI should call `"$ESTATE_CI/check-runner-labels.sh" .`.
+- **R2** Workflow YAML stays thin: `actions/checkout` plus these reusable
+  workflows only; logic lives in repo scripts and `/opt/estate-ci`.
+- **R3** Each workflow file states its Forgejo/Gitea Actions notes; the runbook
+  has the portability checklist.
+
 ## Using it
 
 Pin every `uses: jvallery/estate-ci/...@<sha>` to a full commit SHA. See
-`docs/examples/ci.yml` and `docs/examples/build.yml`.
+`docs/examples/ci.yml` and `docs/examples/build.yml`. The reusable workflows
+are conveniences: a job that is `actions/checkout` plus
+`run: "$ESTATE_CI/image-build.sh" ...` is equivalent and forge-neutral.

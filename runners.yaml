@@ -4,9 +4,11 @@
 # open a PR. CI fails if the rendered files are stale.
 #
 # Profiles (scale set name = <repo>-<suffix>; that name is also the runs-on label):
-#   ci     runner [+ job sidecar running the repo CI image]          suffix -ci
-#   pg     runner + Postgres sidecar on 127.0.0.1:5432 [+ job]        suffix -pg
-#   build  runner + Kaniko sidecar (in-cluster image builds)          suffix -build
+#   ci          runner [+ job sidecar running the repo CI image]         suffix -ci
+#   pg          runner + Postgres sidecar on 127.0.0.1:5432 [+ job]       suffix -pg
+#   build       runner + Kaniko sidecar + the repo's zot push secret
+#               (zot-push-<repo>); default-branch push/dispatch only    suffix -build
+#   buildcheck  runner + Kaniko sidecar, no push credential (PR builds)  suffix -buildcheck
 # Sizes are requests -> limits per Pod. The namespace ResourceQuota
 # (deploy/foundation/quota.yaml) is the hard envelope across all sets.
 defaults:
@@ -21,6 +23,7 @@ defaults:
     ci: 3
     pg: 1
     build: 1
+    buildcheck: 1
 
 # GitHub App registration Secret per owner (Secret in namespace ci-runners).
 owners:
@@ -41,3 +44,14 @@ sets:
       build:
         max: 2
         kaniko_resources: {cpu: "1", memory: 3Gi, limit_cpu: "3", limit_memory: 12Gi}
+      buildcheck:
+        max: 1
+        kaniko_resources: {cpu: "1", memory: 3Gi, limit_cpu: "3", limit_memory: 12Gi}
+  # estate-ci's own self-test (R1: no GitHub-hosted runners, even here).
+  - repo: jvallery/estate-ci
+    profiles:
+      ci:
+        max: 2
+        job_image: docker.io/library/python:3.13-slim@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc
+        job_uid: 1001
+        job_resources: {cpu: 500m, memory: 512Mi, limit_cpu: "2", limit_memory: 2Gi}

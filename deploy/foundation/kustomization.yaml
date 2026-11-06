@@ -10,6 +10,15 @@ generatorOptions:
   disableNameSuffixHash: true
 configMapGenerator:
   - name: estate-ci-scripts
+    # Mounted at /opt/estate-ci in every runner Pod ($ESTATE_CI). All CI logic
+    # lives here and in each repo's own scripts; workflow YAML only calls them.
     files:
-      - files/sidecar-agent.sh
-      - files/job-started-guard.sh
+      - bin/sidecar-agent.sh
+      - bin/sidecar-run.sh
+      - bin/job-started-guard.sh
+      - bin/image-build.sh
+      - bin/pin-bump.sh
+      - bin/pin-rewrite.py
+      - bin/forge-api.sh
+      - bin/wait-postgres.sh
+      - bin/check-runner-labels.sh

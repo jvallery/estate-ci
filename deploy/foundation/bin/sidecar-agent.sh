@@ -1,10 +1,10 @@
 #!/bin/sh
-# estate-ci sidecar agent.
+# estate-ci sidecar agent (client: sidecar-run.sh).
 #
 # Runs inside a sidecar container of an ARC runner Pod (kaniko, job image).
 # The runner container drops a request directory into the shared emptyDir
 # /exchange/<sidecar>/<id>/ with:
-#   script  - POSIX shell script to run (written by actions/sidecar-run)
+#   script  - POSIX shell script to run (written by sidecar-run.sh)
 #   cwd     - working directory (the runner workspace is mounted at the same path)
 #   ready   - created last; the agent starts the request when it appears
 # The agent writes:

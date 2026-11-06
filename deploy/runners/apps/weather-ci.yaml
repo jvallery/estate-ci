@@ -58,6 +58,8 @@ spec:
                 value: ci
               - name: CI_EXCHANGE_DIR
                 value: /exchange
+              - name: ESTATE_CI
+                value: /opt/estate-ci
               resources:
                 requests:
                   cpu: 250m
@@ -76,14 +78,11 @@ spec:
                 runAsUser: 1001
                 runAsGroup: 1001
               volumeMounts:
-              - &id001
-                name: work
+              - name: work
                 mountPath: /home/runner/_work
-              - &id002
-                name: exchange
+              - name: exchange
                 mountPath: /exchange
-              - &id003
-                name: estate-ci-scripts
+              - name: estate-ci-scripts
                 mountPath: /opt/estate-ci
                 readOnly: true
             - name: job
@@ -114,9 +113,13 @@ spec:
                 runAsUser: 1001
                 runAsGroup: 1001
               volumeMounts:
-              - *id001
-              - *id002
-              - *id003
+              - name: work
+                mountPath: /home/runner/_work
+              - name: exchange
+                mountPath: /exchange
+              - name: estate-ci-scripts
+                mountPath: /opt/estate-ci
+                readOnly: true
             volumes:
             - name: work
               emptyDir:

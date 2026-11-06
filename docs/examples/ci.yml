@@ -22,18 +22,25 @@ jobs:
     uses: jvallery/estate-ci/.github/workflows/checks.yml@<sha>
     with:
       name: lint
-      run: make lint
+      run: ci/lint.sh
 
   test:
     uses: jvallery/estate-ci/.github/workflows/checks.yml@<sha>
     with:
       name: test
-      run: make test
+      run: ci/test.sh
       # in-job-image: true     # run inside the repo CI image sidecar (runners.yaml job_image)
       # runner: <repo>-pg      # Postgres sidecar profile
       # postgres: true         # wait for it and export PGHOST/DATABASE_URL
 
-  # Build-only on PRs (no registry credential): proves the Dockerfiles build.
+  # Must stay first: R1/R2 lint (ARC labels only, no marketplace actions).
+  workflow-lint:
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@<sha>
+    with:
+      name: workflow-lint
+      run: '"$ESTATE_CI/check-runner-labels.sh" .'
+
+  # Build-only on PRs on the credential-free <repo>-buildcheck set.
   image:
     if: github.event_name == 'pull_request'
     uses: jvallery/estate-ci/.github/workflows/image-build.yml@<sha>

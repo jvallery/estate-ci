@@ -1,5 +1,5 @@
-# Copy to <repo>/.github/workflows/build.yml. Requires the GitHub environment
-# "registry" (deployment branches: main) with ESTATE_CI_REGISTRY_USERNAME/PASSWORD.
+# Copy to <repo>/.github/workflows/build.yml. Requires the repo's zot push
+# Secret ci-runners/zot-push-<repo> and a "<repo>-build" set (runbook steps 2-3).
 name: build
 
 on:
@@ -22,7 +22,6 @@ jobs:
       image: jvallery/<repo>-app
       dockerfile: Dockerfile
       push: true
-    secrets: inherit
 
   pin:
     needs: [app]
@@ -35,3 +34,12 @@ jobs:
       pins: |
         deploy/k8s/kustomization.yaml registry.vallery.net/jvallery/<repo>-app ${{ needs.app.outputs.digest }}
       checks-workflow: ci.yml
+
+# Vendored (forge-neutral) equivalent of the app job:
+#   app:
+#     runs-on: <repo>-build
+#     outputs: {digest: ${{ steps.b.outputs.digest }}}
+#     steps:
+#       - uses: actions/checkout@<sha>
+#       - id: b
+#         run: '"$ESTATE_CI/image-build.sh" --image jvallery/<repo>-app --push'

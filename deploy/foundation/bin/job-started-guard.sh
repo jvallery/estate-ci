@@ -7,7 +7,8 @@
 #
 #   CI_EXPECTED_REPOSITORY  owner/name this scale set serves, or 'Owner/*' for an
 #                           org-level set that serves every repo of that owner
-#   CI_RUNNER_PROFILE       ci | pg | build
+#   CI_RUNNER_PROFILE       ci | pg | build | buildcheck
+#   CI_BUILD_REF            ref build runners serve (default refs/heads/main)
 set -euo pipefail
 fail() { echo "estate-ci guard: $*" >&2; exit 1; }
 
@@ -46,9 +47,13 @@ case "$event" in
 esac
 
 if [[ "$profile" == "build" ]]; then
+  # build sets mount the repo's zot push credential: default-branch push or
+  # dispatch only. PR builds use the credential-free "<repo>-buildcheck" set.
+  build_ref="${CI_BUILD_REF:-refs/heads/main}"
   case "$event" in
-    push|workflow_dispatch|pull_request|merge_group) ;;
-    *) fail "event ${event} may not use a build runner" ;;
+    push|workflow_dispatch) ;;
+    *) fail "event ${event} may not use a build runner (use <repo>-buildcheck for PR builds)" ;;
   esac
+  [[ "${GITHUB_REF:-}" == "$build_ref" ]] || fail "build runners serve ${build_ref} only, not ${GITHUB_REF:-unknown}"
 fi
 echo "estate-ci guard: ${repo} ${event} ${GITHUB_REF:-} allowed on profile ${profile}"
