@@ -25,6 +25,7 @@ by `.github/workflows/build.yml` (Kaniko on `estate-ci-buildcheck` for PRs,
 | gitleaks | 8.30.1 | built from module source with go1.27.3 (go.sum hash pinned; fleet recipe) |
 | shellcheck | v0.11.0 | GitHub release, sha256 recorded from the asset |
 | actionlint | 1.7.12 | GitHub release, checksums.txt |
+| gh | 2.103.3 | GitHub release, checksums.txt. **ADR-0009 exception E-1**: only `gh attestation verify` of upstream artifacts (sentinel frigate-promotion); no token in the image |
 
 `versions.sh --assert` runs at build time and fails on any drift; the result is
 in the image at `/usr/local/share/estate-ci-toolbox/versions.txt`.
@@ -33,8 +34,9 @@ Environment: `HOME=/home/ci` (uid/gid 1001, the `job_uid` runner sets use),
 `LANG=C.UTF-8`, `PATH` includes `~/.local/bin` and `/opt/node/bin`. The image
 sets no entrypoint; the runner Pod runs `sidecar-agent.sh` in it.
 
-Not included, by design: Docker or any container runtime, cloud CLIs, forge
-CLIs (`gh`), credentials. Repository-specific stacks (Playwright browsers,
+Not included, by design: Docker or any container runtime, cloud CLIs,
+credentials. `gh` is present only for exception E-1; forge API calls still go
+through `forge-api.sh`. Repository-specific stacks (Playwright browsers,
 PostgreSQL server, ESPHome) belong in that repository's own CI image.
 
 ## Using it

@@ -107,6 +107,17 @@ RUN fetch-verified "https://github.com/astral-sh/uv/releases/download/${UV_VERSI
     && mkdir -p /opt/node && tar -xJf node.txz -C /opt/node --strip-components=1 \
     && rm -rf /tmp/tools/*
 
+# gh v2.103.3: ADR-0009 exception E-1 (upstream supply-chain attestation
+# verification). Only for `gh attestation verify` of upstream release artifacts
+# (sentinel frigate-promotion); never for forge API calls, which go through the
+# forge wrapper (forge-api.sh). The image carries no token.
+ARG GH_VERSION=2.103.3
+ARG GH_SHA256=4c806978ffce1cec70853302a56d70ac6da4f19bae7adca4e1a8ab00633dd91d
+RUN fetch-verified "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" "${GH_SHA256}" gh.tgz \
+    && tar -xzf gh.tgz "gh_${GH_VERSION}_linux_amd64/bin/gh" \
+    && install -m 0755 "gh_${GH_VERSION}_linux_amd64/bin/gh" /usr/local/bin/gh \
+    && rm -rf /tmp/tools/*
+
 COPY --from=gitleaks-build /out/gitleaks /usr/local/bin/gitleaks
 
 # The job sidecar runs as uid/gid 1001 (runners.yaml job_uid). Give it a home.
