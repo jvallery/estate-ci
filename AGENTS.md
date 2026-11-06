@@ -31,9 +31,12 @@ Actions workflows, the ARC runner scale sets in namespace `ci-runners`, and the
 per-repo migration runbook. Read `README.md` and `docs/MIGRATION-RUNBOOK.md`.
 
 - This repo is **public and secret-free**. Never commit credentials,
-  kubeconfigs, decrypted material or operator-machine paths. Secrets live in
-  central KSOPS (registration, pull) and in each consumer repo's GitHub
-  environment `registry` (zot push).
+  kubeconfigs, decrypted material or operator-machine paths. Secrets live only in
+  central KSOPS (registration, pull, per-repo zot push).
+- Estate CI rules R1-R3 (README): no GitHub-hosted runners anywhere, including
+  this repo; thin YAML (only `actions/checkout` and these workflows); logic in
+  `deploy/foundation/bin/` (mounted at `/opt/estate-ci`); keep it runnable on
+  Forgejo/Gitea Actions.
 - `deploy/runners/apps/` is generated: edit `runners.yaml`, run
   `python3 scripts/render_runners.py`, commit both. CI fails on stale output.
 - Callers pin reusable workflows by full commit SHA. A breaking change to a
