@@ -62,7 +62,9 @@ sets:
   # Native steps -> profiles: lint-unit and manifests -> research-vault-ci,
   # postgres -> research-vault-pg (2 shards, run one at a time), vault-server and
   # vault-ci images -> research-vault-build. Every job runs in the vault-ci job
-  # image (the digest native pins in the agents registry record gh-1442052745).
+  # image: the GHA Kaniko build of Dockerfile.ci at research-vault 29277aac
+  # (tag gha-29277aace592, build run 42254218463), which carries Chromium and
+  # RV_BROWSER so the lint job runs the web browser specs (research-vault#209).
   # The pg sidecar is the production CNPG image (PostgreSQL 16.15 + pgvector
   # 0.8.7), the same digest as research-vault deploy/k8s/database/cluster.yaml.
   # Sizes: job = native check pod (500m request, 2 CPU / 4Gi limit), Kaniko =
@@ -76,7 +78,7 @@ sets:
         # COORD GO-FAST 2026-11-06 ~18:0xZ (Jason first-hand: "Drive FAST"): 3 -> 4.
         # D-39 (Jason 2026-11-06 ~21:15Z): 4 -> 12.
         max: 12
-        job_image: registry.vallery.net/jvallery/vault-ci@sha256:5a4b84df9e93d04dadab9da714f456f8f1231aaa59954103081e6144d22ed964
+        job_image: registry.vallery.net/jvallery/vault-ci@sha256:afedf20188449a65eb77b1299ae61b40285d89996c9aef04524cfe567aaab009
         job_uid: 1001
         # COORD 2026-11-06 ~20:0xZ (Jason: accelerate RV2 CI): 'unit' took 30-36 min
         # pinned at ~1 core under limit 2 / 4Gi. Was 500m / 768Mi req, 2 / 4Gi lim.
@@ -85,7 +87,7 @@ sets:
         # COORD 2026-11-06 ~18:4xZ (D5 critical path, Jason GO): 1 -> 3.
         # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
         max: 9
-        job_image: registry.vallery.net/jvallery/vault-ci@sha256:5a4b84df9e93d04dadab9da714f456f8f1231aaa59954103081e6144d22ed964
+        job_image: registry.vallery.net/jvallery/vault-ci@sha256:afedf20188449a65eb77b1299ae61b40285d89996c9aef04524cfe567aaab009
         job_uid: 1001
         job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "16", limit_memory: 8Gi}
         postgres_image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-b67681006859e657@sha256:09109f553eafc0ed17dccf0c8b3af77a6e1293707a2a14d8d6458a2de3a964eb
