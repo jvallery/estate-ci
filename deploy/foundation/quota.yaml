@@ -65,15 +65,27 @@ metadata:
 #   512Mi), which also ends native candidate pods (5 live: 3 small 1100m / 640Mi,
 #   2 large 3100m / 2688Mi): 9950m / 9856Mi requests given up >= the 2250m /
 #   5376Mi taken here.
+# - COORD GO-FAST 2026-11-06 ~18:1xZ (Jason first-hand: "Drive FAST"): sized
+#   from live load, not per-set arithmetic. research-vault-ci max 3 -> 4,
+#   agents-build 2 -> 4, verdify-platform-ci 2 -> 3, verdify-platform-ci-pg
+#   1 -> 3 (verdify#1402 waiting on capacity). agents-ci stays 12: worker
+#   memory requests were 75-91% of allocatable on node4-7 at 18:0xZ, so 16
+#   waits for the native drain. Native agent-fleet-ci held ~22.4 CPU /
+#   28.6GiB requests across 48 pods (COORD read) and goes to 0 as agents#6164
+#   and the build moves land (35 pods / 5.4 CPU / 14.4GiB at 18:0xZ).
+#   limits.cpu was the binding dimension (199/201). pods 50 -> 70,
+#   requests.cpu 40.5 -> 60, requests.memory 83Gi -> 106Gi, limits.cpu 201 ->
+#   260, limits.memory 326Gi -> 400Gi, ephemeral 537Gi / 1738Gi -> 600Gi /
+#   2000Gi (node4-7 ephemeral allocatable ~1.1TiB).
 spec:
   hard:
-    pods: "50"
-    requests.cpu: "40500m"
-    requests.memory: 84992Mi
-    limits.cpu: "201"
-    limits.memory: 326Gi
-    requests.ephemeral-storage: 537Gi
-    limits.ephemeral-storage: 1738Gi
+    pods: "70"
+    requests.cpu: "60"
+    requests.memory: 106Gi
+    limits.cpu: "260"
+    limits.memory: 400Gi
+    requests.ephemeral-storage: 600Gi
+    limits.ephemeral-storage: 2000Gi
     persistentvolumeclaims: "0"
     services.loadbalancers: "0"
     services.nodeports: "0"

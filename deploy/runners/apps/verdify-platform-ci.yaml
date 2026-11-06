@@ -19,7 +19,7 @@ spec:
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: verdify-platform-ci
         minRunners: 0
-        maxRunners: 2
+        maxRunners: 3
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller
