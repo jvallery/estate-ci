@@ -22,6 +22,7 @@ SOURCE = "https://github.com/jvallery/estate-ci.git"
 SUFFIX = {"ci": "ci", "pg": "pg", "build": "build", "buildcheck": "buildcheck"}
 # Extra ci-profile sets for repos whose checks need more than one CI image:
 # profile key "ci-<variant>" renders set "<repo>-ci-<variant>" (a ci profile).
+# A ci variant with "postgres: true" also gets the pg profile's Postgres sidecar.
 CI_VARIANT = re.compile(r"^ci-[a-z0-9]{1,12}$")
 DIGEST_REF = re.compile(r"^[a-z0-9.\-]+(:[0-9]+)?(/[a-z0-9._\-]+)+(:[A-Za-z0-9._\-]+)?@sha256:[0-9a-f]{64}$")
 NAME = re.compile(r"^[a-z0-9]([a-z0-9-]{0,43}[a-z0-9])?$")
@@ -113,7 +114,7 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
             "securityContext": restricted(uid),
             "volumeMounts": [work, exchange, scripts],
         })
-    if profile == "pg":
+    if profile == "pg" or (profile == "ci" and opts.get("postgres") is True):
         pr = opts.get("postgres_resources", {})
         containers.append({
             "name": "postgres",

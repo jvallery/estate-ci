@@ -106,7 +106,9 @@ sets:
   #   -ci-dashboard  weather-ci (node, pnpm, Playwright): dashboard
   #   -build         Kaniko; mounts zot-push-verdify-platform (ci-verdify-platform,
   #                  writes verdifyconsultancy/verdify-* only; registry paths unchanged)
-  # No -pg set: every PostgreSQL user in #1402 starts its own private PG16.
+  #   -ci-pg         agents-ci-tools + a PostgreSQL 16.15/pgvector sidecar on 127.0.0.1:5432
+  #                  (the research-vault pg digest): the 7 private-Postgres campaign test
+  #                  files in #1402 (COORD 2026-11-06); checks.yml postgres: true.
   # Quota moves in when native verdify slots are lowered.
   - repo: jvallery/verdify-platform
     profiles:
@@ -120,6 +122,13 @@ sets:
         job_image: registry.vallery.net/jvallery/agents-ci-tools@sha256:c581b862f3da5c79f71fc982455684350628bc4c9fa51dff77d3b8354cd8f214
         job_uid: 1001
         job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
+      ci-pg:
+        max: 1
+        postgres: true
+        job_image: registry.vallery.net/jvallery/agents-ci-tools@sha256:c581b862f3da5c79f71fc982455684350628bc4c9fa51dff77d3b8354cd8f214
+        job_uid: 1001
+        job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
+        postgres_image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-b67681006859e657@sha256:09109f553eafc0ed17dccf0c8b3af77a6e1293707a2a14d8d6458a2de3a964eb
       ci-esphome:
         max: 1
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
@@ -152,6 +161,9 @@ sets:
         job_image: registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2
         job_uid: 1001
         job_resources: {cpu: "1", memory: 1536Mi, limit_cpu: "4", limit_memory: 8Gi}
+        # COORD 2026-11-06: runner CPU limit 2 -> 4 to cut the ~2.4 min full-history checkout.
+        # Limits only; requests stay at the runner default (250m / 512Mi), so no scheduling cost.
+        runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "4", limit_memory: 2Gi}
   # estate-ci's own self-test (R1: no GitHub-hosted runners, even here), image
   # mirrors (mirrors.txt, crane copy) and the estate-ci-toolbox build. The build
   # set mounts zot-push-estate-ci (writer for jvallery/estate-ci/** only).

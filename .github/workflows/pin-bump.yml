@@ -33,6 +33,10 @@ on:
       base:
         type: string
         default: main
+      source-sha:
+        description: Commit the images were built from. Default the caller run's github.sha
+        type: string
+        default: ""
       auto-merge:
         type: boolean
         default: false
@@ -68,9 +72,10 @@ jobs:
           BASE: ${{ inputs.base }}
           CHECKS: ${{ inputs.checks-workflow }}
           AUTO_MERGE: ${{ inputs.auto-merge }}
+          SOURCE_SHA: ${{ inputs.source-sha != '' && inputs.source-sha || github.sha }}
         run: |
           set -euo pipefail
-          args=(--base "$BASE")
+          args=(--base "$BASE" --source-sha "$SOURCE_SHA")
           while IFS= read -r p; do [[ -z "${p// /}" ]] || args+=(--pin "$p"); done <<< "$PINS"
           [[ -z "$CHECKS" ]] || args+=(--checks-workflow "$CHECKS")
           [[ "$AUTO_MERGE" != true ]] || args+=(--auto-merge)
