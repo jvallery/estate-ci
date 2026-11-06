@@ -12,7 +12,7 @@ Notation: `<owner>/<repo>`, `<r>` = repo name lowercased with `_` and `.` → `-
 ## 0. Preconditions (once, estate-wide)
 
 - `estate-ci-foundation`, `estate-ci-runners` and `estate-ci-secrets` Synced/Healthy;
-  `kubectl -n ci-runners get secret arc-github-app-jvallery arc-github-app-verdifyconsultancy zot-pull`.
+  `kubectl -n ci-runners get secret arc-github-app-jvallery zot-pull`.
 - The repo's own Argo Application, if any, is unchanged by this work: CI never deploys
   directly; merged pins do.
 
@@ -71,10 +71,11 @@ Merge when `self-test` is green. `estate-ci-runners` auto-syncs (prune off);
 check `kubectl -n ci-runners get autoscalingrunnerset <r>-ci` and the listener
 in `arc-systems`.
 
-VerdifyConsultancy: repos share the org-level set (`org: VerdifyConsultancy`,
-`name: verdify`); callers pass `runner: verdify-ci` (or `verdify-build`).
-Commits to VerdifyConsultancy repos must not contain operator-machine paths or
-the string naming the fleet repo.
+jvallery only (D19, ADR-0002): there are no VerdifyConsultancy or org-level
+sets. A VerdifyConsultancy repository that needs CI is transferred to jvallery
+first (REPO-MOVE), then onboarded here like any jvallery repository.
+Commits to repositories still in VerdifyConsultancy must not contain
+operator-machine paths or the string naming the fleet repo.
 
 ## 4. Workflows in parallel (PR to the repo)
 
@@ -97,8 +98,10 @@ Keep the job ids and names stable: they become the required check contexts
 - Concurrency: `cancel-in-progress` on PRs only (see the example). That replaces
   native's supersession and re-plan logic; a moved `main` does not rerun anything (L1).
 
-**Parallel-run gate:** at least 3 PRs (or 24 h of `main` pushes, whichever
-comes first) where every estate-ci check finished and matched native's verdict.
+**Parallel-run gate (fast path, D19, ADR-0008):** merge-gated or image-building
+repos need 5 PRs where every estate-ci check finished and matched native's
+verdict; static-only repos need 3 runs including one `main` push. There is no
+minimum duration (no 48-hour wait).
 A red estate-ci check with green native is a migration bug: fix it before
 continuing. Infra failures: `gh run rerun --failed` once, then report (L2).
 
@@ -115,8 +118,8 @@ One API write per repo, with the before/after JSON in receipts:
 - Classic protection (e.g. weather): `gh api -X PATCH
   repos/<owner>/<repo>/branches/main/protection/required_status_checks` with
   `{"strict": false, "checks": [{"context": "lint / lint", "app_id": 15368}, ...]}`.
-- Repos where the plan cannot enforce checks (VerdifyConsultancy private repos,
-  `jvallery/options-tracker`, see J-2): skip the write. The checks are
+- Repos where the plan cannot enforce checks (`jvallery/options-tracker`, see J-2;
+  VerdifyConsultancy repos do not run on estate-ci until transferred, D19): skip the write. The checks are
   **advisory**: the lane merges only when they are green (compare-check), and
   states "advisory" in the PR.
 

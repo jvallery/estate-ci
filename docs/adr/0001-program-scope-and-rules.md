@@ -48,13 +48,14 @@ of jvallery/agents is a separate epic (J-3).
 
 | # | Decision |
 |---|---|
-| J-1 | One copy of the reusable workflows per owner, at most. Reconciled: this repository is public and secret-free, so a single copy serves both jvallery and VerdifyConsultancy callers (a public repository cannot call a private reusable workflow, and `jvallery/weather` is public). No VerdifyConsultancy mirror is needed. Secret-freedom is enforced by self-test (no `secrets:` use other than `GITHUB_TOKEN`, no credential files). |
+| J-1 | One copy of the reusable workflows per owner, at most. Reconciled: this repository is public and secret-free, so one copy serves every caller (a public repository cannot call a private reusable workflow, and `jvallery/weather` is public). With D19 every repository with CI is a jvallery repository, so the owner question goes away; no VerdifyConsultancy copy or mirror exists. Secret-freedom is enforced by self-test (no `secrets:` use other than `GITHUB_TOKEN`, no credential files). |
 | J-2 | Advisory, non-blocking checks where the plan cannot enforce protection (VerdifyConsultancy private repositories, `jvallery/options-tracker`). The lane merges only on green and says "advisory" in the PR. |
 | J-3 | The platform-repo split is its own epic. |
 | J-5 | The fleet GitHub Apps are deleted last, after cutover and a zero-dependency check. The ARC registration App is kept (renamed) or replaced first, never deleted while a scale set uses it. |
 | J-6 | The jvallery/agents ruleset switches to Actions checks only after parity. |
 | J-7 | memoryos image builds (GHCR) are out of scope; its leftover CI files are still cleaned up. |
 | Move | verdify-platform, verdify-www and sunshine_club transfer to jvallery (REPO-MOVE lane); their CI cutover is sequenced with the transfer (ADR-0008). |
+| D19 | (Jason first-hand, D19, 2026-11-06) (a) Parity fast path: 5 agreeing PRs for merge-gated repositories, 3 runs for static ones, no 48-hour wait (ADR-0008). (b) ARC runners serve **jvallery repositories only**; any VerdifyConsultancy repository that needs CI moves to jvallery first (REPO-MOVE); there are no VerdifyConsultancy scale sets (ADR-0002). (c) jvallery/agents goes onto ARC **first**, right after its estate-ci delivery lands, with the J-6 ruleset switch after fast-path parity (ADR-0008). |
 
 **End state per repository** (the acceptance criteria every migration issue
 carries):

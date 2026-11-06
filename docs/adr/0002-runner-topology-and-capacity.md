@@ -9,7 +9,8 @@ Status: Accepted (2026-11-06). Owner: CI-ARCH; built by CI-PLATFORM.
   registry by a 2,749-line fleet renderer with a fleet toolbox image, plus one in
   `frigate`. Those are fleet dependencies and retire with their repositories.
 - `jvallery` is a user account, so its scale sets register per repository.
-  VerdifyConsultancy is an organization and can use org-level sets.
+  VerdifyConsultancy is an organization and could use org-level sets, but on the
+  Free plan its only runner group is open to every private repository.
 - The GPU workers are memory-bound: on 2026-11-06 nodes 4, 5 and 7 had 96-98% of
   allocatable memory requested and 90-98% of CPU. Native CI holds two quotas
   (about 76 CPU / 81 GiB of requests together) and used about 56 CPU / 66 GiB of
@@ -23,10 +24,16 @@ baseline`, `warn/audit: restricted`), rendered from `runners.yaml` by
 `github-runners` sets are not extended; each retires when its repository cuts
 over.
 
-**Scale-set naming.** `<repo>-<profile>` for jvallery repositories (the name is
-the `runs-on` label); `verdify-<profile>` org-level for VerdifyConsultancy
-repositories that stay in the organization. A transferred repository gets its
-own repo-level sets in the same PR that moves it.
+**jvallery only (D19).** ARC scale sets register only for jvallery repositories.
+A VerdifyConsultancy repository that needs CI is transferred to jvallery first
+(REPO-MOVE) and gets its repo-level sets after the transfer. There are no
+VerdifyConsultancy or org-level scale sets, and no VerdifyConsultancy
+registration Secret is needed in `ci-runners`. The transitional `verdify-ci` and memoryos org-level
+sets (estate-ci#12) are removed by CI-PLATFORM once the REPO-MOVE transfers
+are done. New work does not target them: on the Free plan the org's only
+runner group is open to every private repository in the organization.
+
+**Scale-set naming.** `<repo>-<profile>` (the name is the `runs-on` label).
 
 **Profiles.**
 
