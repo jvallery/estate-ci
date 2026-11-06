@@ -2,6 +2,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+- agents-ci.yaml
 - estate-ci-build.yaml
 - estate-ci-ci.yaml
 - kepler-buildcheck.yaml
