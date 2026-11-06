@@ -76,7 +76,8 @@ sets:
         job_uid: 1001
         job_resources: {cpu: 500m, memory: 768Mi, limit_cpu: "2", limit_memory: 4Gi}
       pg:
-        max: 1
+        # COORD 2026-11-06 ~18:4xZ (D5 critical path, Jason GO): 1 -> 3.
+        max: 3
         job_image: registry.vallery.net/jvallery/vault-ci@sha256:5a4b84df9e93d04dadab9da714f456f8f1231aaa59954103081e6144d22ed964
         job_uid: 1001
         job_resources: {cpu: 500m, memory: 768Mi, limit_cpu: "2", limit_memory: 4Gi}
