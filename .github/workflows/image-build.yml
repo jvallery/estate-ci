@@ -1,0 +1,215 @@
+# Reusable: build one image in-cluster with Kaniko and (optionally) push it to zot by digest.
+#
+#   jobs:
+#     app:
+#       uses: jvallery/estate-ci/.github/workflows/image-build.yml@<sha>
+#       with:
+#         image: jvallery/weather-app
+#         dockerfile: Dockerfile.app
+#         push: ${{ github.event_name == 'push' }}
+#       secrets: inherit
+#
+# Runs on the caller's "<repo>-build" scale set: runner + Kaniko sidecar. Kaniko
+# holds only the registry pull credential and builds to a tarball with
+# --no-push. When push is true the job enters the caller's GitHub environment
+# (default "registry", restricted to the default branch), whose secrets
+# ESTATE_CI_REGISTRY_USERNAME / ESTATE_CI_REGISTRY_PASSWORD hold the repo's
+# own zot principal; the runner container pushes the tarball with crane and
+# verifies the digest. Dockerfile RUN steps never see the write credential.
+name: estate-ci image build
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: Registry repository path, e.g. jvallery/weather-app
+        type: string
+        required: true
+      dockerfile:
+        type: string
+        default: Dockerfile
+      context:
+        type: string
+        default: .
+      target:
+        description: Optional Docker build stage
+        type: string
+        default: ""
+      build-args:
+        description: Newline-separated NAME=value build arguments
+        type: string
+        default: ""
+      push:
+        description: Push to zot (requires the registry environment)
+        type: boolean
+        default: false
+      environment:
+        description: GitHub environment holding the registry secrets
+        type: string
+        default: registry
+      runner:
+        description: Scale set name. Default "<repo>-build"
+        type: string
+        default: ""
+      timeout-minutes:
+        type: number
+        default: 90
+    outputs:
+      digest:
+        description: sha256 manifest digest (empty when push is false)
+        value: ${{ jobs.build.outputs.digest }}
+      image-ref:
+        description: registry.vallery.net/<image>@<digest> (empty when push is false)
+        value: ${{ jobs.build.outputs.image-ref }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build ${{ inputs.image }}
+    runs-on: ${{ inputs.runner != '' && inputs.runner || format('{0}-build', github.event.repository.name) }}
+    environment: ${{ inputs.push && inputs.environment || '' }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+      image-ref: ${{ steps.push.outputs.image-ref }}
+    env:
+      ORIGIN: registry-origin.registry-origin.svc.cluster.local:5000
+      PUBLIC_REGISTRY: registry.vallery.net
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Validate inputs
+        id: args
+        shell: bash
+        env:
+          IMAGE: ${{ inputs.image }}
+          DOCKERFILE: ${{ inputs.dockerfile }}
+          CONTEXT: ${{ inputs.context }}
+          TARGET: ${{ inputs.target }}
+          BUILD_ARGS: ${{ inputs.build-args }}
+        run: |
+          set -euo pipefail
+          [[ "$IMAGE" =~ ^[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)+$ ]] || { echo "::error::invalid image path"; exit 1; }
+          [[ "$TARGET" =~ ^[A-Za-z0-9_.-]{0,128}$ ]] || { echo "::error::invalid target"; exit 1; }
+          ctx="$(realpath -m "$GITHUB_WORKSPACE/$CONTEXT")"
+          df="$(realpath -m "$GITHUB_WORKSPACE/$DOCKERFILE")"
+          [[ "$ctx" == "$GITHUB_WORKSPACE"* && "$df" == "$GITHUB_WORKSPACE"* ]] || { echo "::error::context/dockerfile outside the workspace"; exit 1; }
+          [[ -d "$ctx" && -f "$df" ]] || { echo "::error::context or dockerfile not found"; exit 1; }
+          while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*=[^$'\r']*$ ]] || { echo "::error::invalid build-arg line"; exit 1; }
+          done <<< "$BUILD_ARGS"
+          short="${GITHUB_SHA:0:12}"
+          {
+            echo "K_CONTEXT=$ctx"
+            echo "K_DOCKERFILE=$df"
+            echo "K_TARGET=$TARGET"
+            echo "K_DEST=${PUBLIC_REGISTRY}/${IMAGE}:gha-${short}"
+            echo "K_TAR=/exchange/kaniko-out/${short}-${RANDOM}.tar"
+            echo "K_SOURCE=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+            echo "K_REVISION=${GITHUB_SHA}"
+            echo "K_BUILD_ARGS<<__ESTATE_CI_EOF__"
+            printf '%s\n' "$BUILD_ARGS"
+            echo "__ESTATE_CI_EOF__"
+          } >> "$GITHUB_ENV"
+          mkdir -p /exchange/kaniko-out
+
+      - name: Kaniko build (sidecar, no push)
+        shell: bash
+        env:
+          SIDECAR: kaniko
+          ENV_NAMES: K_CONTEXT K_DOCKERFILE K_TARGET K_DEST K_TAR K_SOURCE K_REVISION K_BUILD_ARGS
+          TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+          SCRIPT: |
+            set -- --context="dir://${K_CONTEXT}" --dockerfile="${K_DOCKERFILE}" \
+              --destination="${K_DEST}" --no-push --tar-path="${K_TAR}" \
+              --snapshot-mode=full --compressed-caching=false --cleanup \
+              --label=org.opencontainers.image.source="${K_SOURCE}" \
+              --label=org.opencontainers.image.revision="${K_REVISION}"
+            [ -z "${K_TARGET}" ] || set -- "$@" --target="${K_TARGET}"
+            while IFS= read -r line; do
+              [ -z "$line" ] || set -- "$@" --build-arg="$line"
+            done <<__ARGS__
+            ${K_BUILD_ARGS}
+            __ARGS__
+            /kaniko/executor "$@"
+            chmod 0644 "${K_TAR}"
+        run: |
+          # estate-ci sidecar exchange client (canonical copy: actions/sidecar-run/run.sh)
+          set -euo pipefail
+          ex="${CI_EXCHANGE_DIR:-/exchange}/${SIDECAR}"
+          for _ in $(seq 1 120); do [[ -e "$ex/.alive" ]] && break; sleep 1; done
+          [[ -e "$ex/.alive" ]] || { echo "::error::sidecar '${SIDECAR}' is not running in this runner Pod (wrong runs-on?)" >&2; exit 2; }
+          id="$(date +%s)-$$-${RANDOM}"; dir="$ex/$id"
+          mkdir -p "$dir"; chmod 0770 "$dir"
+          printf '%s' "${WORKDIR:-$PWD}" > "$dir/cwd"
+          quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }
+          {
+            printf 'set -e\n'
+            for name in ${ENV_NAMES:-}; do
+              [[ "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || { echo "invalid env name $name" >&2; exit 2; }
+              printf 'export %s=%s\n' "$name" "$(quote "${!name-}")"
+            done
+            printf '%s\n' "$SCRIPT"
+          } > "$dir/script"
+          : > "$dir/ready"
+          off=0; deadline=$((SECONDS + ${TIMEOUT_MINUTES:-60} * 60))
+          flush() {
+            [[ -f "$dir/log" ]] || return 0
+            local size; size=$(stat -c %s "$dir/log")
+            if (( size > off )); then tail -c +"$((off + 1))" "$dir/log" | head -c "$((size - off))"; off=$size; fi
+          }
+          while [[ ! -f "$dir/rc" ]]; do
+            flush
+            if (( SECONDS > deadline )); then echo "::error::sidecar request timed out" >&2; exit 124; fi
+            sleep 1
+          done
+          flush
+          rc="$(cat "$dir/rc")"; rm -rf "$dir"; exit "$rc"
+
+      - name: Install crane
+        if: inputs.push
+        shell: bash
+        env:
+          CRANE_VERSION: v0.22.1
+          CRANE_SHA256: 0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0
+        run: |
+          set -euo pipefail
+          dest="${RUNNER_TEMP}/estate-ci-bin"; mkdir -p "$dest"
+          curl -fsSL --retry 3 -o "${RUNNER_TEMP}/crane.tgz" \
+            "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz"
+          echo "${CRANE_SHA256}  ${RUNNER_TEMP}/crane.tgz" | sha256sum -c -
+          tar -xzf "${RUNNER_TEMP}/crane.tgz" -C "$dest" crane
+          echo "$dest" >> "$GITHUB_PATH"
+
+      - name: Push by digest
+        id: push
+        if: inputs.push
+        shell: bash
+        env:
+          IMAGE: ${{ inputs.image }}
+          REG_USER: ${{ secrets.ESTATE_CI_REGISTRY_USERNAME }}
+          REG_PASS: ${{ secrets.ESTATE_CI_REGISTRY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [[ -n "$REG_USER" && -n "$REG_PASS" ]] || { echo "::error::registry environment secrets are missing"; exit 1; }
+          export DOCKER_CONFIG="${RUNNER_TEMP}/docker-config"
+          umask 077; mkdir -p "$DOCKER_CONFIG"
+          printf '{"auths":{"%s":{"auth":"%s"}}}' "$ORIGIN" "$(printf '%s:%s' "$REG_USER" "$REG_PASS" | base64 -w0)" > "$DOCKER_CONFIG/config.json"
+          trap 'rm -rf "$DOCKER_CONFIG"' EXIT
+          # gha- prefix: native CI pushes sha-<12> tags for the same commit during the parallel run.
+          tag="gha-${GITHUB_SHA:0:12}"
+          pushed="$(crane push --insecure "$K_TAR" "${ORIGIN}/${IMAGE}:${tag}")"
+          digest="${pushed##*@}"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::unexpected push output"; exit 1; }
+          readback="$(crane digest --insecure "${ORIGIN}/${IMAGE}:${tag}")"
+          [[ "$readback" == "$digest" ]] || { echo "::error::digest readback mismatch"; exit 1; }
+          ref="${PUBLIC_REGISTRY}/${IMAGE}@${digest}"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "image-ref=${ref}" >> "$GITHUB_OUTPUT"
+          echo "### Pushed \`${ref}\` (tag \`${tag}\`)" >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$K_TAR"

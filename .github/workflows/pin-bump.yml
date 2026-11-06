@@ -1,0 +1,159 @@
+# Reusable: open a pull request that pins new image digests in GitOps manifests.
+#
+#   jobs:
+#     pin:
+#       needs: [app, web]
+#       permissions: {contents: write, pull-requests: write, actions: write}
+#       uses: jvallery/estate-ci/.github/workflows/pin-bump.yml@<sha>
+#       with:
+#         pins: |
+#           deploy/k8s/kustomization.yaml registry.vallery.net/jvallery/weather-app ${{ needs.app.outputs.digest }}
+#           deploy/k8s/kustomization.yaml registry.vallery.net/jvallery/weather-web ${{ needs.web.outputs.digest }}
+#         checks-workflow: ci.yml
+#
+# Each pins line is "<file> <image> <sha256:digest>". Two shapes are rewritten:
+#   * kustomize images entries:  newName: <image>  followed (within the entry) by  digest: sha256:...
+#   * inline references:         <image>@sha256:...
+# Lines with an empty digest are skipped (an image that was not rebuilt).
+#
+# The PR is opened with GITHUB_TOKEN. GitHub does not start workflows for
+# events caused by GITHUB_TOKEN, so the job then workflow_dispatches
+# checks-workflow on the pin branch; its check runs land on the PR head commit
+# and satisfy required checks of the same name. The caller's checks workflow
+# must therefore accept workflow_dispatch. Argo CD delivers after merge.
+name: estate-ci pin bump
+
+on:
+  workflow_call:
+    inputs:
+      pins:
+        description: Newline-separated "<file> <image> <digest>" triples
+        type: string
+        required: true
+      checks-workflow:
+        description: Workflow file to dispatch on the pin branch ("" to skip)
+        type: string
+        default: ci.yml
+      base:
+        type: string
+        default: main
+      auto-merge:
+        description: Enable GitHub auto-merge (squash) on the pin PR
+        type: boolean
+        default: false
+      runner:
+        description: Scale set name. Default "<repo>-ci"
+        type: string
+        default: ""
+    outputs:
+      pr-url:
+        value: ${{ jobs.pin.outputs.pr-url }}
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  pin:
+    runs-on: ${{ inputs.runner != '' && inputs.runner || format('{0}-ci', github.event.repository.name) }}
+    timeout-minutes: 10
+    outputs:
+      pr-url: ${{ steps.pr.outputs.url }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.base }}
+
+      - name: Rewrite pins
+        id: rewrite
+        shell: bash
+        env:
+          PINS: ${{ inputs.pins }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re, sys
+          changed = []
+          for raw in os.environ["PINS"].splitlines():
+              parts = raw.split()
+              if not parts:
+                  continue
+              if len(parts) == 2:          # digest empty: image not rebuilt
+                  continue
+              if len(parts) != 3:
+                  sys.exit(f"bad pins line: {raw!r}")
+              path, image, digest = parts
+              if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
+                  sys.exit(f"bad digest for {image}")
+              if not re.fullmatch(r"[a-z0-9.\-]+(/[a-z0-9._\-]+)+", image):
+                  sys.exit(f"bad image {image}")
+              real = os.path.realpath(path)
+              if not real.startswith(os.getcwd() + os.sep) or not os.path.isfile(real):
+                  sys.exit(f"bad file {path}")
+              text = open(real).read()
+              new = re.sub(re.escape(image) + r"@sha256:[0-9a-f]{64}", f"{image}@{digest}", text)
+              # kustomize images: entry -> replace the first digest: line after newName: <image>
+              lines = new.split("\n")
+              for i, line in enumerate(lines):
+                  m = re.match(r"^(\s*)(-\s+)?newName:\s*['\"]?" + re.escape(image) + r"['\"]?\s*$", line)
+                  if not m:
+                      continue
+                  for j in range(i + 1, min(i + 6, len(lines))):
+                      d = re.match(r"^(\s*)digest:\s*\S+\s*$", lines[j])
+                      if d:
+                          lines[j] = f"{d.group(1)}digest: {digest}"
+                          break
+                      if re.match(r"^\s*-\s", lines[j]):
+                          break
+              new = "\n".join(lines)
+              if new == text and f"{image}@{digest}" not in text and f"digest: {digest}" not in text:
+                  sys.exit(f"{image} not found in {path}")
+              if new != text:
+                  open(real, "w").write(new)
+                  changed.append(f"{image}@{digest[:19]}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"changed={' '.join(changed)}\n")
+          print("changed:", changed or "nothing")
+          PY
+
+      - name: Commit, push and open the PR
+        id: pr
+        if: steps.rewrite.outputs.changed != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANGED: ${{ steps.rewrite.outputs.changed }}
+          BASE: ${{ inputs.base }}
+          CHECKS: ${{ inputs.checks-workflow }}
+          AUTO_MERGE: ${{ inputs.auto-merge }}
+        run: |
+          set -euo pipefail
+          api="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}"
+          branch="estate-ci/pin-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git commit -qam "deploy: pin ${CHANGED} (built from ${GITHUB_SHA:0:12})"
+          git push -q origin "$branch"
+          body="$(printf 'Automated digest pin from run %s/%s/actions/runs/%s (source commit %s).\n\nPins: %s\n\nArgo CD delivers this after merge.' \
+            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$GITHUB_SHA" "$CHANGED")"
+          payload="$(python3 -c 'import json,sys; print(json.dumps({"title": sys.argv[1], "head": sys.argv[2], "base": sys.argv[3], "body": sys.argv[4]}))' \
+            "deploy: pin ${CHANGED}" "$branch" "$BASE" "$body")"
+          resp="$(curl -fsS -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "$api/pulls" -d "$payload")"
+          url="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["html_url"])' <<< "$resp")"
+          node_id="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["node_id"])' <<< "$resp")"
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
+          echo "### Pin PR: ${url}" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -n "$CHECKS" ]]; then
+            curl -fsS -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" \
+              "$api/actions/workflows/${CHECKS}/dispatches" -d "{\"ref\":\"${branch}\"}"
+            echo "dispatched ${CHECKS} on ${branch}"
+          fi
+          if [[ "$AUTO_MERGE" == "true" ]]; then
+            # shellcheck disable=SC2016 # GraphQL variables, not shell
+            q='mutation($id:ID!){enablePullRequestAutoMerge(input:{pullRequestId:$id,mergeMethod:SQUASH}){clientMutationId}}'
+            curl -fsS -X POST -H "Authorization: Bearer ${GH_TOKEN}" "${GITHUB_GRAPHQL_URL}" \
+              -d "$(python3 -c 'import json,sys; print(json.dumps({"query": sys.argv[1], "variables": {"id": sys.argv[2]}}))' "$q" "$node_id")" >/dev/null
+            echo "auto-merge enabled"
+          fi

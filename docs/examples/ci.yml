@@ -1,0 +1,43 @@
+# Copy to <repo>/.github/workflows/ci.yml. Replace <sha> with an estate-ci commit SHA.
+# Check contexts are "<job id> / <name>", e.g. "lint / lint", "test / test".
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  merge_group:
+  workflow_dispatch:   # pin-bump dispatches this on its PR branch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # Supersede stale PR runs; never cancel runs on main.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@<sha>
+    with:
+      name: lint
+      run: make lint
+
+  test:
+    uses: jvallery/estate-ci/.github/workflows/checks.yml@<sha>
+    with:
+      name: test
+      run: make test
+      # in-job-image: true     # run inside the repo CI image sidecar (runners.yaml job_image)
+      # runner: <repo>-pg      # Postgres sidecar profile
+      # postgres: true         # wait for it and export PGHOST/DATABASE_URL
+
+  # Build-only on PRs (no registry credential): proves the Dockerfiles build.
+  image:
+    if: github.event_name == 'pull_request'
+    uses: jvallery/estate-ci/.github/workflows/image-build.yml@<sha>
+    with:
+      image: jvallery/<repo>-app
+      dockerfile: Dockerfile
+      push: false

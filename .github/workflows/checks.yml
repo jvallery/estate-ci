@@ -1,0 +1,132 @@
+# Reusable: run one check command on the caller repo's estate-ci runner.
+#
+#   jobs:
+#     test:
+#       uses: jvallery/estate-ci/.github/workflows/checks.yml@<sha>
+#       with:
+#         name: test
+#         run: make test
+#
+# The check context is "<caller job id> / <name>". By default the job runs on
+# the "<repo>-ci" scale set. in-job-image runs the command inside the repo's
+# CI image sidecar instead of the runner container (sets declared with
+# job_image in runners.yaml). Runners on the heavy-pg profile carry a Postgres
+# sidecar on 127.0.0.1:5432; postgres: true waits for it and exports PG*/DATABASE_URL.
+name: estate-ci checks
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        description: Check name (second half of the check context)
+        type: string
+        default: run
+      run:
+        description: Shell command(s) to run from the repository root
+        type: string
+        required: true
+      runner:
+        description: Scale set name. Default "<repo>-ci" (use "<repo>-pg" for heavy-pg)
+        type: string
+        default: ""
+      in-job-image:
+        description: Run inside the repo CI image sidecar instead of the runner container
+        type: boolean
+        default: false
+      env-names:
+        description: Space-separated runner env var names to pass into the job image (in-job-image only)
+        type: string
+        default: ""
+      postgres:
+        description: Wait for the heavy-pg Postgres sidecar and export PGHOST/PGPORT/PGUSER/DATABASE_URL
+        type: boolean
+        default: false
+      fetch-depth:
+        type: number
+        default: 1
+      timeout-minutes:
+        type: number
+        default: 30
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: ${{ inputs.name }}
+    runs-on: ${{ inputs.runner != '' && inputs.runner || format('{0}-ci', github.event.repository.name) }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: ${{ inputs.fetch-depth }}
+          persist-credentials: false
+
+      - name: Wait for the Postgres sidecar
+        if: inputs.postgres
+        shell: bash
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 120); do
+            if (exec 3<>/dev/tcp/127.0.0.1/5432) 2>/dev/null; then
+              echo "Postgres sidecar is accepting connections"
+              {
+                echo "PGHOST=127.0.0.1"
+                echo "PGPORT=5432"
+                echo "PGUSER=postgres"
+                echo "PGDATABASE=postgres"
+                echo "DATABASE_URL=postgresql://postgres@127.0.0.1:5432/postgres"
+              } >> "$GITHUB_ENV"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::no Postgres sidecar on 127.0.0.1:5432 (use runner '<repo>-pg')"
+          exit 1
+
+      - name: ${{ inputs.name }}
+        if: ${{ !inputs.in-job-image }}
+        shell: bash
+        run: ${{ inputs.run }}
+
+      - name: ${{ inputs.name }} (job image)
+        if: inputs.in-job-image
+        shell: bash
+        env:
+          SIDECAR: job
+          SCRIPT: ${{ inputs.run }}
+          ENV_NAMES: ${{ inputs.env-names }} ${{ inputs.postgres && 'PGHOST PGPORT PGUSER PGDATABASE DATABASE_URL' || '' }} GITHUB_SHA GITHUB_REF GITHUB_REPOSITORY GITHUB_EVENT_NAME CI
+          TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+        run: |
+          # estate-ci sidecar exchange client (canonical copy: actions/sidecar-run/run.sh)
+          set -euo pipefail
+          [[ "$SIDECAR" =~ ^[a-z][a-z0-9-]{0,30}$ ]] || { echo "invalid sidecar name" >&2; exit 2; }
+          ex="${CI_EXCHANGE_DIR:-/exchange}/${SIDECAR}"
+          for _ in $(seq 1 120); do [[ -e "$ex/.alive" ]] && break; sleep 1; done
+          [[ -e "$ex/.alive" ]] || { echo "::error::sidecar '${SIDECAR}' is not running in this runner Pod (wrong runs-on?)" >&2; exit 2; }
+          id="$(date +%s)-$$-${RANDOM}"; dir="$ex/$id"
+          mkdir -p "$dir"; chmod 0770 "$dir"
+          printf '%s' "${WORKDIR:-$PWD}" > "$dir/cwd"
+          quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }
+          {
+            printf 'set -e\n'
+            for name in ${ENV_NAMES:-}; do
+              [[ "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || { echo "invalid env name $name" >&2; exit 2; }
+              printf 'export %s=%s\n' "$name" "$(quote "${!name-}")"
+            done
+            printf '%s\n' "$SCRIPT"
+          } > "$dir/script"
+          : > "$dir/ready"
+          off=0; deadline=$((SECONDS + ${TIMEOUT_MINUTES:-60} * 60))
+          flush() {
+            [[ -f "$dir/log" ]] || return 0
+            local size; size=$(stat -c %s "$dir/log")
+            if (( size > off )); then tail -c +"$((off + 1))" "$dir/log" | head -c "$((size - off))"; off=$size; fi
+          }
+          while [[ ! -f "$dir/rc" ]]; do
+            flush
+            if (( SECONDS > deadline )); then echo "::error::sidecar request timed out" >&2; exit 124; fi
+            sleep 1
+          done
+          flush
+          rc="$(cat "$dir/rc")"; rm -rf "$dir"; exit "$rc"

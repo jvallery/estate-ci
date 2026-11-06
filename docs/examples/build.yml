@@ -1,0 +1,37 @@
+# Copy to <repo>/.github/workflows/build.yml. Requires the GitHub environment
+# "registry" (deployment branches: main) with ESTATE_CI_REGISTRY_USERNAME/PASSWORD.
+name: build
+
+on:
+  push:
+    branches: [main]
+    paths: [Dockerfile, src/**, requirements.lock]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  app:
+    uses: jvallery/estate-ci/.github/workflows/image-build.yml@<sha>
+    with:
+      image: jvallery/<repo>-app
+      dockerfile: Dockerfile
+      push: true
+    secrets: inherit
+
+  pin:
+    needs: [app]
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    uses: jvallery/estate-ci/.github/workflows/pin-bump.yml@<sha>
+    with:
+      pins: |
+        deploy/k8s/kustomization.yaml registry.vallery.net/jvallery/<repo>-app ${{ needs.app.outputs.digest }}
+      checks-workflow: ci.yml

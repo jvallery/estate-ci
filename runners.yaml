@@ -1,0 +1,43 @@
+# estate-ci runner registry. The ONLY input to scripts/render_runners.py, which
+# writes deploy/runners/apps/*.yaml (one Argo Application per ARC scale set).
+# Onboarding a repo = add an entry here, run `python3 scripts/render_runners.py`,
+# open a PR. CI fails if the rendered files are stale.
+#
+# Profiles (scale set name = <repo>-<suffix>; that name is also the runs-on label):
+#   ci     runner [+ job sidecar running the repo CI image]          suffix -ci
+#   pg     runner + Postgres sidecar on 127.0.0.1:5432 [+ job]        suffix -pg
+#   build  runner + Kaniko sidecar (in-cluster image builds)          suffix -build
+# Sizes are requests -> limits per Pod. The namespace ResourceQuota
+# (deploy/foundation/quota.yaml) is the hard envelope across all sets.
+defaults:
+  chart_version: 0.14.2
+  controller_service_account: {namespace: arc-systems, name: arc-gha-rs-controller}
+  runner_image: ghcr.io/actions/actions-runner:2.338.2@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232
+  # Mirror of gcr.io/kaniko-project/executor:v1.23.2-debug (the image native CI already uses).
+  kaniko_image: registry.vallery.net/jvallery/agents-kaniko-executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e
+  # CloudNativePG PostgreSQL (includes pgvector), mirrored in zot.
+  postgres_image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-777ad6774e00fff6@sha256:d66df406385b9f3c43c47e94fe3a0002278ef56d21b82a8c9d3a22f91aa9c3f0
+  max:
+    ci: 3
+    pg: 1
+    build: 1
+
+# GitHub App registration Secret per owner (Secret in namespace ci-runners).
+owners:
+  jvallery: arc-github-app-jvallery
+  VerdifyConsultancy: arc-github-app-verdifyconsultancy
+
+# Scale sets. repo: owner/name registers at repository level (jvallery is a
+# user account). org: <owner> registers one org-level set shared by all repos
+# of that organization; name is then required.
+sets:
+  - repo: jvallery/weather
+    profiles:
+      ci:
+        max: 3
+        job_image: registry.vallery.net/jvallery/weather-ci@sha256:f4fceab3222d3817baf8def870970981eb88a853cf42f2dc36efcec779f46673
+        job_uid: 1001
+        job_resources: {cpu: "1", memory: 3Gi, limit_cpu: "4", limit_memory: 8Gi}
+      build:
+        max: 2
+        kaniko_resources: {cpu: "1", memory: 3Gi, limit_cpu: "3", limit_memory: 12Gi}

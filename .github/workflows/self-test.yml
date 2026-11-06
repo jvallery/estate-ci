@@ -1,0 +1,45 @@
+# estate-ci's own checks. They run on GitHub-hosted runners on purpose: the
+# repo that defines the self-hosted runners must stay testable when they are down.
+name: self-test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/al.tgz "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_checksums.txt" \
+            | grep "actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" | sed 's|  .*|  /tmp/al.tgz|' | sha256sum -c -
+          tar -xzf /tmp/al.tgz -C /tmp actionlint
+          /tmp/actionlint -color
+      - name: shellcheck
+        run: shellcheck deploy/foundation/files/*.sh actions/sidecar-run/run.sh
+      - name: Runner manifests are rendered
+        run: |
+          python3 -m pip install --quiet pyyaml==6.0.2
+          python3 scripts/render_runners.py --check
+      - name: Foundation and runner kustomizations build
+        run: |
+          kubectl kustomize deploy/foundation > /dev/null
+          kubectl kustomize deploy/runners/apps > /dev/null
