@@ -68,3 +68,15 @@ replaces it on the phase-2 forge. The lint does not police them; review does.
   outbound HTTPS to the public Sigstore/GitHub endpoints); if a token-free path
   is required, replace it with `cosign verify-blob-attestation` against the
   same bundles.
+- **E-2 (2026-11-06, D-52, Jason first-hand): the vallery-pin-bot App key.**
+  Each repository has the Actions secret `PIN_BOT_PRIVATE_KEY` and the variable
+  `PIN_BOT_CLIENT_ID`. Callers pass the secret to `pin-bump.yml` as
+  `pin-bot-private-key`. `app-token.py` mints an installation token from it,
+  scoped to the calling repository with contents and pull_requests write, and
+  revokes it when the step exits. The pin PR is opened with that token. A PR
+  opened with the per-job token starts no `pull_request` workflows, so its
+  required checks never attach. Jason chose Actions-secret custody for this
+  key (D-52, 2026-11-06), and lint allows exactly this secret name.
+  Custody: storage-infra `inventory/recovery-key-custody/pin-pr-app-20261106/`.
+  Phase 2: if the forge starts workflows for job-token PRs, drop the key and
+  E-2. Otherwise give a forge bot account token the same scope.
