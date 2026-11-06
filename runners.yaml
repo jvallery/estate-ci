@@ -55,3 +55,19 @@ sets:
         job_image: docker.io/library/python:3.13-slim@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc
         job_uid: 1001
         job_resources: {cpu: 500m, memory: 512Mi, limit_cpu: "2", limit_memory: 2Gi}
+  # VerdifyConsultancy org-level set shared by its repos (crm, memoryos, ...).
+  # Workflows pass runner: verdify-ci to checks.yml. No job image yet: steps run
+  # in the runner container until the estate-ci toolbox image (estate-ci#3) lands.
+  - org: VerdifyConsultancy
+    name: verdify
+    profiles:
+      ci:
+        max: 2
+  # memoryos image build (J-8, memoryos#39/#40). build needs the KSOPS Secret
+  # zot-push-memoryos (zot principal ci-memoryos, storage-infra#1387).
+  - repo: VerdifyConsultancy/memoryos
+    profiles:
+      build:
+        max: 1
+      buildcheck:
+        max: 1
