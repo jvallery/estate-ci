@@ -88,13 +88,12 @@ Branch and commit are plain git; the PR, dispatch and auto-merge calls are in
 implemented against the Gitea/Forgejo API). Merging the PR is the deploy;
 Argo CD syncs it. No extra GitHub App is needed.
 
-**Registration.** Runners register with the existing GitHub App
-`vallery-agent-fleet-ci` (installations on `jvallery` and
-`VerdifyConsultancy`, repository selection "all", permissions
-administration:write and organization self-hosted runners). Its credentials are
-copied into `ci-runners/arc-github-app-<owner>` through central KSOPS. New
-repositories are covered automatically. Do not delete this App while any
-scale set uses it (see jvallery/agents#6092 J-5).
+**Registration.** Runners register with the dedicated least-privilege GitHub App
+`vallery-ci-runners` (J-10; App ID 5636090, installation 179108157 on `jvallery`,
+selected repositories, Administration RW + Metadata RO, no webhook). Its
+credential is `ci-runners/arc-github-app-jvallery` in central KSOPS. A repository
+joins by being added to the installation's selected repositories. ARC is jvallery
+only (D19): there is no VerdifyConsultancy installation or org-level set.
 
 **Delivery.** Argo CD Applications `estate-ci-foundation`, `estate-ci-runners`
 (app-of-apps over `deploy/runners/apps`) and `estate-ci-secrets` (central

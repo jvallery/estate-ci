@@ -27,7 +27,6 @@ resources:
 - research-vault-pg.yaml
 - storage-infra-build.yaml
 - storage-infra-ci.yaml
-- verdify-ci.yaml
 - verdify-platform-build.yaml
 - verdify-platform-ci.yaml
 - verdify-platform-pg.yaml

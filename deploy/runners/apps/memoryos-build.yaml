@@ -5,7 +5,7 @@ metadata:
   name: estate-ci-runner-memoryos-build
   namespace: argocd
   annotations:
-    estate-ci.vallery.net/repository: VerdifyConsultancy/memoryos
+    estate-ci.vallery.net/repository: jvallery/memoryos
 spec:
   project: estate-ci
   source:
@@ -15,8 +15,8 @@ spec:
     helm:
       releaseName: memoryos-build
       valuesObject:
-        githubConfigUrl: https://github.com/VerdifyConsultancy/memoryos
-        githubConfigSecret: arc-github-app-verdifyconsultancy
+        githubConfigUrl: https://github.com/jvallery/memoryos
+        githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: memoryos-build
         minRunners: 0
         maxRunners: 1
@@ -53,7 +53,7 @@ spec:
               - name: ACTIONS_RUNNER_HOOK_JOB_STARTED
                 value: /opt/estate-ci/job-started-guard.sh
               - name: CI_EXPECTED_REPOSITORY
-                value: VerdifyConsultancy/memoryos
+                value: jvallery/memoryos
               - name: CI_RUNNER_PROFILE
                 value: build
               - name: CI_EXCHANGE_DIR
