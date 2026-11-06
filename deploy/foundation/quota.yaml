@@ -91,13 +91,17 @@ metadata:
 #   queued in GitHub (no failure path for Pending). Runner pods use
 #   PriorityClass ci-runner (value 0, preemptionPolicy Never), so CI never
 #   preempts anything. A maxRunners raise must still raise this envelope.
+# - COORD 2026-11-06 ~20:0xZ (Jason: accelerate RV2 CI): research-vault-ci job
+#   container 500m / 768Mi req, 2 / 4Gi lim -> 2 / 2Gi req, 8 / 8Gi lim, max 4:
+#   +6 CPU / +5Gi requests, +24 CPU / +16Gi limits. Sum at max is now 110.5 CPU
+#   / 214.75Gi requests, 571 CPU / 873Gi limits.
 spec:
   hard:
     pods: "105"
-    requests.cpu: "105"
-    requests.memory: 212Gi
-    limits.cpu: "550"
-    limits.memory: 860Gi
+    requests.cpu: "111"
+    requests.memory: 216Gi
+    limits.cpu: "575"
+    limits.memory: 876Gi
     requests.ephemeral-storage: 1080Gi
     limits.ephemeral-storage: 3720Gi
     persistentvolumeclaims: "0"

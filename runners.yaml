@@ -74,7 +74,9 @@ sets:
         max: 4
         job_image: registry.vallery.net/jvallery/vault-ci@sha256:5a4b84df9e93d04dadab9da714f456f8f1231aaa59954103081e6144d22ed964
         job_uid: 1001
-        job_resources: {cpu: 500m, memory: 768Mi, limit_cpu: "2", limit_memory: 4Gi}
+        # COORD 2026-11-06 ~20:0xZ (Jason: accelerate RV2 CI): 'unit' took 30-36 min
+        # pinned at ~1 core under limit 2 / 4Gi. Was 500m / 768Mi req, 2 / 4Gi lim.
+        job_resources: {cpu: "2", memory: 2Gi, limit_cpu: "8", limit_memory: 8Gi}
       pg:
         # COORD 2026-11-06 ~18:4xZ (D5 critical path, Jason GO): 1 -> 3.
         max: 3
