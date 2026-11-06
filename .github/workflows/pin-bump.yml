@@ -16,8 +16,9 @@
 # <image>@sha256: references.
 #
 # PR identity (D-52): with the pin-bot-private-key secret and the repo variable
-# PIN_BOT_CLIENT_ID (GitHub App vallery-pin-bot), the PR is opened with an App
-# installation token scoped to the calling repo only, so pull_request workflows
+# PIN_BOT_CLIENT_ID (GitHub App vallery-pin-bot), $ESTATE_CI/app-token.py mints
+# an installation token scoped to the calling repo only (revoked at step end)
+# and the PR is opened with it, so pull_request workflows
 # run and the PR's required checks attach normally. Without the secret it falls
 # back to the job token, which starts no workflows; the checks workflow is then
 # dispatched on the pin branch instead (it must accept workflow_dispatch), but
@@ -76,28 +77,12 @@ jobs:
         with:
           ref: ${{ inputs.base }}
           fetch-depth: 0
-      - id: bot
-        shell: bash
-        env:
-          KEY: ${{ secrets.pin-bot-private-key }}
-          CLIENT_ID: ${{ vars.PIN_BOT_CLIENT_ID }}
-        run: |
-          if [[ -n "$KEY" && -n "$CLIENT_ID" ]]; then echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else echo "::warning::pin-bot secret/variable absent; job-token PR + checks dispatch fallback"; fi
-      - id: app
-        if: steps.bot.outputs.enabled == 'true'
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        with:
-          client-id: ${{ vars.PIN_BOT_CLIENT_ID }}
-          private-key: ${{ secrets.pin-bot-private-key }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
       - id: pin
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          # forge-api.sh prefers FORGE_TOKEN: the App opens (and auto-merges) the PR.
-          FORGE_TOKEN: ${{ steps.app.outputs.token }}
+          APP_CLIENT_ID: ${{ vars.PIN_BOT_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.pin-bot-private-key }}
           PINS: ${{ inputs.pins }}
           BASE: ${{ inputs.base }}
           CHECKS: ${{ inputs.checks-workflow }}
@@ -107,7 +92,6 @@ jobs:
           set -euo pipefail
           args=(--base "$BASE" --source-sha "$SOURCE_SHA")
           while IFS= read -r p; do [[ -z "${p// /}" ]] || args+=(--pin "$p"); done <<< "$PINS"
-          # The dispatch is only needed when the job token opens the PR.
-          [[ -n "$FORGE_TOKEN" || -z "$CHECKS" ]] || args+=(--checks-workflow "$CHECKS")
+          [[ -z "$CHECKS" ]] || args+=(--checks-workflow "$CHECKS")  # ignored when the App key is set
           [[ "$AUTO_MERGE" != true ]] || args+=(--auto-merge)
           "$ESTATE_CI/pin-bump.sh" "${args[@]}"
