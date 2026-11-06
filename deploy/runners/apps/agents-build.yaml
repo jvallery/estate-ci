@@ -19,7 +19,7 @@ spec:
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: agents-build
         minRunners: 0
-        maxRunners: 2
+        maxRunners: 4
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller
