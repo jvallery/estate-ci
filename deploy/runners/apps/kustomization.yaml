@@ -4,6 +4,8 @@ kind: Kustomization
 resources:
 - estate-ci-build.yaml
 - estate-ci-ci.yaml
+- kepler-buildcheck.yaml
+- kepler-ci.yaml
 - memoryos-build.yaml
 - memoryos-buildcheck.yaml
 - research-vault-build.yaml
