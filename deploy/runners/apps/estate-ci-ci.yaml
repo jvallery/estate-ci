@@ -30,7 +30,7 @@ spec:
           spec:
             automountServiceAccountToken: false
             restartPolicy: Never
-            priorityClassName: ci-preemptible
+            priorityClassName: ci-runner
             imagePullSecrets:
             - name: zot-pull
             securityContext:
