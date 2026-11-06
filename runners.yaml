@@ -176,8 +176,9 @@ sets:
   # existing bare `run:` steps in the runner container, so their ci set uses
   # the fleet toolbox (built FROM the stock actions-runner image; adds
   # gitleaks, ruby, pip, kustomize) as runner_image and has no job sidecar.
-  # runner_resources equal the former runner+job totals, so the quota is
-  # unchanged (its ephemeral-storage envelope gains 3 x 4Gi/16Gi of slack).
+  # runner_resources equal the former runner+job totals; only the dropped job
+  # sidecars' ephemeral storage leaves the quota. jvallery/backups was archived
+  # on 2026-11-06 (backups#87), so its set is removed.
   - repo: jvallery/monitoring-stack
     profiles:
       ci:
@@ -236,13 +237,6 @@ sets:
         max: 1
         runner_image: *fleet-toolbox
         runner_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "4", limit_memory: 5Gi}
-  - repo: jvallery/backups
-    profiles:
-      ci:
-        max: 1
-        job_image: *fleet-toolbox
-        job_uid: 1001
-        job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "2", limit_memory: 3Gi}
   - repo: jvallery/immich-config
     profiles:
       ci:
