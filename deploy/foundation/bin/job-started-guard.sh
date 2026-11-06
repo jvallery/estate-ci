@@ -7,7 +7,7 @@
 #
 #   CI_EXPECTED_REPOSITORY  owner/name this scale set serves, or 'Owner/*' for an
 #                           org-level set that serves every repo of that owner
-#   CI_RUNNER_PROFILE       ci | pg | build | buildcheck
+#   CI_RUNNER_PROFILE       ci | pg | build | buildcheck | ops
 #   CI_BUILD_REF            ref build runners serve (default refs/heads/main)
 set -euo pipefail
 fail() { echo "estate-ci guard: $*" >&2; exit 1; }
@@ -57,5 +57,12 @@ if [[ "$profile" == "build" ]]; then
     *) fail "event ${event} may not use a build runner (use <repo>-buildcheck for PR builds)" ;;
   esac
   [[ "${GITHUB_REF:-}" == "$build_ref" ]] || fail "build runners serve ${build_ref} only, not ${GITHUB_REF:-unknown}"
+fi
+if [[ "$profile" == "ops" ]]; then
+  # ops sets mount the repo's ops Secret (for example a deploy SSH key) and may
+  # reach exact management targets: a manual dispatch from the default branch only.
+  ops_ref="${CI_BUILD_REF:-refs/heads/main}"
+  [[ "$event" == "workflow_dispatch" ]] || fail "event ${event} may not use an ops runner (workflow_dispatch only)"
+  [[ "${GITHUB_REF:-}" == "$ops_ref" ]] || fail "ops runners serve ${ops_ref} only, not ${GITHUB_REF:-unknown}"
 fi
 echo "estate-ci guard: ${repo} ${event} ${GITHUB_REF:-} allowed on profile ${profile}"

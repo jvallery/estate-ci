@@ -7,6 +7,8 @@ resources:
   - networkpolicies.yaml
   - hold-reader.yaml
   - hot-guard.yaml
+  # Rendered by scripts/render_runners.py from runners.yaml ops sets.
+  - ops-egress.generated.yaml
 generatorOptions:
   # Runner Pod templates reference this name; keep it stable.
   disableNameSuffixHash: true

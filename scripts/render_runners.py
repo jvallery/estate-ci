@@ -22,9 +22,13 @@ import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "deploy" / "runners" / "apps"
+# Per-set egress for ops sets (rendered here, applied by estate-ci-foundation).
+OPS_EGRESS = ROOT / "deploy" / "foundation" / "ops-egress.generated.yaml"
 NAMESPACE = "ci-runners"
 SOURCE = "https://github.com/jvallery/estate-ci.git"
-SUFFIX = {"ci": "ci", "pg": "pg", "build": "build", "buildcheck": "buildcheck"}
+SUFFIX = {"ci": "ci", "pg": "pg", "build": "build", "buildcheck": "buildcheck", "ops": "ops"}
+CIDR = re.compile(r"^(\d{1,3}\.){3}\d{1,3}/(3[0-2]|[12]?\d)$")
+SECRET_NAME = re.compile(r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
 # Extra ci-profile sets for repos whose checks need more than one CI image:
 # profile key "ci-<variant>" renders set "<repo>-ci-<variant>" (a ci profile).
 # A ci variant with "postgres: true" also gets the pg profile's Postgres sidecar.
@@ -129,8 +133,21 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
             raise RenderError(f"{base}: runner_resources is only for ci profiles")
         rr = opts["runner_resources"]
         runner["resources"] = res(rr["cpu"], rr["memory"], rr["limit_cpu"], rr["limit_memory"], "1Gi", "16Gi")
-    if opts.get("runner_image") and profile != "ci":
-        raise RenderError(f"{base}: runner_image is only for ci profiles")
+    if profile == "ops":
+        # ops: one runner container on the toolbox image (git, ssh, CLIs), no
+        # sidecars. It holds the repo's KSOPS ops Secret, read-only, and the job
+        # guard admits only default-branch workflow_dispatch. Egress beyond the
+        # shared runner policy is per set (OPS_EGRESS, rendered below).
+        if opts.get("job_image") or opts.get("postgres"):
+            raise RenderError(f"{base}: ops sets are runner-only (no job_image or postgres)")
+        secret = opts.get("secret", "")
+        if not SECRET_NAME.match(secret):
+            raise RenderError(f"{base}: ops sets need secret: <KSOPS Secret name in ci-runners>")
+        runner["image"] = pinned(opts.get("runner_image", d["toolbox"]), "runner_image")
+        runner["resources"] = res("250m", "512Mi", "2", "2Gi", "1Gi", "4Gi")
+        runner["volumeMounts"].append({"name": "ops-secret", "mountPath": "/run/secrets/ops", "readOnly": True})
+    elif opts.get("runner_image") and profile != "ci":
+        raise RenderError(f"{base}: runner_image is only for ci and ops profiles")
     # One slot per Pod, on the runner container (every Pod has exactly one).
     # Extended resources need request == limit.
     # Gate sets (slot: false, COORD P0 2026-11-07) run only aggregator jobs at
@@ -147,6 +164,9 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
         {"name": "exchange", "emptyDir": {"sizeLimit": "24Gi"}},
         {"name": "estate-ci-scripts", "configMap": {"name": "estate-ci-scripts", "defaultMode": 0o555}},
     ]
+    if profile == "ops":
+        # 0440 + fsGroup 1001: readable by the runner uid only.
+        volumes.append({"name": "ops-secret", "secret": {"secretName": opts["secret"], "defaultMode": 0o440}})
 
     def agent(name: str) -> list[dict]:
         return [{"name": "CI_SIDECAR_NAME", "value": name}, {"name": "CI_EXCHANGE_DIR", "value": "/exchange"}]
@@ -242,8 +262,11 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
         runner["volumeMounts"].append({"name": "zot-push", "mountPath": "/run/secrets/zot-push", "readOnly": True})
         volumes.append({"name": "zot-push", "secret": {
             "secretName": push_secret, "items": [{"key": ".dockerconfigjson", "path": "config.json"}]}})
+    labels = {"estate-ci.vallery.net/profile": label, RUNNER_LABEL: "true"}
+    if profile == "ops":
+        labels["estate-ci.vallery.net/set"] = f"{base}-ops"
     return {
-        "metadata": {"labels": {"estate-ci.vallery.net/profile": label, RUNNER_LABEL: "true"}},
+        "metadata": {"labels": labels},
         "spec": {
             "automountServiceAccountToken": False,
             "restartPolicy": "Never",
@@ -333,11 +356,38 @@ def budget(cap: dict, max_pod: float, quota: float) -> list[str]:
     return lines
 
 
+OPS_KEY = "../../foundation/ops-egress.generated.yaml"
+
+
+def ops_egress_policy(name: str, opts: dict) -> dict:
+    """Additive egress for one ops set: TCP to the exact declared targets only."""
+    rules = []
+    for target in opts.get("egress") or []:
+        cidr, ports = target.get("cidr", ""), target.get("tcp") or []
+        if not CIDR.match(cidr) or not ports or not all(isinstance(p, int) and 0 < p < 65536 for p in ports):
+            raise RenderError(f"{name}: ops egress needs cidr: a.b.c.d/n and tcp: [ports]")
+        rules.append({"to": [{"ipBlock": {"cidr": cidr}}],
+                      "ports": [{"protocol": "TCP", "port": p} for p in ports]})
+    if not rules:
+        raise RenderError(f"{name}: an ops set must declare its egress targets")
+    return {
+        "apiVersion": "networking.k8s.io/v1",
+        "kind": "NetworkPolicy",
+        "metadata": {"name": f"ops-egress-{name}"},
+        "spec": {
+            "podSelector": {"matchLabels": {"estate-ci.vallery.net/set": name}},
+            "policyTypes": ["Egress"],
+            "egress": rules,
+        },
+    }
+
+
 def render(cfg: dict) -> dict[str, str]:
     d = cfg["defaults"]
     owners = cfg["owners"]
     out: dict[str, str] = {}
     pod_cpu: list[float] = []
+    ops_policies: list[dict] = []
     for entry in cfg["sets"]:
         if "repo" in entry:
             owner, repo = entry["repo"].split("/", 1)
@@ -355,10 +405,10 @@ def render(cfg: dict) -> dict[str, str]:
             profile = "ci" if CI_VARIANT.match(key) else key
             if profile not in SUFFIX:
                 raise RenderError(f"{base}: unknown profile {key}")
-            if profile == "build" and "repo" not in entry:
+            if profile in ("build", "ops") and "repo" not in entry:
                 # The push credential is per repository (ADR-0003); an org-wide
                 # set would hand one repo's credential to every repo in the org.
-                raise RenderError(f"{base}: the build profile needs a repo-level set")
+                raise RenderError(f"{base}: the {profile} profile needs a repo-level set")
             opts = opts or {}
             name = f"{base}-{key if profile != key else SUFFIX[profile]}"
             if not NAME.match(name):
@@ -398,8 +448,12 @@ def render(cfg: dict) -> dict[str, str]:
                 },
             }
             out[f"{name}.yaml"] = HEADER + yaml.dump(app, Dumper=_NoAliasDumper, sort_keys=False, width=200)
+            if profile == "ops":
+                ops_policies.append(ops_egress_policy(name, opts))
     cfg["_max_pod_cpu"] = max(pod_cpu) if pod_cpu else 0.0
     names = sorted(out)
+    out[OPS_KEY] = HEADER + "".join(
+        "---\n" + yaml.dump(p, Dumper=_NoAliasDumper, sort_keys=False, width=200) for p in ops_policies)
     out["kustomization.yaml"] = HEADER + yaml.safe_dump(
         {"apiVersion": "kustomize.config.k8s.io/v1beta1", "kind": "Kustomization", "resources": names},
         sort_keys=False)
@@ -420,19 +474,21 @@ def main() -> int:
         print(f"render_runners: {exc}", file=sys.stderr)
         return 2
     existing = {p.name: p.read_text() for p in OUT.glob("*.yaml")} if OUT.exists() else {}
+    if OPS_EGRESS.exists():
+        existing[OPS_KEY] = OPS_EGRESS.read_text()
     if args.check:
         if existing != rendered:
             stale = sorted(set(existing) ^ set(rendered) | {k for k in rendered if existing.get(k) != rendered[k]})
             print("render_runners: stale output, run scripts/render_runners.py: " + ", ".join(stale), file=sys.stderr)
             return 1
-        print(f"render_runners: {len(rendered) - 1} scale sets up to date")
+        print(f"render_runners: {len(rendered) - 2} scale sets up to date")
         return 0
     OUT.mkdir(parents=True, exist_ok=True)
     for name in set(existing) - set(rendered):
         (OUT / name).unlink()
     for name, text in rendered.items():
-        (OUT / name).write_text(text)
-    print(f"render_runners: wrote {len(rendered) - 1} scale sets")
+        (OPS_EGRESS if name == OPS_KEY else OUT / name).write_text(text)
+    print(f"render_runners: wrote {len(rendered) - 2} scale sets")
     return 0
 
 
