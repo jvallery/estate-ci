@@ -161,6 +161,9 @@ sets:
         job_image: registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2
         job_uid: 1001
         job_resources: {cpu: "1", memory: 1536Mi, limit_cpu: "4", limit_memory: 8Gi}
+        # COORD 2026-11-06: runner CPU limit 2 -> 4 to cut the ~2.4 min full-history checkout.
+        # Limits only; requests stay at the runner default (250m / 512Mi), so no scheduling cost.
+        runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "4", limit_memory: 2Gi}
   # estate-ci's own self-test (R1: no GitHub-hosted runners, even here), image
   # mirrors (mirrors.txt, crane copy) and the estate-ci-toolbox build. The build
   # set mounts zot-push-estate-ci (writer for jvallery/estate-ci/** only).
