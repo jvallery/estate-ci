@@ -94,6 +94,11 @@ sets:
       buildcheck:
         max: 1
         kaniko_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
+      # Pushes jvallery/kepler-estate-mcp with zot principal ci-kepler
+      # (storage-infra si#1395) via the KSOPS Secret ci-runners/zot-push-kepler.
+      build:
+        max: 1
+        kaniko_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 4Gi}
   # verdify-platform (DASH, verdify-platform#1397/#1402). It transfers to jvallery
   # first (D19), hence the jvallery URL. Sets follow #1402's job map, all uid 1001
   # (ci/gha/lib.sh makes a private writable HOME):
