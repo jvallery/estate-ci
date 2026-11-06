@@ -20,6 +20,7 @@ Tracking: jvallery/agents#6092 (FLEET-DECOM epic), jvallery/agents#6094 (this fo
 | `.github/workflows/lint.yml` | Reusable R1-R3 workflow lint (`deploy/foundation/bin/lint-workflows.py`, stdlib Python; fixtures in `tests/lint/`). |
 | `scripts/fork-policy.sh` | Operator check/apply of the fork-PR approval policy for onboarded repos. |
 | `.github/workflows/mirror.yml`, `mirrors.txt` | Reusable digest-preserving image mirror (`crane copy`, `deploy/foundation/bin/mirror.sh`); estate-ci's own mirror list. |
+| `images/estate-ci-toolbox/`, `.github/workflows/build.yml` | The estate-ci-toolbox job image (tools and versions in its README), built in-cluster by Kaniko. |
 | `runners.yaml` | The runner registry: which repos get which scale sets. |
 | `scripts/render_runners.py` | Renders `runners.yaml` into `deploy/runners/apps/` (one Argo Application per scale set). |
 | `deploy/foundation/` | Namespace `ci-runners`, ResourceQuota/LimitRange, NetworkPolicies, the runner scripts ConfigMap. |

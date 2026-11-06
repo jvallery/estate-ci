@@ -51,3 +51,20 @@ its workflows run unmodified) that confirms the version-specific items marked
 9. Required-check names are stable job ids, so a ruleset can be recreated on
    another forge from a list.
 10. Each estate-ci reusable workflow carries a "Forgejo notes" header (R3).
+
+## Exceptions
+
+Each exception names its scope, why no portable alternative exists, and what
+replaces it on the phase-2 forge. The lint does not police them; review does.
+
+- **E-1 (2026-11-06, COORD): upstream supply-chain attestation verification.**
+  The estate-ci-toolbox image ships the `gh` CLI (pinned, sha256-checked) so
+  jobs can run `gh attestation verify` on upstream release artifacts (first
+  user: sentinel's frigate-promotion jobs, moving off GitHub-hosted runners).
+  Scope: verification of upstream GitHub-issued attestations only. Not allowed:
+  `gh` for forge API calls (rule 7: those go through `forge-api.sh`), or any
+  credential beyond the per-job token. Phase 2: the upstream attestations stay
+  on GitHub, so verification keeps working from any forge (it needs only
+  outbound HTTPS to the public Sigstore/GitHub endpoints); if a token-free path
+  is required, replace it with `cosign verify-blob-attestation` against the
+  same bundles.
