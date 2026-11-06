@@ -12,10 +12,12 @@
 # commit records "Estate-CI-Source: <sha>" so later runs can order themselves.
 #
 # Plain git for the branch and commit; forge-api.sh for the PR, the checks
-# dispatch and auto-merge (the only forge-specific part). The job token cannot
-# trigger workflows by itself on GitHub, so the checks workflow is dispatched on
-# the pin branch; its check runs land on the PR head. Run from the repository
-# root with push access (actions/checkout's default persisted token).
+# dispatch and auto-merge (the only forge-specific part). forge-api.sh uses
+# FORGE_TOKEN when set: pin-bump.yml passes a vallery-pin-bot App token there,
+# so the PR starts pull_request workflows normally. A job-token PR starts none,
+# so --checks-workflow (fallback only) dispatches the checks on the pin branch.
+# Run from the repository root with push access (actions/checkout's default
+# persisted token).
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 pins="" base=main checks="" automerge=false source_sha=""

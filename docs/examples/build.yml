@@ -30,10 +30,13 @@ jobs:
       pull-requests: write
       actions: write
     uses: jvallery/estate-ci/.github/workflows/pin-bump.yml@<sha>
+    secrets:
+      # vallery-pin-bot App key; with repo variable PIN_BOT_CLIENT_ID the PR gets normal pull_request CI.
+      pin-bot-private-key: ${{ secrets.PIN_BOT_PRIVATE_KEY }}
     with:
       pins: |
         deploy/k8s/kustomization.yaml registry.vallery.net/jvallery/<repo>-app ${{ needs.app.outputs.digest }}
-      checks-workflow: ci.yml
+      checks-workflow: ci.yml   # fallback only, when the pin-bot secret is absent
 
 # Vendored (forge-neutral) equivalent of the app job:
 #   app:
