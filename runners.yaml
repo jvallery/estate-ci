@@ -249,7 +249,8 @@ sets:
         # 36.5/60 CPU, 68.25/106Gi, limits 207/260 CPU, 287/400Gi; node4-7 free
         # memory requests 10.4/12.4/18.9/12.0Gi. Soft preference away from node5
         # (COORD: 94% memory requested there).
-        max: 16
+        # D-29 (Jason, 2026-11-06 ~19:0xZ): 16 -> 24; ARC quota limits.cpu 260 -> 320.
+        max: 24
         avoid_nodes: [vm-k3s-node5]
         job_image: registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2
         job_uid: 1001
