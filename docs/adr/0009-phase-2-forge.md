@@ -38,8 +38,11 @@ its workflows run unmodified) that confirms the version-specific items marked
    `workflow_run`, `merge_group`-only logic, `services:` or `container:` keys.
 5. Read only these contexts in YAML: `github.repository`, `github.ref`,
    `github.ref_name`, `github.sha`, `github.event_name`, `github.event.pull_request.number`,
-   `github.event.pull_request.head.sha`, `inputs.*`, `needs.*`, `matrix.*`.
-   Scripts read the equivalent env vars.
+   `github.event.pull_request.head.sha`, `github.event.repository.name`, `inputs.*`,
+   `needs.*`, `matrix.*`. Scripts read the equivalent env vars.
+   `github.event.repository.name` was added by COORD ruling on 2026-11-06. It selects
+   the `<repo>-<profile>` runner label in `runs-on`, where no script can run.
+   Forgejo/Gitea event payloads carry `repository.name` too.
 6. Do not depend on job-level `permissions` for safety (Forgejo ignores them);
    safety comes from the guard, the credential split and the token scope.
 7. All forge API calls go through the `forge` wrapper (ADR-0006).
