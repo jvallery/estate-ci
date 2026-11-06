@@ -1,0 +1,12 @@
+# estate-ci image mirrors (estate-ci#6). Copied byte-for-byte into the zot origin by
+# .github/workflows/mirror.yml (deploy/foundation/bin/mirror.sh) on push to main.
+# Format: <upstream-ref>@sha256:<digest>  <dest-repository under jvallery/estate-ci/>
+# Pin as registry.vallery.net/<dest-repository>@<same digest>.
+#
+# ARC runner (image index, as pinned in runners.yaml defaults.runner_image).
+ghcr.io/actions/actions-runner:2.338.2@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232  jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner
+# Kaniko executor v1.23.2-debug (image index; same digest as the fleet-named jvallery/agents-kaniko-executor copy).
+gcr.io/kaniko-project/executor:v1.23.2-debug@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e  jvallery/estate-ci/mirror/gcr.io/kaniko-project/executor
+# estate-ci-toolbox bases (linux/amd64 children only).
+docker.io/library/ubuntu:24.04@sha256:78d4744ead1f5b19b04d0df558ab182a5300903900755e515b2ca4d10eb2044d  jvallery/estate-ci/mirror/docker.io/library/ubuntu
+docker.io/library/golang:1.27.3-bookworm@sha256:fea12ba16096adec0f699ce1c4da2154d320450e56c1f63671f95d2a3551c77b  jvallery/estate-ci/mirror/docker.io/library/golang

@@ -19,6 +19,7 @@ Tracking: jvallery/agents#6092 (FLEET-DECOM epic), jvallery/agents#6094 (this fo
 | `.github/workflows/pin-bump.yml` | Thin reusable wrapper over `pin-bump.sh`. |
 | `.github/workflows/lint.yml` | Reusable R1-R3 workflow lint (`deploy/foundation/bin/lint-workflows.py`, stdlib Python; fixtures in `tests/lint/`). |
 | `scripts/fork-policy.sh` | Operator check/apply of the fork-PR approval policy for onboarded repos. |
+| `.github/workflows/mirror.yml`, `mirrors.txt` | Reusable digest-preserving image mirror (`crane copy`, `deploy/foundation/bin/mirror.sh`); estate-ci's own mirror list. |
 | `runners.yaml` | The runner registry: which repos get which scale sets. |
 | `scripts/render_runners.py` | Renders `runners.yaml` into `deploy/runners/apps/` (one Argo Application per scale set). |
 | `deploy/foundation/` | Namespace `ci-runners`, ResourceQuota/LimitRange, NetworkPolicies, the runner scripts ConfigMap. |
@@ -121,3 +122,40 @@ Pin every `uses: jvallery/estate-ci/...@<sha>` to a full commit SHA. See
 `docs/examples/ci.yml` and `docs/examples/build.yml`. The reusable workflows
 are conveniences: a job that is `actions/checkout` plus
 `run: "$ESTATE_CI/image-build.sh" ...` is equivalent and forge-neutral.
+
+## Image mirrors
+
+An image whose Dockerfile is only `FROM <upstream>@<digest>` is a mirror, not a
+build: list it in the repo's `mirrors.txt` and call `mirror.yml` (no Kaniko).
+
+```
+# mirrors.txt: <upstream-ref>@sha256:<digest>  <dest-repository>
+ghcr.io/kube-vip/kube-vip:v1.0.4@sha256:<digest>  jvallery/network-infra/mirror/ghcr.io/kube-vip/kube-vip
+```
+
+PRs check the list (format, destination prefix, the upstream digest resolves)
+on `<repo>-ci` without a credential. On the default branch, `apply: true`
+copies each missing digest to the zot origin on `<repo>-build` with the repo's
+own writer and reads the digest back; present digests are skipped. Each copy
+is tagged `pinned-<digest12>` so zot retention keeps it.
+
+`crane copy` is byte-for-byte, so **the mirror's digest is the upstream
+digest**: an image index stays an index (list the `linux/amd64` child digest to
+copy one platform, as the large vLLM/GPUStack mirrors should).
+
+**One-time pin change per mirror.** A Kaniko-built mirror
+(`registry.vallery.net/jvallery/mirror-<name>-<hash>@sha256:<kaniko digest>`)
+has a digest of its own. Moving it to `crane copy` changes the pin once:
+
+1. Add the line to `mirrors.txt` (upstream ref and digest from the old Dockerfile's `FROM`).
+2. Merge; dispatch or push runs `apply`; the log prints
+   `registry.vallery.net/<dest>@<upstream digest>`.
+3. In one PR, repin every consumer to that reference and delete the old
+   mirror Dockerfile and its build entry. The old repository stays in zot
+   until retention or the storage-infra custody plan removes it.
+
+estate-ci's own `mirrors.txt` carries the ARC runner and the Kaniko executor
+(the pins in `runners.yaml` keep their digests and change only their
+repository, to `registry.vallery.net/jvallery/estate-ci/mirror/...`) and the
+toolbox bases. Its writer is `zot-push-estate-ci` (write on
+`jvallery/estate-ci/**` only).
