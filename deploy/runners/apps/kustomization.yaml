@@ -35,9 +35,11 @@ resources:
 - research-vault-build.yaml
 - research-vault-ci.yaml
 - research-vault-pg.yaml
+- sentinel-ci-tools.yaml
 - sentinel-ci.yaml
 - storage-infra-build.yaml
 - storage-infra-ci.yaml
+- sunshine-club-ci.yaml
 - verdify-platform-build.yaml
 - verdify-platform-ci-dashboard.yaml
 - verdify-platform-ci-esphome.yaml
