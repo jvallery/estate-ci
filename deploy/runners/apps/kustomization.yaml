@@ -7,6 +7,7 @@ resources:
 - cortex-ai-compute-build.yaml
 - cortex-ai-compute-ci.yaml
 - estate-ci-build.yaml
+- estate-ci-buildcheck.yaml
 - estate-ci-ci.yaml
 - home-dotfiles-ci.yaml
 - immich-config-ci.yaml
