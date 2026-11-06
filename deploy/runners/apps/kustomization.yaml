@@ -17,6 +17,7 @@ resources:
 - homeassistant-ci-esphome.yaml
 - homeassistant-ci-ha.yaml
 - homeassistant-ci.yaml
+- homeassistant-ops.yaml
 - immich-config-ci.yaml
 - kepler-build.yaml
 - kepler-buildcheck.yaml

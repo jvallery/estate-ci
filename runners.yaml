@@ -9,6 +9,9 @@
 #   build       runner + Kaniko sidecar + the repo's zot push secret
 #               (zot-push-<repo>); default-branch push/dispatch only    suffix -build
 #   buildcheck  runner + Kaniko sidecar, no push credential (PR builds)  suffix -buildcheck
+#   ops         runner only (toolbox image) + the repo's KSOPS ops Secret at
+#               /run/secrets/ops (0440) + per-set TCP egress to the declared
+#               management targets; default-branch workflow_dispatch only  suffix -ops
 #   ci-<v>      another ci set with its own job_image, for repos whose checks
 #               need several CI images (e.g. homeassistant)                suffix -ci-<v>
 # ci options: runner_image (a runner image built FROM the stock actions-runner,
@@ -33,6 +36,7 @@ defaults:
     pg: 1
     build: 1
     buildcheck: 1
+    ops: 1
 
 # GitHub App registration Secret per owner (Secret in namespace ci-runners).
 owners:
@@ -157,6 +161,18 @@ sets:
         runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "2", limit_memory: 2Gi}
   - repo: jvallery/homeassistant
     profiles:
+      # AGENTS-RUNS-ON (2026-11-06): replaces the legacy github-runners
+      # homeassistant-haos-deploy set for haos-deploy.yml and pool-firmware-deploy.yml.
+      # KSOPS Secret ci-runners/ops-homeassistant (sealed by Jason in agents
+      # platform/gitops/secrets-ksops/estate-ci; keys: ssh_key, known_hosts). Egress:
+      # TCP/22 to HAOS 192.168.30.107 only (network-infra ipam/management-cidrs.yaml
+      # consumer row: separate network-infra PR). Until the Secret exists a
+      # dispatched job's runner Pod waits in ContainerCreating; nothing else changes.
+      ops:
+        max: 1
+        secret: ops-homeassistant
+        egress:
+          - {cidr: 192.168.30.107/32, tcp: [22]}
       ci:
         max: 2
         job_image: *toolbox
