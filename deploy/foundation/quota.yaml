@@ -80,15 +80,26 @@ metadata:
 # - D-29 (Jason, 2026-11-06 ~19:0xZ): agents-ci max 16 -> 24 (+8 runners =
 #   +10 CPU / +16Gi requests, +64 CPU / +80Gi limits); limits.cpu 260 -> 320.
 #   Requests and limits.memory unchanged (COORD).
+# - D-34 (Jason first-hand, 2026-11-06 ~19:4xZ): "allow CI to run if the memory
+#   is currently free since these are ephemeral pods, and then queue CI if the
+#   memory isn't free." The quota counts declared requests/limits, not use, so
+#   it no longer gates CI: it is sized to every set at maxRunners (50 sets, 101
+#   pods: 104.5 CPU / 209.75Gi requests, 547 CPU / 857Gi limits, 1070Gi /
+#   3716Gi ephemeral; computed from deploy/runners/apps at this commit, pod
+#   effective = max(sum containers, max init)). The scheduler is the gate: a
+#   runner pod that does not fit stays Pending and ARC 0.14.2 leaves the job
+#   queued in GitHub (no failure path for Pending). Runner pods use
+#   PriorityClass ci-runner (value 0, preemptionPolicy Never), so CI never
+#   preempts anything. A maxRunners raise must still raise this envelope.
 spec:
   hard:
-    pods: "70"
-    requests.cpu: "60"
-    requests.memory: 106Gi
-    limits.cpu: "320"
-    limits.memory: 400Gi
-    requests.ephemeral-storage: 600Gi
-    limits.ephemeral-storage: 2000Gi
+    pods: "105"
+    requests.cpu: "105"
+    requests.memory: 212Gi
+    limits.cpu: "550"
+    limits.memory: 860Gi
+    requests.ephemeral-storage: 1080Gi
+    limits.ephemeral-storage: 3720Gi
     persistentvolumeclaims: "0"
     services.loadbalancers: "0"
     services.nodeports: "0"
