@@ -26,7 +26,7 @@ else
   [[ "${repo,,}" == "${expected,,}" ]] || fail "scale set serves ${expected}, job is from ${repo}"
 fi
 
-# shellcheck disable=SC2012 # fixed runner path, no odd names
+# shellcheck disable=SC2010,SC2012 # fixed runner path, no odd names
 # The runner ships node24 and node24_alpine (musl); sort -V picks the alpine
 # build, which cannot run on the glibc runner image. Use a glibc build.
 node="$(ls -d /home/runner/externals/node*/bin/node 2>/dev/null | grep -v alpine | sort -V | tail -1)"
