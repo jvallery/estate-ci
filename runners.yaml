@@ -138,6 +138,23 @@ sets:
         job_image: *toolbox
         job_uid: 1001
         job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 3Gi}
+      # AGENTS-RUNS-ON (R1): the jobs that ran on GitHub-hosted ubuntu-24.04
+      # (ring-mqtt-dependency-intake; frigate-promotion verify-release and
+      # prepare-promotion). Label swap: their bare run: steps execute in the
+      # toolbox (python3, ruby, jq, git, gh for ADR-0009 E-1) as the runner image.
+      ci-tools:
+        max: 1
+        runner_image: *toolbox
+        runner_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "2", limit_memory: 3Gi}
+  # sunshine_club (moved from VerdifyConsultancy 2026-11-06, REPO-MOVE). Its one
+  # dispatch-only workflow (bash + git path classifier) ran on the legacy
+  # verdifyconsultancy validation-standard set; label swap onto the toolbox.
+  - repo: jvallery/sunshine_club
+    profiles:
+      ci:
+        max: 1
+        runner_image: *toolbox
+        runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "2", limit_memory: 2Gi}
   - repo: jvallery/homeassistant
     profiles:
       ci:
