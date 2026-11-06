@@ -28,8 +28,10 @@ resources:
 - storage-infra-build.yaml
 - storage-infra-ci.yaml
 - verdify-platform-build.yaml
+- verdify-platform-ci-dashboard.yaml
+- verdify-platform-ci-esphome.yaml
+- verdify-platform-ci-tools.yaml
 - verdify-platform-ci.yaml
-- verdify-platform-pg.yaml
 - weather-build.yaml
 - weather-buildcheck.yaml
 - weather-ci.yaml
