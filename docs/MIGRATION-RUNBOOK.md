@@ -85,8 +85,13 @@ Keep the job ids and names stable: they become the required check contexts
 
 - `ci.yml` runs on PRs and `main` next to native CI. Native stays required.
 - `build.yml` is either absent or `push: false` on `<r>-buildcheck` (native still pushes and pins).
-- Every workflow must pass `"$ESTATE_CI/check-runner-labels.sh" .` (R1/R2):
-  ARC labels only, `actions/checkout` and estate-ci workflows only. Replace
+- Every workflow must pass the estate-ci lint (`lint.yml`, the `workflow-lint`
+  job in the example; locally `python3 deploy/foundation/bin/lint-workflows.py <repo>`
+  from an estate-ci checkout): ARC labels only, `actions/checkout@<sha>` and
+  `jvallery/estate-ci/...@<sha>` only, no `services:`/`container:`,
+  `environment:`, `id-token: write`, `pull_request_target`/`workflow_run`,
+  Actions cache/artifacts or ghcr.io. Warnings (non-portable contexts,
+  `secrets.*`, long inline shell) become errors with `strict: true`. Replace
   `actions/setup-*`, cache and marketplace actions with repo scripts or a
   `job_image` that already contains the toolchain.
 - Concurrency: `cancel-in-progress` on PRs only (see the example). That replaces
@@ -96,6 +101,9 @@ Keep the job ids and names stable: they become the required check contexts
 comes first) where every estate-ci check finished and matched native's verdict.
 A red estate-ci check with green native is a migration bug: fix it before
 continuing. Infra failures: `gh run rerun --failed` once, then report (L2).
+
+- Public repos: `scripts/fork-policy.sh check <owner/repo>` (operator, `gh` admin
+  auth) must pass; `apply` sets approval for all outside collaborators.
 
 ## 5. Switch required checks
 
@@ -144,7 +152,7 @@ runs through COORD.
 Run through this for every migrated repo; it is what keeps the later forge
 move a re-registration rather than a rewrite.
 
-- [ ] Every `runs-on` is an estate ARC label; `check-runner-labels.sh` passes.
+- [ ] Every `runs-on` is an estate ARC label; `lint.yml` passes (ideally with `strict: true`).
 - [ ] Only `actions/checkout` and `jvallery/estate-ci` workflows in `uses:`
       (Forgejo mirrors `actions/checkout`; nothing else needs a GitHub-hosted action).
 - [ ] All logic is in repo scripts (`ci/*.sh`, Makefile, task file) or

@@ -17,6 +17,8 @@ Tracking: jvallery/agents#6092 (FLEET-DECOM epic), jvallery/agents#6094 (this fo
 | `.github/workflows/checks.yml` | Thin reusable wrapper: checkout + one repo command (optionally inside the repo's CI image, optionally with Postgres). |
 | `.github/workflows/image-build.yml` | Thin reusable wrapper over `image-build.sh`. |
 | `.github/workflows/pin-bump.yml` | Thin reusable wrapper over `pin-bump.sh`. |
+| `.github/workflows/lint.yml` | Reusable R1-R3 workflow lint (`deploy/foundation/bin/lint-workflows.py`, stdlib Python; fixtures in `tests/lint/`). |
+| `scripts/fork-policy.sh` | Operator check/apply of the fork-PR approval policy for onboarded repos. |
 | `runners.yaml` | The runner registry: which repos get which scale sets. |
 | `scripts/render_runners.py` | Renders `runners.yaml` into `deploy/runners/apps/` (one Argo Application per scale set). |
 | `deploy/foundation/` | Namespace `ci-runners`, ResourceQuota/LimitRange, NetworkPolicies, the runner scripts ConfigMap. |

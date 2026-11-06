@@ -1,0 +1,19 @@
+# expect: R1-hosted-label R1-hosted-label R1-multi-label R1-hosted-label R1-hosted-label R1-no-runner R1-hosted-label
+name: bad-r1
+on: [push]
+jobs:
+  hosted:
+    runs-on: ubuntu-latest
+    steps: [{run: "true"}]
+  generic:
+    runs-on: [self-hosted, linux]
+    steps: [{run: "true"}]
+  expr:
+    runs-on: ${{ inputs.big && 'demo-ci' || 'ubuntu-24.04' }}
+    steps: [{run: "true"}]
+  none:
+    steps: [{run: "true"}]
+  group:
+    runs-on:
+      group: macos-15
+    steps: [{run: "true"}]
