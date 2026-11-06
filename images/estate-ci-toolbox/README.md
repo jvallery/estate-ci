@@ -1,7 +1,10 @@
 # estate-ci-toolbox
 
-The default `job` sidecar image for repositories without their own CI image
-(ADR-0004, estate-ci#3). It replaces the fleet `agents-arc-runner-toolbox`
+The estate CI toolchain image (ADR-0004, estate-ci#3). Built FROM the stock ARC
+runner image, so it serves both as `runner_image` (label-swap sets whose `run:`
+steps execute in the runner container: proxmox-infrastructure, home-dotfiles,
+AI_presentation) and as the `job` sidecar image for repositories without their
+own CI image. It replaces the fleet `agents-arc-runner-toolbox`
 and removes the need for `actions/setup-*` (R2). Secret-free; built in-cluster
 by `.github/workflows/build.yml` (Kaniko on `estate-ci-buildcheck` for PRs,
 `estate-ci-build` with push on `main`) and published as
@@ -9,7 +12,7 @@ by `.github/workflows/build.yml` (Kaniko on `estate-ci-buildcheck` for PRs,
 
 | Tool | Version | Source and check |
 |---|---|---|
-| Ubuntu base | 24.04 (noble) amd64 | `mirrors.txt`, digest-pinned |
+| Base: stock ARC runner | actions-runner 2.338.2 (Ubuntu 24.04 noble) amd64 | `mirrors.txt`, same index digest as `runners.yaml` `runner_image`; startup contract unchanged |
 | python3 + pip + venv + PyYAML | 3.12 (apt) | noble archive (`python3-yaml`); `PIP_BREAK_SYSTEM_PACKAGES=1`, user installs to `~/.local` |
 | uv / uvx | 0.13.5 | GitHub release, sha256 |
 | Node.js + npm + corepack (pnpm) | v24.22.1 | nodejs.org, SHASUMS256 |
@@ -30,9 +33,11 @@ by `.github/workflows/build.yml` (Kaniko on `estate-ci-buildcheck` for PRs,
 `versions.sh --assert` runs at build time and fails on any drift; the result is
 in the image at `/usr/local/share/estate-ci-toolbox/versions.txt`.
 
-Environment: `HOME=/home/ci` (uid/gid 1001, the `job_uid` runner sets use),
-`LANG=C.UTF-8`, `PATH` includes `~/.local/bin` and `/opt/node/bin`. The image
-sets no entrypoint; the runner Pod runs `sidecar-agent.sh` in it.
+Environment: the runner's own (user `runner`, uid/gid 1001, `HOME=/home/runner`,
+runner `PATH`; no ENTRYPOINT/CMD/WORKDIR change) plus `LANG=C.UTF-8` and
+`PIP_BREAK_SYSTEM_PACKAGES=1`. Node lives in `/usr/local`. CVE-2026-59873: the
+runner-bundled npm with tar < 7.5.19 is removed from `externals`, as in the
+fleet toolbox.
 
 Not included, by design: Docker or any container runtime, cloud CLIs,
 credentials. `gh` is present only for exception E-1; forge API calls still go
