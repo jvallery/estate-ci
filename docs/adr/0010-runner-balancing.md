@@ -34,9 +34,13 @@ the same.
    (`MAX_CPU_LIMIT` in the renderer, which refuses a higher value or a request
    above its limit). 8 CPU is 1/5 of a 43-CPU worker and above the p99 of every
    measured class. Memory limits stay per class (ADR-0003 for Kaniko).
-3. **Runners always lose to production.** PriorityClass `ci-preemptible`
-   (-1000, preemptionPolicy Never, D-67): every production Pod (priority 0 and
-   above) can preempt a runner to get its requests; runners never preempt.
+3. **Runners always lose to production; infra schedules first.** PriorityClass
+   `ci-preemptible` (-1000, preemptionPolicy Never, D-67) for app repos and
+   `ci-preemptible-infra` (-900, Never) for the repos in `runners.yaml`
+   `defaults.infra_repos`. Every production Pod (estate-batch -100 and above)
+   can preempt either; runners never preempt. Pending Pods are ordered by
+   priority, so freed CPU goes to infra runners before app runners, however
+   many jobs an app repo has queued (fair share, 2026-11-07).
 4. **Spread all runners together.** Every runner Pod carries
    `estate-ci.vallery.net/runner: "true"`, and one soft hostname
    `topologySpreadConstraint` (maxSkew 1, ScheduleAnyway,
