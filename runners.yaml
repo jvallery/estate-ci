@@ -291,7 +291,8 @@ sets:
         # D-29 (Jason, 2026-11-06 ~19:0xZ): 16 -> 24; ARC quota limits.cpu 260 -> 320.
         # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 24 -> 30 (+6 from weather-build/kepler-ci/verdify-platform-ci-pg; at max 100%, ~90 jobs queued).
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 30 -> 37 (+7 on top of the rebalance; at max 100%, 148 jobs queued at 23:50Z).
-        max: 37
+        # COORD contingency (2026-11-07 ~02:14Z): 37 -> 20 HOLD. verdify-db-0 CPU-starved on node7 (111%), Verdify planner failing; restore after the #66 slot template is live and node7 < 90% for 15 min.
+        max: 20
         avoid_nodes: [vm-k3s-node5]
         job_image: registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2
         job_uid: 1001
