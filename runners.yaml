@@ -247,8 +247,7 @@ sets:
         # D-39 (Jason 2026-11-06 ~21:15Z): 5 -> 15.
         # ARC-RAISE rebalance 2 (Jason via COORD 2026-11-07 00:35Z, zero-sum): 15 -> 12 (donor: listener busy peak 6 since 21:46Z).
         # COORD P0 fair share 2026-11-07 05:08Z (CI-BALANCE): 12 -> 6 until the infra backlog drains, then back to 12.
-        # COORD CI-BALANCE 2026-11-07 ~15:30Z (W7 release 7 backlog): 6 -> 10 until 18:00Z; revert to 6 before the node5 hold.
-        max: 10
+        max: 6
         # python:3.13-bookworm (3.13.18, 2026-11-05 bookworm updates: perl/brotli/imagemagick/linux-libc-dev criticals).
         job_image: mirror.gcr.io/library/python@sha256:cc55e4ded9c95f6ce2133b3d096db43f214d280c2a8af65d83e246c8fa7d168c
         job_uid: 1001
