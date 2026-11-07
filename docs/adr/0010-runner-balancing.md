@@ -80,6 +80,11 @@ quantile_over_time(0.9,
 max_over_time(container_memory_working_set_bytes{namespace="ci-runners", container!="", container!="POD"}[24h])
 ```
 
+A suite that shards across its cgroup CPU limit (CI-SHARD-ALL: storage-infra,
+research-vault) uses the whole limit, so it requests close to it (6 of 8 CPU);
+size such classes from the last hours after the sharding change, not the
+older window (estate-ci#77, 2026-11-07).
+
 Group the per-Pod results by set (strip `-<hash>-runner-<id>`) and take the
 p90 across Pods. The first sizing (this ADR) used 14 h of data
 (2026-11-06 12:19Z to 2026-11-07 02:15Z, about 3,900 runner Pods), the full history
