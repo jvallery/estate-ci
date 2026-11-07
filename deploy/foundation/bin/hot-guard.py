@@ -11,9 +11,10 @@ lose to Frigate, but node CPU alone must not kill in-flight jobs):
                     under the node name in ConfigMap ci-runner-slot-hold, so the
                     agents arc-validation-pool reconciler advertises 0
                     agentfleet.vallery.net/ci-runner-slot on the node within
-                    about a minute (no new runners land), and evict up to
-                    evict_per_run of the node's runner Pods, newest first. The
-                    next run evicts more while the trip holds.
+                    about a minute (no new runners land). If the previous run
+                    had already recorded a HARD trip (confirmed), also evict up
+                    to evict_per_run of the node's runner Pods, newest first;
+                    each later run evicts more while the trip holds.
   signal missing -> hold the node at 0 (fail closed) but evict nothing.
   SOFT trip      -> (node CPU, Frigate clean) write "cap=<soft_cap> ..." so the
                     reconciler advertises min(desired, soft_cap). Nothing is
@@ -26,7 +27,7 @@ lose to Frigate, but node CPU alone must not kill in-flight jobs):
 The guard has no node permission. It writes only its own ConfigMap and
 evicts only Pods that carry the estate-ci.vallery.net/profile label in
 ci-runners. GUARD_MODE=dry-run does every API write with dryRun=All.
-GUARD_FORCE_TRIP=<reason> injects a trip, for the forced-trip test.
+GUARD_FORCE_TRIP=<reason> injects a confirmed HARD trip (evicts on the first run), for the forced-trip test.
 Every run prints one JSON line. The run exits 1 on any API or Prometheus error,
 after the fail-closed hold is attempted.
 """
@@ -95,7 +96,11 @@ def decide(now: dt.datetime, tripped: list[str], missing: list[str], hold: dict 
     """
     soft = soft or []
     if tripped:
-        return {"hold": "set", "evict": True, "reason": "trip:" + ",".join(sorted(tripped))}
+        # Close slots on the first HARD run; evict only when the previous run had
+        # already confirmed a HARD trip (COORD 2026-11-07T04:08Z: delete runners only
+        # on a confirmed Frigate signal).
+        confirmed = bool(hold) and not hold.get("cap") and " trip:" in (hold.get("reason") or "")
+        return {"hold": "set", "evict": confirmed, "reason": "trip:" + ",".join(sorted(tripped))}
     if missing:
         return {"hold": "set", "evict": False, "reason": "missing:" + ",".join(sorted(missing))}
     soft_reason = "soft:" + ",".join(sorted(soft))
@@ -268,6 +273,8 @@ def main() -> int:
     try:
         cm, held = read_hold(node)
         decision = decide(now, tripped, missing, held, int(cfg.get("clean_seconds", 900)), soft, recovered)
+        if force:
+            decision["evict"] = True  # an operator's forced trip is confirmed by definition
         log.update(decision=decision, held_before=bool(held))
         if decision["hold"] == "set":
             write_hold(cm, node, "%s %s" % (iso(now), decision["reason"]), now, held, dry)

@@ -36,7 +36,11 @@ check("restart", g.evaluate(SIG, dict(CALM, frigate_started_age_seconds=60))[0],
 check("missing", g.evaluate(SIG, dict(CALM, frigate_skipped_ratio_4m=None)), ([], ["frigate_skipped_ratio_4m"]))
 
 d = g.decide(NOW, ["frigate_skipped_ratio_4m"], [], None, 900)
-check("trip sets+evicts", (d["hold"], d["evict"]), ("set", True))
+check("first trip closes, no evict", (d["hold"], d["evict"]), ("set", False))
+d = g.decide(NOW, ["frigate_skipped_ratio_4m"], [], {"reason": "2026 trip:x", "since": NOW, "last_trip": NOW, "cap": 0}, 900)
+check("confirmed trip evicts", (d["hold"], d["evict"]), ("set", True))
+d = g.decide(NOW, ["frigate_skipped_ratio_4m"], [], {"reason": "2026 missing:x", "since": NOW, "last_trip": NOW, "cap": 0}, 900)
+check("trip after blind hold is unconfirmed", d["evict"], False)
 d = g.decide(NOW, [], ["x"], None, 900)
 check("missing holds, no evict", (d["hold"], d["evict"]), ("set", False))
 check("clean unheld", g.decide(NOW, [], [], None, 900)["hold"], "none")
@@ -54,7 +58,7 @@ check("soft held + soft trip keeps", g.decide(NOW, [], [], soft_held, 900, ["nod
 check("soft held, not recovered keeps", g.decide(NOW, [], [], soft_held, 900, [], False)["hold"], "keep")
 check("soft held, recovered clears", g.decide(NOW, [], [], soft_held, 900, [], True)["hold"], "clear")
 d = g.decide(NOW, ["frigate_skipped_ratio_4m"], [], soft_held, 900, ["node_cpu_busy_4m"])
-check("hard beats soft cap", (d["hold"], d["evict"]), ("set", True))
+check("hard beats soft cap (first run closes only)", (d["hold"], d["evict"]), ("set", False))
 hard_held = {"reason": "r", "since": NOW - dt.timedelta(minutes=30), "last_trip": NOW - dt.timedelta(minutes=20), "cap": 0}
 check("hard clean + soft steps down to cap", g.decide(NOW, [], [], hard_held, 900, ["node_cpu_busy_4m"])["hold"], "soft")
 hard_held["last_trip"] = NOW - dt.timedelta(minutes=5)
@@ -123,6 +127,8 @@ check("calm: no hold cm", state["cm"], None)
 VALUES["frigate_skipped_ratio_4m"] = 0.5
 check("trip run rc", g.main(), 0)
 check("trip: node held", "vm-k3s-node8" in state["cm"]["data"], True)
+check("first trip: no eviction", [c for c in state["calls"] if c[1].endswith("/eviction")], [])
+check("confirmed trip run rc", g.main(), 0)
 ev = [c[1].split("/")[-2] for c in state["calls"] if c[1].endswith("/eviction")]
 check("trip: evicts 2 newest", ev, ["new", "mid"])
 VALUES["frigate_skipped_ratio_4m"] = 0.0
