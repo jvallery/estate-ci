@@ -19,9 +19,9 @@
 # (deploy/foundation/quota.yaml) is the hard envelope across all sets.
 defaults:
   # estate-ci-toolbox (ADR-0004, estate-ci#16; images/estate-ci-toolbox), built
-  # in-cluster by build.yml on main b1f323c5 (tag gha-b1f323c57983). FROM the
+  # in-cluster by build.yml on main 11c064f3 (tag gha-11c064f31332; helm v3.22.1). FROM the
   # stock runner (uid 1001), so it serves as runner_image and as job_image.
-  toolbox: &toolbox registry.vallery.net/jvallery/estate-ci/toolbox@sha256:fe6107cb7dab551e5afe90527fc084a4930a7433b6b733f38c6cc8a0330d6d5b
+  toolbox: &toolbox registry.vallery.net/jvallery/estate-ci/toolbox@sha256:e130c841bad833b34a19c6dc39ecfbae13a87553591cfe569c70aaf240850554
   chart_version: 0.14.2
   controller_service_account: {namespace: arc-systems, name: arc-gha-rs-controller}
   # Stock actions-runner 2.338.2, mirrored by mirrors.txt (same index digest as upstream).
@@ -235,7 +235,8 @@ sets:
         # D-39 (Jason 2026-11-06 ~21:15Z): 5 -> 15.
         # ARC-RAISE rebalance 2 (Jason via COORD 2026-11-07 00:35Z, zero-sum): 15 -> 12 (donor: listener busy peak 6 since 21:46Z).
         max: 12
-        job_image: mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779
+        # python:3.13-bookworm (3.13.18, 2026-11-05 bookworm updates: perl/brotli/imagemagick/linux-libc-dev criticals).
+        job_image: mirror.gcr.io/library/python@sha256:cc55e4ded9c95f6ce2133b3d096db43f214d280c2a8af65d83e246c8fa7d168c
         job_uid: 1001
         job_resources: {cpu: "1", memory: 768Mi, limit_cpu: "8", limit_memory: 8Gi}
       ci-tools:
