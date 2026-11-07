@@ -51,7 +51,8 @@ sets:
         max: 9
         job_image: registry.vallery.net/jvallery/weather-ci@sha256:f4fceab3222d3817baf8def870970981eb88a853cf42f2dc36efcec779f46673
         job_uid: 1001
-        job_resources: {cpu: 1900m, memory: 1664Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # D-87 re-size (CI-BALANCE 03:20Z, last 90 min per-Pod p90 after CI-SHARD-ALL sharding): 2.4 CPU per Pod.
+        job_resources: {cpu: 2400m, memory: 1664Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 6 -> 4 (donor: 24 h peak 1 runner).
@@ -86,7 +87,8 @@ sets:
         job_uid: 1001
         # COORD 2026-11-06 ~20:0xZ (Jason: accelerate RV2 CI): 'unit' took 30-36 min
         # pinned at ~1 core under limit 2 / 4Gi. Was 500m / 768Mi req, 2 / 4Gi lim.
-        job_resources: {cpu: 1950m, memory: 5760Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # D-87 re-size (CI-BALANCE 03:20Z, last 90 min per-Pod p90 after CI-SHARD-ALL sharding): 5.9 CPU per Pod (shards across the CPU limit).
+        job_resources: {cpu: "6", memory: 5760Mi, limit_cpu: "8", limit_memory: 8Gi}
       pg:
         # COORD 2026-11-06 ~18:4xZ (D5 critical path, Jason GO): 1 -> 3.
         # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
@@ -259,7 +261,8 @@ sets:
         max: 3
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
         job_uid: 1001
-        job_resources: {cpu: 2250m, memory: 1408Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # D-87 re-size (CI-BALANCE 03:20Z, last 90 min per-Pod p90 after CI-SHARD-ALL sharding): 2.65 CPU per Pod.
+        job_resources: {cpu: 2600m, memory: 1408Mi, limit_cpu: "8", limit_memory: 8Gi}
       ci-dashboard:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2

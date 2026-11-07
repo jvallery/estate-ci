@@ -174,7 +174,7 @@ spec:
                 value: /exchange
               resources:
                 requests:
-                  cpu: 2250m
+                  cpu: 2600m
                   memory: 1408Mi
                   ephemeral-storage: 2Gi
                 limits:
