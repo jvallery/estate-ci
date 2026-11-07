@@ -169,6 +169,28 @@ def kube(path: str, method: str = "GET", body=None, content_type: str = "applica
         return json.loads(raw) if raw else {}
 
 
+def wait_network(base: str, budget: float, sleep=None, clock=None) -> float:
+    """Poll Prometheus /-/ready until it answers or budget seconds pass; return seconds waited.
+
+    A new Pod is not yet in kube-router's NetworkPolicy ipsets for its first few
+    seconds (measured 2026-11-07: refused at t+0, open by t+10 s), so the first
+    connections of a one-minute CronJob Pod are rejected. Never raises: if the
+    budget runs out, the signal reads below fail closed as usual.
+    """
+    import time
+    sleep = sleep or time.sleep
+    clock = clock or time.monotonic
+    start = clock()
+    while True:
+        try:
+            with urllib.request.urlopen(base.rstrip("/") + "/-/ready", timeout=3):
+                return clock() - start
+        except (urllib.error.URLError, OSError, ValueError):
+            if clock() - start >= budget:
+                return clock() - start
+            sleep(2)
+
+
 def prom_scalar(base: str, query: str) -> float | None:
     url = base.rstrip("/") + "/api/v1/query?" + urllib.parse.urlencode({"query": query})
     with urllib.request.urlopen(url, timeout=TIMEOUT) as resp:
@@ -246,6 +268,7 @@ def main() -> int:
 
     values: dict = {}
     prom_failed = False
+    log["net_wait_s"] = round(wait_network(cfg["prometheus_url"], float(cfg.get("net_wait_seconds", 25))), 1)
     queries = dict((name, spec["query"]) for name, spec in cfg["signals"].items())
     if cfg.get("soft_recover"):
         queries["soft_recover"] = cfg["soft_recover"]["query"]

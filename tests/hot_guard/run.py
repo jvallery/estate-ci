@@ -114,6 +114,7 @@ def fake_kube(path, method="GET", body=None, content_type="application/json", dr
     raise AssertionError(path)
 
 
+g.wait_network = lambda base, budget: 0.0
 VALUES = dict(CALM)
 QUERIES = dict({n: s_["query"] for n, s_ in SIG.items()}, soft_recover=cfg["soft_recover"]["query"])
 g.kube = fake_kube
@@ -165,6 +166,24 @@ check("forced dry-run rc", g.main(), 0)
 writes = [c for c in state["calls"] if c[0] == "W"]
 check("dry-run: every write is dry", all(c[2] or (c[3] or {}).get("deleteOptions") == {"dryRun": ["All"]} for c in writes) and len(writes) == 3, True)
 os.environ.pop("GUARD_MODE"); os.environ.pop("GUARD_FORCE_TRIP")
+
+# wait_network: polls /-/ready through kube-router's new-Pod ipset lag, never raises.
+import urllib.request as _ur
+_t = [0.0]
+def _ready_after_6s(url, timeout):
+    if _t[0] < 6:
+        raise urllib.error.URLError("refused")
+    return io.BytesIO(b"ok")
+_orig = _ur.urlopen
+_ur.urlopen = _ready_after_6s
+spec2 = importlib.util.spec_from_file_location("guard2", ROOT / "deploy/foundation/bin/hot-guard.py")
+g2 = importlib.util.module_from_spec(spec2); spec2.loader.exec_module(g2)
+_tick = lambda d: _t.__setitem__(0, _t[0] + d)
+check("wait_network opens after lag", g2.wait_network("http://p", 25, sleep=_tick, clock=lambda: _t[0]), 6.0)
+_t[0] = 0.0
+_ur.urlopen = lambda url, timeout: (_ for _ in ()).throw(urllib.error.URLError("x"))
+check("wait_network gives up at budget", g2.wait_network("http://p", 5, sleep=_tick, clock=lambda: _t[0]), 6.0)
+_ur.urlopen = _orig
 
 if failures:
     sys.exit(f"hot-guard tests: {failures} failure(s)")
