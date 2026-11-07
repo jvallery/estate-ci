@@ -225,7 +225,8 @@ sets:
         # COORD 2026-11-06 ~18:1xZ (verdify#1402 waiting on capacity): 2 -> 3.
         # COORD 2026-11-06 ~19:1xZ (9 runs queued; #1437 migration 303 critical path): 3 -> 5.
         # D-39 (Jason 2026-11-06 ~21:15Z): 5 -> 15.
-        max: 15
+        # ARC-RAISE rebalance 2 (Jason via COORD 2026-11-07 00:35Z, zero-sum): 15 -> 12 (donor: listener busy peak 6 since 21:46Z).
+        max: 12
         job_image: mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779
         job_uid: 1001
         job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
@@ -340,7 +341,8 @@ sets:
     profiles:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
-        max: 6
+        # ARC-RAISE rebalance 2 (Jason via COORD 2026-11-07 00:35Z, zero-sum): 6 -> 9 (+3 from verdify-platform-ci; at max, ~20 jobs queued incl. fleet-CI exit PRs ms#1444/#1446/#1449).
+        max: 9
         job_image: *toolbox
         job_uid: 1001
         job_resources: {cpu: 500m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
