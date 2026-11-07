@@ -92,7 +92,8 @@ NSS_SCRIPT = (
 )
 
 
-def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, label: str | None = None) -> dict:
+def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, label: str | None = None,
+                 priority_class: str = "ci-preemptible") -> dict:
     label = label or profile
     exchange = {"name": "exchange", "mountPath": "/exchange"}
     work = {"name": "work", "mountPath": "/home/runner/_work"}
@@ -239,7 +240,7 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
             # mid-job, #33), and Frigate and every app may preempt them. Jason
             # accepted mid-job preemption (the reason ci-runner 0 was used
             # 2026-11-06) so runners always lose to Frigate on node8.
-            "priorityClassName": "ci-preemptible",
+            "priorityClassName": priority_class,
             "tolerations": [dict(FRIGATE_TOLERATION)],
             "imagePullSecrets": [{"name": "zot-pull"}],
             "securityContext": {"fsGroup": 1001, "fsGroupChangePolicy": "OnRootMismatch",
@@ -303,7 +304,8 @@ def render(cfg: dict) -> dict[str, str]:
                 "minRunners": 0,
                 "maxRunners": int(opts.get("max", d["max"][profile])),
                 "controllerServiceAccount": d["controller_service_account"],
-                "template": pod_template(d, profile, opts, expected, base, key),
+                "template": pod_template(d, profile, opts, expected, base, key,
+                                         d["infra_priority_class"] if expected in d.get("infra_repos", []) else "ci-preemptible"),
             }
             app = {
                 "apiVersion": "argoproj.io/v1alpha1",

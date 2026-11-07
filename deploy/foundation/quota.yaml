@@ -158,7 +158,7 @@ spec:
     matchExpressions:
       - scopeName: PriorityClass
         operator: In
-        values: ["ci-preemptible"]
+        values: ["ci-preemptible", "ci-preemptible-infra"]
 ---
 # Everything else in ci-runners (the ci-runner-hot-guard CronJob): its own small
 # budget, so runners can never starve it.
@@ -177,7 +177,7 @@ spec:
     matchExpressions:
       - scopeName: PriorityClass
         operator: NotIn
-        values: ["ci-preemptible"]
+        values: ["ci-preemptible", "ci-preemptible-infra"]
 ---
 apiVersion: v1
 kind: LimitRange

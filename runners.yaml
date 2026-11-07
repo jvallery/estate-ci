@@ -30,6 +30,12 @@ defaults:
   kaniko_image: registry.vallery.net/jvallery/estate-ci/mirror/gcr.io/kaniko-project/executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e
   # CloudNativePG PostgreSQL (includes pgvector), mirrored in zot.
   postgres_image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-777ad6774e00fff6@sha256:d66df406385b9f3c43c47e94fe3a0002278ef56d21b82a8c9d3a22f91aa9c3f0
+  # D-87 fair share (COORD/Jason P0 2026-11-07): pending Pods schedule by
+  # priority, so these repos' runners use ci-preemptible-infra (-900) and
+  # schedule ahead of app-repo runners (ci-preemptible, -1000). Neither preempts
+  # anything; every production tier preempts both.
+  infra_priority_class: ci-preemptible-infra
+  infra_repos: [jvallery/agents, jvallery/monitoring-stack, jvallery/storage-infra, jvallery/network-infra, jvallery/proxmox-infrastructure, jvallery/estate-ci, jvallery/sentinel, jvallery/homeassistant]
   max:
     ci: 3
     pg: 1
