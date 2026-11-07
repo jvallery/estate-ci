@@ -123,6 +123,30 @@ metadata:
 #   hard: pods 236 -> 262, limits.cpu 4300 -> 4780, limits.memory 2480 ->
 #   2740Gi, ephemeral 1000 -> 1080Gi / 8600 -> 9400Gi. Requests hard
 #   unchanged (above sum + 10%).
+#
+# D-87 (2026-11-07): the compute envelope above moved to estate-ci-runner-pods,
+# scoped to runner Pods (PriorityClass ci-preemptible), because pending runners
+# filled the shared quota and the node8 hot guard CronJob (estate-default) was
+# refused at admission ("exceeded quota"). This object keeps the namespace-wide
+# object caps and ephemeral storage (PriorityClass scopes cannot track it); the
+# pods cap includes the ops Pods below.
+spec:
+  hard:
+    pods: "272"
+    requests.ephemeral-storage: 1080Gi
+    limits.ephemeral-storage: 9400Gi
+    persistentvolumeclaims: "0"
+    services.loadbalancers: "0"
+    services.nodeports: "0"
+---
+# Runner Pods only: the envelope (same values as the former estate-ci-runners).
+# CPU requests are not the limit in practice: the workers' allocatable CPU binds
+# first (about 98 CPU of runner room on 2026-11-07, ADR-0010); this stays above
+# it so ARC keeps a small buffer of pending Pods ready.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: estate-ci-runner-pods
 spec:
   hard:
     pods: "262"
@@ -130,11 +154,30 @@ spec:
     requests.memory: 365Gi
     limits.cpu: "4780"
     limits.memory: 2740Gi
-    requests.ephemeral-storage: 1080Gi
-    limits.ephemeral-storage: 9400Gi
-    persistentvolumeclaims: "0"
-    services.loadbalancers: "0"
-    services.nodeports: "0"
+  scopeSelector:
+    matchExpressions:
+      - scopeName: PriorityClass
+        operator: In
+        values: ["ci-preemptible"]
+---
+# Everything else in ci-runners (the ci-runner-hot-guard CronJob): its own small
+# budget, so runners can never starve it.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: estate-ci-ops
+spec:
+  hard:
+    pods: "10"
+    requests.cpu: "2"
+    requests.memory: 4Gi
+    limits.cpu: "8"
+    limits.memory: 8Gi
+  scopeSelector:
+    matchExpressions:
+      - scopeName: PriorityClass
+        operator: NotIn
+        values: ["ci-preemptible"]
 ---
 apiVersion: v1
 kind: LimitRange
