@@ -8,7 +8,9 @@
 # uses: other than actions/checkout@<sha> / jvallery/estate-ci/...@<sha> / ./local,
 # services:/container:, pull_request_target/workflow_run, environment:,
 # id-token: write, Actions cache/artifacts and ghcr.io. Rule list:
-# /opt/estate-ci/lint-workflows.py (deploy/foundation/bin in estate-ci).
+# /opt/estate-ci/lint-workflows.py (deploy/foundation/bin in estate-ci). R4 (lint-images.py,
+# same directory): imagePullPolicy Always on an external image fails (ADR-016, agents#5767);
+# exceptions in the caller's .estate-ci/image-lint-allow.txt with expiry + issue.
 #
 # Portability (Forgejo/Gitea Actions): checkout + one script on the runner's
 # python3 (standard library only); it lints .forgejo/ and .gitea/ workflows too.

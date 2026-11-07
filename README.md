@@ -17,7 +17,7 @@ Tracking: jvallery/agents#6092 (FLEET-DECOM epic), jvallery/agents#6094 (this fo
 | `.github/workflows/checks.yml` | Thin reusable wrapper: checkout + one repo command (optionally inside the repo's CI image, optionally with Postgres). |
 | `.github/workflows/image-build.yml` | Thin reusable wrapper over `image-build.sh`. |
 | `.github/workflows/pin-bump.yml` | Thin reusable wrapper over `pin-bump.sh`. |
-| `.github/workflows/lint.yml` | Reusable R1-R3 workflow lint (`deploy/foundation/bin/lint-workflows.py`, stdlib Python; fixtures in `tests/lint/`). |
+| `.github/workflows/lint.yml` | Reusable R1-R3 workflow lint (`deploy/foundation/bin/lint-workflows.py`, stdlib Python; fixtures in `tests/lint/`), plus R4 image lint (`deploy/foundation/bin/lint-images.py`: `imagePullPolicy: Always` on an image outside registry.vallery.net fails; allowlist `.estate-ci/image-lint-allow.txt` rows carry an expiry and an issue; fixtures in `tests/lint-images/`). |
 | `scripts/fork-policy.sh` | Operator check/apply of the fork-PR approval policy for onboarded repos. |
 | `.github/workflows/mirror.yml`, `mirrors.txt` | Reusable digest-preserving image mirror (`crane copy`, `deploy/foundation/bin/mirror.sh`); estate-ci's own mirror list. |
 | `images/estate-ci-toolbox/`, `.github/workflows/build.yml` | The estate-ci-toolbox job image (tools and versions in its README), built in-cluster by Kaniko. |

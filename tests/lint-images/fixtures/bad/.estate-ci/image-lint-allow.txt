@@ -1,0 +1,4 @@
+# path glob, image prefix, expiry, issue
+deploy.yaml quay.io/example/allowed 2999-01-01 https://github.com/jvallery/agents/issues/5767
+deploy.yaml docker.io/old 2000-01-01 https://github.com/jvallery/agents/issues/5767
+broken row

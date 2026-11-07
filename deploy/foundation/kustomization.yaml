@@ -26,6 +26,7 @@ configMapGenerator:
       - bin/wait-postgres.sh
       - bin/check-runner-labels.sh
       - bin/lint-workflows.py
+      - bin/lint-images.py
       - bin/mirror.sh
   # node8 hot guard (D-67): script and thresholds (hot-guard.yaml).
   - name: ci-runner-hot-guard
