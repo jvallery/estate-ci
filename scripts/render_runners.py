@@ -127,8 +127,14 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
         raise RenderError(f"{base}: runner_image is only for ci profiles")
     # One slot per Pod, on the runner container (every Pod has exactly one).
     # Extended resources need request == limit.
-    runner["resources"]["requests"][RUNNER_SLOT] = "1"
-    runner["resources"]["limits"][RUNNER_SLOT] = "1"
+    # Gate sets (slot: false, COORD P0 2026-11-07) run only aggregator jobs at
+    # ~100m and stay warm (min), so they take no slot and never queue behind
+    # real work.
+    if opts.get("slot", True):
+        runner["resources"]["requests"][RUNNER_SLOT] = "1"
+        runner["resources"]["limits"][RUNNER_SLOT] = "1"
+    elif profile != "ci" or opts.get("job_image") or int(opts.get("max", 0)) > 4:
+        raise RenderError(f"{base}: slot: false is only for job-image-free ci gate sets with max <= 4")
     containers = [runner]
     volumes = [
         {"name": "work", "emptyDir": {"sizeLimit": "16Gi"}},
@@ -301,7 +307,7 @@ def render(cfg: dict) -> dict[str, str]:
                 "githubConfigUrl": url,
                 "githubConfigSecret": owners[owner],
                 "runnerScaleSetName": name,
-                "minRunners": 0,
+                "minRunners": int(opts.get("min", 0)),
                 "maxRunners": int(opts.get("max", d["max"][profile])),
                 "controllerServiceAccount": d["controller_service_account"],
                 "template": pod_template(d, profile, opts, expected, base, key,

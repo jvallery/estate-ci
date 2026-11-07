@@ -289,6 +289,15 @@ sets:
   # It shares the namespace quota until the native agents slots move in (COORD).
   - repo: jvallery/agents
     profiles:
+      ci-gate:
+        # COORD P0 2026-11-07: warm, tiny, slot-free runners for gate/aggregator
+        # jobs only (the required "all"/"static"/"networking-required" checks),
+        # so a green PR does not wait 10-20 min for a runner just to aggregate.
+        max: 4
+        min: 2
+        slot: false
+        runner_image: *toolbox
+        runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
       ci:
         # COORD 2026-11-06 13:5xZ (Jason: max speed): 6 -> 12. Each runner requests 1.25 CPU / 2Gi
         # (runner 250m/512Mi + job 1/1536Mi, measured job ~1 core / ~0.6Gi). +6 runners = +7.5 CPU /
@@ -358,6 +367,15 @@ sets:
   # on 2026-11-06 (backups#87), so its set is removed.
   - repo: jvallery/monitoring-stack
     profiles:
+      ci-gate:
+        # COORD P0 2026-11-07: warm, tiny, slot-free runners for gate/aggregator
+        # jobs only (the required "all"/"static"/"networking-required" checks),
+        # so a green PR does not wait 10-20 min for a runner just to aggregate.
+        max: 4
+        min: 2
+        slot: false
+        runner_image: *toolbox
+        runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # ARC-RAISE rebalance 2 (Jason via COORD 2026-11-07 00:35Z, zero-sum): 6 -> 9 (+3 from verdify-platform-ci; at max, ~20 jobs queued incl. fleet-CI exit PRs ms#1444/#1446/#1449).
@@ -372,6 +390,15 @@ sets:
         kaniko_resources: {cpu: "1", memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/network-infra
     profiles:
+      ci-gate:
+        # COORD P0 2026-11-07: warm, tiny, slot-free runners for gate/aggregator
+        # jobs only (the required "all"/"static"/"networking-required" checks),
+        # so a green PR does not wait 10-20 min for a runner just to aggregate.
+        max: 4
+        min: 2
+        slot: false
+        runner_image: *toolbox
+        runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 6 -> 8 (at max 96%; queue p50 8 min, 136/197 jobs > 5 min).
