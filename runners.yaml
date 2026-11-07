@@ -51,8 +51,8 @@ sets:
         max: 9
         job_image: registry.vallery.net/jvallery/weather-ci@sha256:f4fceab3222d3817baf8def870970981eb88a853cf42f2dc36efcec779f46673
         job_uid: 1001
-        # D-87 (COORD 03:50Z): request = p90 of 6 h of 1-min container CPU samples (03:55Z); limit unchanged.
-        job_resources: {cpu: 1500m, memory: 1664Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # D-103 B: request = 6 h sample p95 where it exceeds p90 materially, else p90 (04:10Z); limit unchanged.
+        job_resources: {cpu: "2", memory: 1664Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 6 -> 4 (donor: 24 h peak 1 runner).
@@ -87,8 +87,8 @@ sets:
         job_uid: 1001
         # COORD 2026-11-06 ~20:0xZ (Jason: accelerate RV2 CI): 'unit' took 30-36 min
         # pinned at ~1 core under limit 2 / 4Gi. Was 500m / 768Mi req, 2 / 4Gi lim.
-        # D-87 (COORD 03:50Z): request = p90 of 6 h of 1-min container CPU samples (03:55Z); limit unchanged.
-        job_resources: {cpu: 2950m, memory: 5760Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # D-103 B: request = 6 h sample p95 where it exceeds p90 materially, else p90 (04:10Z); limit unchanged.
+        job_resources: {cpu: 5600m, memory: 5760Mi, limit_cpu: "8", limit_memory: 8Gi}
       pg:
         # COORD 2026-11-06 ~18:4xZ (D5 critical path, Jason GO): 1 -> 3.
         # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
@@ -115,7 +115,7 @@ sets:
         max: 5
         job_image: docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
         job_uid: 1001
-        job_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
+        job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       buildcheck:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
@@ -163,7 +163,7 @@ sets:
         max: 6
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 300m, memory: 384Mi, limit_cpu: "8", limit_memory: 8Gi}
+        job_resources: {cpu: 900m, memory: 384Mi, limit_cpu: "8", limit_memory: 8Gi}
       # AGENTS-RUNS-ON (R1): the jobs that ran on GitHub-hosted ubuntu-24.04
       # (ring-mqtt-dependency-intake; frigate-promotion verify-release and
       # prepare-promotion). Label swap: their bare run: steps execute in the
@@ -190,7 +190,7 @@ sets:
         max: 6
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 500m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
+        job_resources: {cpu: 750m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       ci-ha:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (at max 65%; queue p50 28 min / 24h).
@@ -238,7 +238,7 @@ sets:
         # python:3.13-bookworm (3.13.18, 2026-11-05 bookworm updates: perl/brotli/imagemagick/linux-libc-dev criticals).
         job_image: mirror.gcr.io/library/python@sha256:cc55e4ded9c95f6ce2133b3d096db43f214d280c2a8af65d83e246c8fa7d168c
         job_uid: 1001
-        job_resources: {cpu: 950m, memory: 768Mi, limit_cpu: "8", limit_memory: 8Gi}
+        job_resources: {cpu: "1", memory: 768Mi, limit_cpu: "8", limit_memory: 8Gi}
       ci-tools:
         # COORD/DASH 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 2 -> 6.
         # D-39 (Jason 2026-11-06 ~21:15Z): 6 -> 18.
@@ -262,14 +262,14 @@ sets:
         max: 3
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
         job_uid: 1001
-        # D-87 (COORD 03:50Z): request = p90 of 6 h of 1-min container CPU samples (03:55Z); limit unchanged.
-        job_resources: {cpu: 2250m, memory: 1408Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # D-103 B: request = 6 h sample p95 where it exceeds p90 materially, else p90 (04:10Z); limit unchanged.
+        job_resources: {cpu: 2300m, memory: 1408Mi, limit_cpu: "8", limit_memory: 8Gi}
       ci-dashboard:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         job_image: registry.vallery.net/jvallery/weather-ci@sha256:f4fceab3222d3817baf8def870970981eb88a853cf42f2dc36efcec779f46673
         job_uid: 1001
-        job_resources: {cpu: 2500m, memory: 3200Mi, limit_cpu: "8", limit_memory: 8Gi}
+        job_resources: {cpu: 1050m, memory: 3200Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
@@ -302,7 +302,7 @@ sets:
         avoid_nodes: [vm-k3s-node5]
         job_image: registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2
         job_uid: 1001
-        job_resources: {cpu: 1600m, memory: 384Mi, limit_cpu: "8", limit_memory: 8Gi}
+        job_resources: {cpu: 2150m, memory: 384Mi, limit_cpu: "8", limit_memory: 8Gi}
         # COORD 2026-11-06: runner CPU limit 2 -> 4 to cut the ~2.4 min full-history checkout.
         # Limits only; requests stay at the runner default (250m / 512Mi), so no scheduling cost.
         runner_resources: {cpu: 550m, memory: 640Mi, limit_cpu: "4", limit_memory: 2Gi}
@@ -359,7 +359,7 @@ sets:
         max: 11
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 3500m, memory: 640Mi, limit_cpu: "8", limit_memory: 8Gi}
+        job_resources: {cpu: 3550m, memory: 640Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
@@ -385,8 +385,8 @@ sets:
         max: 8
         job_image: *toolbox
         job_uid: 1001
-        # D-87 (COORD 03:50Z): request = p90 of 6 h of 1-min container CPU samples (03:55Z); limit unchanged.
-        job_resources: {cpu: 3300m, memory: 1280Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # D-103 B: request = 6 h sample p95 where it exceeds p90 materially, else p90 (04:10Z); limit unchanged.
+        job_resources: {cpu: 5350m, memory: 1280Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 3.
         max: 3

@@ -24,7 +24,8 @@ the same.
 1. **Requests are measured, per runner class.** Each container of each scale
    set (`runner`, `job`, `kaniko`, `postgres`) requests about the p90 of its own
    CPU use (p90 of all 1-minute samples of its running Pods over the last
-   6 h, so idle stretches inside a job count), and the p90 of its peak working
+   6 h, so idle stretches inside a job count; p95 where p95 exceeds p90 by at
+   least 20% and 200m, D-103 B), and the p90 of its peak working
    set, rounded up to 50m / 128 MiB. A sizing pass moves requests up or down
    but never below that p90; classes with fewer than 5 Pods keep their value. The values live in `runners.yaml` (`*_resources`). With
    realistic requests the scheduler stops placing runners on a worker once its
