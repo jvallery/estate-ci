@@ -476,3 +476,13 @@ sets:
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
+  # estate-platform gates (SPRINT-X E0, D-78 Jason 2026-11-07; home-dotfiles#77).
+  # Registers once jvallery/estate-platform is in runner App installation
+  # 179108157 (Jason). Offline gates only: gitleaks, YAML/SOPS, kustomize build.
+  - repo: jvallery/estate-platform
+    profiles:
+      ci:
+        max: 2
+        job_image: *toolbox
+        job_uid: 1001
+        job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "4", limit_memory: 2Gi}
