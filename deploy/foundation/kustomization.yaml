@@ -5,6 +5,7 @@ resources:
   - namespace.yaml
   - quota.yaml
   - networkpolicies.yaml
+  - hold-reader.yaml
 generatorOptions:
   # Runner Pod templates reference this name; keep it stable.
   disableNameSuffixHash: true
