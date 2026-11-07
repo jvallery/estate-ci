@@ -179,10 +179,18 @@ _ur.urlopen = _ready_after_6s
 spec2 = importlib.util.spec_from_file_location("guard2", ROOT / "deploy/foundation/bin/hot-guard.py")
 g2 = importlib.util.module_from_spec(spec2); spec2.loader.exec_module(g2)
 _tick = lambda d: _t.__setitem__(0, _t[0] + d)
-check("wait_network opens after lag", g2.wait_network("http://p", 25, sleep=_tick, clock=lambda: _t[0]), 6.0)
+check("wait_network opens after lag (needs a run of 4)", g2.wait_network("http://p", 25, sleep=_tick, clock=lambda: _t[0]), 9.0)
 _t[0] = 0.0
 _ur.urlopen = lambda url, timeout: (_ for _ in ()).throw(urllib.error.URLError("x"))
 check("wait_network gives up at budget", g2.wait_network("http://p", 5, sleep=_tick, clock=lambda: _t[0]), 6.0)
+_n = [0]
+def _flaky(url, timeout):
+    _n[0] += 1
+    if _n[0] < 3:
+        raise urllib.error.URLError("refused")
+    return io.BytesIO(b'{"status":"success","data":{"result":[{"value":[0,"0.5"]}]}}')
+_ur.urlopen = _flaky
+check("prom_scalar retries a refused backend", g2.prom_scalar("http://p", "up", sleep=lambda d: None), 0.5)
 _ur.urlopen = _orig
 
 if failures:

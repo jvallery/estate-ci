@@ -51,6 +51,8 @@ CONFIG_PATH = os.environ.get("GUARD_CONFIG", "/etc/hot-guard/config.json")
 TOKEN_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 CA_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 TIMEOUT = 10
+READY_RUN = 4
+PROM_ATTEMPTS = 3
 
 
 class GuardError(Exception):
@@ -181,20 +183,34 @@ def wait_network(base: str, budget: float, sleep=None, clock=None) -> float:
     sleep = sleep or time.sleep
     clock = clock or time.monotonic
     start = clock()
+    ok = 0
     while True:
         try:
             with urllib.request.urlopen(base.rstrip("/") + "/-/ready", timeout=3):
-                return clock() - start
+                ok += 1
         except (urllib.error.URLError, OSError, ValueError):
-            if clock() - start >= budget:
-                return clock() - start
-            sleep(2)
+            ok = 0
+        # The Service has several backends on different nodes and each node's
+        # kube-router updates its ipsets on its own schedule: require a run of
+        # successes, not one.
+        if ok >= READY_RUN or clock() - start >= budget:
+            return clock() - start
+        sleep(1 if ok else 2)
 
 
-def prom_scalar(base: str, query: str) -> float | None:
+def prom_scalar(base: str, query: str, sleep=None) -> float | None:
+    import time
+    sleep = sleep or time.sleep
     url = base.rstrip("/") + "/api/v1/query?" + urllib.parse.urlencode({"query": query})
-    with urllib.request.urlopen(url, timeout=TIMEOUT) as resp:
-        doc = json.load(resp)
+    for attempt in range(PROM_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(url, timeout=TIMEOUT) as resp:
+                doc = json.load(resp)
+            break
+        except (urllib.error.URLError, OSError):
+            if attempt == PROM_ATTEMPTS - 1:
+                raise
+            sleep(1)
     if doc.get("status") != "success":
         raise GuardError("prometheus status " + str(doc.get("status")))
     result = doc["data"]["result"]
