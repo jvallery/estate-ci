@@ -21,7 +21,7 @@
 #   state:         kubectl -n ci-runners get cm ci-runner-slot-hold -o yaml
 #   pause guard:   set "mode": "dry-run" in hot-guard-config.json (PR); every write becomes dryRun=All
 #   forced trip:   docs/adr/0002-runner-topology-and-capacity.md "node8 overflow (D-67)"
-# Alerts (jvallery/monitoring-stack): CIRunnerNode8GuardTripped, CIRunnerNode8GuardFailing.
+# Alerts (jvallery/monitoring-stack): EstateCINode8GuardTripped, EstateCINode8GuardFailing.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
