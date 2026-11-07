@@ -20,7 +20,7 @@ check ruby        3.2         "$(ruby -e 'print RUBY_VERSION.split(".")[0,2].joi
 check php         8.3         "$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')"
 check kubectl     v1.35.10    "$(kubectl version --client -o json | python3 -c 'import json,sys; print(json.load(sys.stdin)["clientVersion"]["gitVersion"])')"
 check kustomize   v5.8.3      "$(kustomize version)"
-check helm        v3.16.3     "$(helm version --template '{{.Version}}')"
+check helm        v3.22.1     "$(helm version --template '{{.Version}}')"
 check kubeconform v0.8.0      "$(kubeconform -v)"
 check yq          v4.54.1     "$(yq --version | awk '{print $NF}')"
 check jq          ok          "$(jq --version >/dev/null && echo ok)"

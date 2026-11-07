@@ -20,7 +20,7 @@ by `.github/workflows/build.yml` (Kaniko on `estate-ci-buildcheck` for PRs,
 | php-cli | 8.3 (apt) | noble archive (wordpress `php -l`) |
 | kubectl | v1.35.10 | dl.k8s.io, sha256 (fleet toolbox pin) |
 | kustomize | v5.8.3 | GitHub release, sha256 (fleet/Argo CD pin; cortex checks it exactly) |
-| helm | v3.16.3 | get.helm.sh, sha256 (cortex renders need v3) |
+| helm | v3.22.1 | get.helm.sh, sha256 (cortex renders need v3) |
 | kubeconform | v0.8.0 | GitHub release, CHECKSUMS |
 | yq (mikefarah) | v4.54.1 | GitHub release, sha256 |
 | jq, git, curl, make, zip/unzip, xz, sqlite3, g++, openssh-client, file | apt | noble archive |

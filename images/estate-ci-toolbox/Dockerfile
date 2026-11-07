@@ -82,9 +82,10 @@ RUN cd /tmp/tools && fetch-verified "https://dl.k8s.io/release/${KUBECTL_VERSION
     && tar -xzf kustomize.tgz kustomize && install -m 0755 kustomize /usr/local/bin/kustomize \
     && rm -f /tmp/tools/*
 
-# helm v3.16.3 (cortex-ai-compute renders need exactly v3; v4 fails), kubeconform v0.8.0.
-ARG HELM_VERSION=v3.16.3
-ARG HELM_SHA256=f5355c79190951eed23c5432a3b920e071f4c00a64f75e077de0dd4cb7b294ea
+# helm v3.22.1 (cortex-ai-compute renders need exactly v3; v4 fails; go1.26.9, no grpc in the
+# binary: clears CVE-2025-68121 and CVE-2026-33186 of v3.16.3), kubeconform v0.8.0.
+ARG HELM_VERSION=v3.22.1
+ARG HELM_SHA256=896cf63684a42a723d61c980369d6e588330927deb13676ca0d85006dd6da0ea
 ARG KUBECONFORM_VERSION=v0.8.0
 ARG KUBECONFORM_SHA256=9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
 RUN cd /tmp/tools && fetch-verified "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" "${HELM_SHA256}" helm.tgz \
