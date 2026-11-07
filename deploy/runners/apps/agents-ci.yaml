@@ -138,7 +138,7 @@ spec:
                 value: /opt/estate-ci
               resources:
                 requests:
-                  cpu: 550m
+                  cpu: 500m
                   memory: 640Mi
                   ephemeral-storage: 1Gi
                   agentfleet.vallery.net/ci-runner-slot: '1'
@@ -175,7 +175,7 @@ spec:
                 value: /exchange
               resources:
                 requests:
-                  cpu: 2150m
+                  cpu: 1300m
                   memory: 384Mi
                   ephemeral-storage: 2Gi
                 limits:

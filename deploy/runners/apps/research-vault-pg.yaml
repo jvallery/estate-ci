@@ -174,7 +174,7 @@ spec:
                 value: /exchange
               resources:
                 requests:
-                  cpu: 900m
+                  cpu: 800m
                   memory: 512Mi
                   ephemeral-storage: 2Gi
                 limits:
@@ -218,7 +218,7 @@ spec:
                 -c fsync=off -c full_page_writes=off -c synchronous_commit=off -c max_connections=200
               resources:
                 requests:
-                  cpu: 400m
+                  cpu: 350m
                   memory: 1Gi
                   ephemeral-storage: 1Gi
                 limits:
