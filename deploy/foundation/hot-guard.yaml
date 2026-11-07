@@ -2,14 +2,20 @@
 # vm-k3s-node8 (Frigate's node) as overflow, and always lose to Frigate.
 #
 # Every estate-ci runner Pod requests one agentfleet.vallery.net/ci-runner-slot
-# (advertised per node by the jvallery/agents arc-validation-pool reconciler:
-# node4-7 64, node8 16). Every minute this CronJob reads node8 and Frigate signals
-# from Prometheus (bin/hot-guard.py, thresholds in hot-guard-config.json). On a
-# trip it writes node8 into ConfigMap ci-runner-slot-hold, and the reconciler then
-# advertises 0 slots on node8 within about a minute. It also evicts node8 runner
-# Pods newest-first (evict_per_run per run, until the trip clears). It drops the
-# hold after 15 clean minutes. A missing signal or an unreachable Prometheus
-# holds node8 (fail closed) without evicting, and the run exits 1.
+# (advertised per node by the jvallery/agents arc-validation-pool reconciler from
+# ConfigMap github-runner-ops/ci-runner-slots; D-87: node4-7 16, node8 8). Every
+# minute this CronJob reads node8 and Frigate signals from Prometheus
+# (bin/hot-guard.py, thresholds in hot-guard-config.json). Two tiers (COORD
+# 2026-11-07T03:49Z, after a CPU-only trip killed in-flight jobs):
+#   HARD (Frigate skipped/decode deficit, a frigate restart, node memory): write a
+#     reason under node8 in ConfigMap ci-runner-slot-hold (the reconciler advertises
+#     0 slots within about a minute) and evict node8 runner Pods newest-first
+#     (evict_per_run per run). The hold drops after 15 clean minutes.
+#   SOFT (node8 CPU min over 4 min > 0.85, Frigate clean): write "cap=4 ..." (the
+#     reconciler advertises min(desired, 4)); nothing is evicted. The cap drops once
+#     node8 CPU max over 10 min is below 0.75.
+# A missing signal or an unreachable Prometheus holds node8 at 0 (fail closed)
+# without evicting, and the run exits 1.
 #
 # Least privilege: no node or cluster-scoped permission. The guard may create
 # ConfigMaps and get/patch only ci-runner-slot-hold, list Pods, and evict Pods in

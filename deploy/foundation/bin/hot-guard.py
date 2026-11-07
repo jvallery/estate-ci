@@ -4,17 +4,24 @@
 Runs every minute as CronJob ci-runner-hot-guard in ci-runners. stdlib only.
 
 Each run reads trip signals from Prometheus (the queries are in the config
-ConfigMap), then:
+ConfigMap). Signals have a tier (COORD ruling 2026-11-07T03:49Z: runners always
+lose to Frigate, but node CPU alone must not kill in-flight jobs):
 
-  trip active    -> write a reason under the node name in ConfigMap
-                    ci-runner-slot-hold, so the agents arc-validation-pool
-                    reconciler advertises 0 agentfleet.vallery.net/ci-runner-slot
-                    on the node within about a minute (no new runners land), and
-                    evict up to evict_per_run of the node's runner Pods,
-                    newest first. The next run evicts more while the trip holds.
-  signal missing -> hold the node (fail closed) but evict nothing.
-  held + clean   -> once no trip has been seen for clean_seconds, drop the hold
-                    entry. The reconciler then restores the desired slots.
+  HARD trip      -> (Frigate degraded or restarted, node memory) write a reason
+                    under the node name in ConfigMap ci-runner-slot-hold, so the
+                    agents arc-validation-pool reconciler advertises 0
+                    agentfleet.vallery.net/ci-runner-slot on the node within
+                    about a minute (no new runners land), and evict up to
+                    evict_per_run of the node's runner Pods, newest first. The
+                    next run evicts more while the trip holds.
+  signal missing -> hold the node at 0 (fail closed) but evict nothing.
+  SOFT trip      -> (node CPU, Frigate clean) write "cap=<soft_cap> ..." so the
+                    reconciler advertises min(desired, soft_cap). Nothing is
+                    evicted; runners drain as their jobs finish.
+  hard + clean   -> once no trip has been seen for clean_seconds, drop the hold
+                    (or step down to the soft cap if the soft signal still trips).
+  soft + calm    -> drop the cap once soft_recover holds (CPU max over 10 min
+                    below 0.75). The reconciler then restores the desired slots.
 
 The guard has no node permission. It writes only its own ConfigMap and
 evicts only Pods that carry the estate-ci.vallery.net/profile label in
@@ -67,22 +74,48 @@ def evaluate(signals: dict, values: dict) -> tuple[list[str], list[str]]:
     return tripped, missing
 
 
-def decide(now: dt.datetime, tripped: list[str], missing: list[str], hold: dict | None,
-           clean_seconds: int) -> dict:
-    """Pure decision. hold is None (not held) or {"reason", "since", "last_trip"} (datetimes).
+def hold_cap(reason: str | None) -> int | None:
+    """Slot cap of a hold value: None if empty, N for a leading "cap=N", else 0 (closed)."""
+    text = (reason or "").strip()
+    if not text:
+        return None
+    head = text.split()[0]
+    if head.startswith("cap=") and head[4:].isdigit():
+        return int(head[4:])
+    return 0
 
-    Returns {"hold": "set"|"keep"|"clear"|"none", "evict": bool, "reason": str}.
+
+def decide(now: dt.datetime, tripped: list[str], missing: list[str], hold: dict | None,
+           clean_seconds: int, soft: list[str] | None = None, recovered: bool = False) -> dict:
+    """Pure decision. tripped = HARD trips, soft = SOFT trips. hold is None (not held) or
+    {"reason", "since", "last_trip", "cap"}; cap 0 is a hard hold, N > 0 a soft cap.
+    recovered: the soft_recover condition holds (CPU calm long enough to drop a soft cap).
+
+    Returns {"hold": "set"|"soft"|"keep"|"clear"|"none", "evict": bool, "reason": str}.
     """
+    soft = soft or []
     if tripped:
         return {"hold": "set", "evict": True, "reason": "trip:" + ",".join(sorted(tripped))}
     if missing:
         return {"hold": "set", "evict": False, "reason": "missing:" + ",".join(sorted(missing))}
+    soft_reason = "soft:" + ",".join(sorted(soft))
+    if hold is not None and not hold.get("cap"):
+        # Hard (or blind) hold: cool down for clean_seconds before reopening.
+        last = hold.get("last_trip") or hold.get("since") or now
+        if (now - last).total_seconds() < clean_seconds:
+            return {"hold": "keep", "evict": False, "reason": "cooling"}
+        if soft:
+            return {"hold": "soft", "evict": False, "reason": soft_reason}
+        return {"hold": "clear", "evict": False, "reason": "clean-for-%ds" % clean_seconds}
+    if soft:
+        if hold is not None:
+            return {"hold": "keep", "evict": False, "reason": "soft-capped"}
+        return {"hold": "soft", "evict": False, "reason": soft_reason}
     if hold is None:
         return {"hold": "none", "evict": False, "reason": "clean"}
-    last = hold.get("last_trip") or hold.get("since") or now
-    if (now - last).total_seconds() >= clean_seconds:
-        return {"hold": "clear", "evict": False, "reason": "clean-for-%ds" % clean_seconds}
-    return {"hold": "keep", "evict": False, "reason": "cooling"}
+    if recovered:
+        return {"hold": "clear", "evict": False, "reason": "soft-recovered"}
+    return {"hold": "keep", "evict": False, "reason": "soft-capped"}
 
 
 def newest_first(pods: list[dict], node: str) -> list[dict]:
@@ -157,13 +190,18 @@ def read_hold(node: str) -> tuple[dict | None, dict | None]:
     if not reason:
         return cm, None
     ann = cm.get("metadata", {}).get("annotations") or {}
-    return cm, {"reason": reason, "since": parse_iso(ann.get(SINCE)), "last_trip": parse_iso(ann.get(LAST_TRIP))}
+    return cm, {"reason": reason, "since": parse_iso(ann.get(SINCE)), "last_trip": parse_iso(ann.get(LAST_TRIP)),
+                "cap": hold_cap(reason)}
 
 
-def write_hold(cm, node: str, reason: str | None, now: dt.datetime, held: dict | None, dry: bool):
-    """reason None clears the node entry. Annotations carry the timers."""
+def write_hold(cm, node: str, reason: str | None, now: dt.datetime, held: dict | None, dry: bool,
+               soft: bool = False):
+    """reason None clears the node entry. Annotations carry the timers. A soft write
+    keeps last-trip (the hard clean timer) untouched."""
     if reason is None:
         ann = {SINCE: None, LAST_TRIP: None}
+    elif soft:
+        ann = {SINCE: iso(held["since"]) if held and held.get("since") else iso(now)}
     else:
         # A trip or a blind (missing-signal) run both restart the clean timer.
         ann = {SINCE: iso(held["since"]) if held and held.get("since") else iso(now), LAST_TRIP: iso(now)}
@@ -203,15 +241,25 @@ def main() -> int:
 
     values: dict = {}
     prom_failed = False
-    for name, spec in cfg["signals"].items():
+    queries = dict((name, spec["query"]) for name, spec in cfg["signals"].items())
+    if cfg.get("soft_recover"):
+        queries["soft_recover"] = cfg["soft_recover"]["query"]
+    for name, query in queries.items():
         try:
-            values[name] = prom_scalar(cfg["prometheus_url"], spec["query"])
+            values[name] = prom_scalar(cfg["prometheus_url"], query)
         except (urllib.error.URLError, OSError, ValueError, KeyError, GuardError) as err:
             prom_failed = True
             values[name] = None
             log["errors"].append("prometheus:%s:%s" % (name, type(err).__name__))
     log["values"] = values
-    tripped, missing = evaluate(cfg["signals"], values)
+    tripped_all, missing = evaluate(cfg["signals"], values)
+    soft = [n for n in tripped_all if cfg["signals"][n].get("tier", "hard") == "soft"]
+    tripped = [n for n in tripped_all if n not in soft]
+    recovered = False
+    rec = cfg.get("soft_recover")
+    if rec and values.get("soft_recover") is not None:
+        recovered = bool(evaluate({"r": rec}, {"r": values["soft_recover"]})[0])
+    soft_cap = int(cfg.get("soft_cap", 0))
     force = os.environ.get("GUARD_FORCE_TRIP", "").strip()
     if force:
         tripped.append("forced-" + "".join(c for c in force if c.isalnum() or c in "-_")[:40])
@@ -219,10 +267,12 @@ def main() -> int:
     rc = 0
     try:
         cm, held = read_hold(node)
-        decision = decide(now, tripped, missing, held, int(cfg.get("clean_seconds", 900)))
+        decision = decide(now, tripped, missing, held, int(cfg.get("clean_seconds", 900)), soft, recovered)
         log.update(decision=decision, held_before=bool(held))
         if decision["hold"] == "set":
             write_hold(cm, node, "%s %s" % (iso(now), decision["reason"]), now, held, dry)
+        elif decision["hold"] == "soft":
+            write_hold(cm, node, "cap=%d %s %s" % (soft_cap, iso(now), decision["reason"]), now, held, dry, soft=True)
         elif decision["hold"] == "clear":
             write_hold(cm, node, None, now, held, dry)
         evicted = []
