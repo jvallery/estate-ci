@@ -240,7 +240,8 @@ sets:
         # COORD 2026-11-06 ~19:1xZ (9 runs queued; #1437 migration 303 critical path): 3 -> 5.
         # D-39 (Jason 2026-11-06 ~21:15Z): 5 -> 15.
         # ARC-RAISE rebalance 2 (Jason via COORD 2026-11-07 00:35Z, zero-sum): 15 -> 12 (donor: listener busy peak 6 since 21:46Z).
-        max: 12
+        # COORD P0 fair share 2026-11-07 05:08Z (CI-BALANCE): 12 -> 6 until the infra backlog drains, then back to 12.
+        max: 6
         # python:3.13-bookworm (3.13.18, 2026-11-05 bookworm updates: perl/brotli/imagemagick/linux-libc-dev criticals).
         job_image: mirror.gcr.io/library/python@sha256:cc55e4ded9c95f6ce2133b3d096db43f214d280c2a8af65d83e246c8fa7d168c
         job_uid: 1001
@@ -248,7 +249,8 @@ sets:
       ci-tools:
         # COORD/DASH 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 2 -> 6.
         # D-39 (Jason 2026-11-06 ~21:15Z): 6 -> 18.
-        max: 18
+        # COORD P0 fair share 2026-11-07 05:08Z (CI-BALANCE): 18 -> 6 until the infra backlog drains, then back to 18.
+        max: 6
         job_image: registry.vallery.net/jvallery/agents-ci-tools@sha256:c581b862f3da5c79f71fc982455684350628bc4c9fa51dff77d3b8354cd8f214
         job_uid: 1001
         job_resources: {cpu: 600m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
@@ -392,7 +394,8 @@ sets:
         job_image: *toolbox
         job_uid: 1001
         # D-103 B: request = 6 h sample p95 where it exceeds p90 materially, else p90 (04:10Z); limit unchanged.
-        job_resources: {cpu: 5350m, memory: 1280Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # COORD P0 2026-11-07 05:08Z: 5350m (p95) left the 5.45-CPU pod unable to fit any worker's free CPU; back to the 6 h p90 (3.76).
+        job_resources: {cpu: 3800m, memory: 1280Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 3.
         max: 3
