@@ -19,7 +19,7 @@ spec:
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: monitoring-stack-ci
         minRunners: 0
-        maxRunners: 13
+        maxRunners: 11
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller
