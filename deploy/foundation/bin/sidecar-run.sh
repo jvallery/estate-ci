@@ -37,7 +37,15 @@ flush() {
   local size
   size=$(stat -c %s "$dir/log")
   if (( size > off )); then
-    tail -c +"$((off + 1))" "$dir/log" | head -c "$((size - off))"
+    # head stops at the byte count stat saw. If the sidecar appended more since then,
+    # tail dies of SIGPIPE/EPIPE when head exits ("tail: write error: Broken pipe");
+    # under pipefail that killed this client mid-replay and failed jobs whose script
+    # passed (storage-infra#1432, 2026-11-07). The next flush prints those bytes, so
+    # only head's status (our own stdout) counts.
+    tail -c +"$((off + 1))" "$dir/log" 2>/dev/null | head -c "$((size - off))" || {
+      local status=("${PIPESTATUS[@]}")
+      (( status[1] == 0 )) || return "${status[1]}"
+    }
     off=$size
   fi
 }
