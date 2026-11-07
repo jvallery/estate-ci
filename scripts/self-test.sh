@@ -7,8 +7,9 @@ python3 -m pip install --quiet --user pyyaml==6.0.2 actionlint-py==1.7.12.25 she
 python3 deploy/foundation/bin/lint-workflows.py --require-forgejo-notes .
 python3 tests/lint/run.py
 python3 tests/hot_guard/run.py >/dev/null
+python3 tests/lint-images/run.py
 actionlint -color
 shellcheck deploy/foundation/bin/*.sh scripts/*.sh
-python3 -m py_compile deploy/foundation/bin/hot-guard.py deploy/foundation/bin/pin-rewrite.py deploy/foundation/bin/lint-workflows.py scripts/render_runners.py
+python3 -m py_compile deploy/foundation/bin/hot-guard.py deploy/foundation/bin/pin-rewrite.py deploy/foundation/bin/lint-workflows.py deploy/foundation/bin/lint-images.py scripts/render_runners.py
 python3 scripts/render_runners.py --check
 echo "self-test: OK"

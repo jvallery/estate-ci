@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bad
+spec:
+  template:
+    spec:
+      containers:
+        - name: a
+          imagePullPolicy: Always
+          image: docker.io/library/redis@sha256:d856c5d2e96e9b013ca776b2ac4a4686d7ff8072d9ad6e1140d3aa79f277ee5c
+        - name: b
+          image: ghcr.io/example/tool:1.0
+          imagePullPolicy: "Always"
+        - name: local-ok
+          image: registry.vallery.net/jvallery/app@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: Always
+        - name: c
+          image: quay.io/example/allowed:1
+          imagePullPolicy: Always

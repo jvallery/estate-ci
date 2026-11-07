@@ -536,6 +536,18 @@ def collect(path: Path):
     return files
 
 
+def run_image_lint(roots):
+    """Rule R4 from lint-images.py next to this file (also in the $ESTATE_CI ConfigMap)."""
+    import importlib.util
+    path = Path(__file__).resolve().parent / "lint-images.py"
+    if not path.is_file():
+        path = Path(__file__).parent / "lint-images.py"
+    spec = importlib.util.spec_from_file_location("estate_ci_lint_images", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.main(roots)
+
+
 def main(argv):
     strict = "--strict" in argv
     notes = "--require-forgejo-notes" in argv
@@ -555,8 +567,14 @@ def main(argv):
                 findings += lint_workflow(str(f), text, notes)
     for x in findings:
         print(x, file=sys.stderr)
+    # R4 (image pull policy, ADR-016 / agents#5767 G6) runs from the same mounted script set, so
+    # every caller of lint.yml gets it without a workflow pin bump.
+    roots = [str(p) for p in paths if p.is_dir()]
+    image_rc = run_image_lint(roots) if roots else 0
     errors = [x for x in findings if x.error or strict]
     warns = len(findings) - len([x for x in findings if x.error])
+    if image_rc:
+        errors = errors or ["R4"]
     if errors:
         print(f"lint-workflows: FAILED: {len(errors)} error(s), {warns} warning(s) in {n} file(s) (estate rules R1-R3; see estate-ci docs/adr/0009)", file=sys.stderr)
         return 1
