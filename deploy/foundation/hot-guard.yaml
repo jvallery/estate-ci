@@ -13,8 +13,7 @@
 #
 # Least privilege: no node or cluster-scoped permission. The guard may create
 # ConfigMaps and get/patch only ci-runner-slot-hold, list Pods, and evict Pods in
-# ci-runners. The reconciler's ServiceAccount (github-runner-ops) may get only
-# ci-runner-slot-hold.
+# ci-runners. The reconciler's read access to ci-runner-slot-hold is in hold-reader.yaml.
 #
 # Operate:
 #   log:           kubectl -n ci-runners logs job/<latest ci-runner-hot-guard job>
@@ -60,29 +59,6 @@ subjects:
     name: ci-runner-hot-guard
     namespace: ci-runners
 roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: ci-runner-hot-guard}
----
-# The agents arc-validation-pool reconciler reads the hold (and nothing else here).
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: ci-runner-slot-hold-reader
-  labels: {app.kubernetes.io/name: ci-runner-hot-guard, app.kubernetes.io/part-of: estate-ci}
-rules:
-  - apiGroups: [""]
-    resources: [configmaps]
-    resourceNames: [ci-runner-slot-hold]
-    verbs: [get]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: ci-runner-slot-hold-reader
-  labels: {app.kubernetes.io/name: ci-runner-hot-guard, app.kubernetes.io/part-of: estate-ci}
-subjects:
-  - kind: ServiceAccount
-    name: arc-validation-pool-reconciler
-    namespace: github-runner-ops
-roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: ci-runner-slot-hold-reader}
 ---
 # ci-runners is default-deny. The guard reaches only DNS, the Kubernetes API and
 # the Prometheus HA query endpoint (observability admits it in monitoring-stack).
