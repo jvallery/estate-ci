@@ -6,6 +6,7 @@ resources:
   - quota.yaml
   - networkpolicies.yaml
   - hold-reader.yaml
+  - hot-guard.yaml
 generatorOptions:
   # Runner Pod templates reference this name; keep it stable.
   disableNameSuffixHash: true
@@ -26,3 +27,10 @@ configMapGenerator:
       - bin/check-runner-labels.sh
       - bin/lint-workflows.py
       - bin/mirror.sh
+  # node8 hot guard (D-67): script and thresholds (hot-guard.yaml).
+  - name: ci-runner-hot-guard
+    files:
+      - bin/hot-guard.py
+  - name: ci-runner-hot-guard-config
+    files:
+      - hot-guard-config.json

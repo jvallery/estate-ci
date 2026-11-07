@@ -1,0 +1,29 @@
+{
+  "mode": "enforce",
+  "node": "vm-k3s-node8",
+  "prometheus_url": "http://prometheus-ha-query.observability.svc:9090",
+  "clean_seconds": 900,
+  "evict_per_run": 2,
+  "signals": {
+    "node_cpu_busy_2m": {
+      "op": ">", "threshold": 0.95,
+      "query": "min_over_time((1 - avg(rate(node_cpu_seconds_total{nodename=\"vm-k3s-node8\",mode=~\"idle|iowait|steal\"}[2m])))[2m:30s])"
+    },
+    "node_memory_used_2m": {
+      "op": ">", "threshold": 0.85,
+      "query": "min_over_time((1 - node_memory_MemAvailable_bytes{nodename=\"vm-k3s-node8\"} / node_memory_MemTotal_bytes{nodename=\"vm-k3s-node8\"})[2m:30s])"
+    },
+    "frigate_skipped_ratio_2m": {
+      "op": ">", "threshold": 0.10,
+      "query": "min_over_time((sum(frigate_skipped_fps{job=\"frigate\"}) / clamp_min(sum(frigate_camera_fps{job=\"frigate\"}), 1))[2m:30s])"
+    },
+    "frigate_decode_deficit_2m": {
+      "op": ">", "threshold": 0.20,
+      "query": "min_over_time(((sum(frigate_camera_fps{job=\"frigate\"}) - sum(frigate_process_fps{job=\"frigate\"})) / clamp_min(sum(frigate_camera_fps{job=\"frigate\"}), 1))[2m:30s])"
+    },
+    "frigate_started_age_seconds": {
+      "op": "<", "threshold": 300,
+      "query": "time() - max(kube_pod_container_state_started{namespace=\"frigate\",container=\"frigate\"})"
+    }
+  }
+}
