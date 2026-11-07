@@ -20,6 +20,7 @@ Program owner: lane CI-ARCH. Program epic and issue tree: jvallery/agents
 | [0007](0007-observability.md) | Runner and job observability | Accepted |
 | [0008](0008-cutover-parity-rollback.md) | Cutover, parity, ruleset switch, rollback and decommission order | Accepted |
 | [0009](0009-phase-2-forge.md) | Phase 2: self-hosted forge selection and portability rules | Proposed (research) |
+| [0010](0010-runner-balancing.md) | Runner balancing: measured requests, one spread, node8 the only exception (D-87) | Accepted |
 
 The per-repo dependency matrix carries internal detail (namespaces, credential
 names, pin files), so it lives in the private jvallery/agents repository at

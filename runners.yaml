@@ -13,7 +13,9 @@
 #               need several CI images (e.g. homeassistant)                suffix -ci-<v>
 # ci options: runner_image (a runner image built FROM the stock actions-runner,
 # so bare run: steps get the repo's tools) and runner_resources override the defaults.
-# Sizes are requests -> limits per Pod. The namespace ResourceQuota
+# Sizes are requests -> limits per Pod. Requests are the measured p90 per
+# container class and CPU limits are at most 8 (ADR-0010, D-87; the renderer
+# refuses more). The namespace ResourceQuota
 # (deploy/foundation/quota.yaml) is the hard envelope across all sets.
 defaults:
   # estate-ci-toolbox (ADR-0004, estate-ci#16; images/estate-ci-toolbox), built
@@ -49,16 +51,16 @@ sets:
         max: 9
         job_image: registry.vallery.net/jvallery/weather-ci@sha256:f4fceab3222d3817baf8def870970981eb88a853cf42f2dc36efcec779f46673
         job_uid: 1001
-        job_resources: {cpu: 500m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 1900m, memory: 1664Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 6 -> 4 (donor: 24 h peak 1 runner).
         max: 4
-        kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "16", limit_memory: 12Gi}
+        kaniko_resources: {cpu: "2", memory: 512Mi, limit_cpu: "8", limit_memory: 12Gi}
       buildcheck:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "16", limit_memory: 12Gi}
+        kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "8", limit_memory: 12Gi}
   # Research Vault v2 (research-vault#200, second pilot; COORD 2026-11-06).
   # Native steps -> profiles: lint-unit and manifests -> research-vault-ci,
   # postgres -> research-vault-pg (2 shards, run one at a time), vault-server and
@@ -84,7 +86,7 @@ sets:
         job_uid: 1001
         # COORD 2026-11-06 ~20:0xZ (Jason: accelerate RV2 CI): 'unit' took 30-36 min
         # pinned at ~1 core under limit 2 / 4Gi. Was 500m / 768Mi req, 2 / 4Gi lim.
-        job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 1950m, memory: 5760Mi, limit_cpu: "8", limit_memory: 8Gi}
       pg:
         # COORD 2026-11-06 ~18:4xZ (D5 critical path, Jason GO): 1 -> 3.
         # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
@@ -92,14 +94,14 @@ sets:
         max: 12
         job_image: registry.vallery.net/jvallery/vault-ci@sha256:afedf20188449a65eb77b1299ae61b40285d89996c9aef04524cfe567aaab009
         job_uid: 1001
-        job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 900m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
         postgres_image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-b67681006859e657@sha256:09109f553eafc0ed17dccf0c8b3af77a6e1293707a2a14d8d6458a2de3a964eb
         postgres_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "1", limit_memory: 2Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         # D-55 (Jason via COORD 2026-11-07 ~01:0xZ: RV2 needs more research-vault runners): 2 -> 3.
         max: 3
-        kaniko_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 12Gi}
+        kaniko_resources: {cpu: 550m, memory: 384Mi, limit_cpu: "8", limit_memory: 12Gi}
   # kepler (jvallery/agents#6092, kepler#34). Job image = the python base the
   # app ships on (app/Dockerfile), for unit/render (pip); static and secret-scan
   # run in the runner container. build is added with the zot principal ci-kepler.
@@ -111,17 +113,17 @@ sets:
         max: 5
         job_image: docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
         job_uid: 1001
-        job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       buildcheck:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       # Pushes jvallery/kepler-estate-mcp with zot principal ci-kepler
       # (storage-infra si#1395) via the KSOPS Secret ci-runners/zot-push-kepler.
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        kaniko_resources: {cpu: 250m, memory: 1Gi, limit_cpu: "16", limit_memory: 8Gi}
+        kaniko_resources: {cpu: 250m, memory: 1Gi, limit_cpu: "8", limit_memory: 8Gi}
   # MIGRATE-APPS repos (jvallery/agents#6092). Checks run in the estate-ci
   # toolbox; homeassistant adds sets for its two CI images (ci-<variant>).
   # Max runners kept low while workers are CPU-tight; jobs queue instead.
@@ -131,13 +133,13 @@ sets:
         max: 3
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       # BUILD-APPS (D-22): docs-portal, docs-ingest, docs-kiwix with zot principal
       # ci-docs (ACL storage-infra#1387) via KSOPS Secret ci-runners/zot-push-docs.
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/options-tracker
     profiles:
       ci:
@@ -145,13 +147,13 @@ sets:
         max: 2
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: "1", memory: 1Gi, limit_cpu: "8", limit_memory: 8Gi}
       # BUILD-APPS (D-22): jvallery/options-tracker with zot principal
       # ci-options-tracker (ACL storage-infra#1387) via Secret ci-runners/zot-push-options-tracker.
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        kaniko_resources: {cpu: 450m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/sentinel
     profiles:
       ci:
@@ -159,7 +161,7 @@ sets:
         max: 6
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 250m, memory: 384Mi, limit_cpu: "8", limit_memory: 8Gi}
       # AGENTS-RUNS-ON (R1): the jobs that ran on GitHub-hosted ubuntu-24.04
       # (ring-mqtt-dependency-intake; frigate-promotion verify-release and
       # prepare-promotion). Label swap: their bare run: steps execute in the
@@ -168,7 +170,7 @@ sets:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         runner_image: *toolbox
-        runner_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        runner_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   # sunshine_club (moved from VerdifyConsultancy 2026-11-06, REPO-MOVE). Its one
   # dispatch-only workflow (bash + git path classifier) ran on the legacy
   # verdifyconsultancy validation-standard set; label swap onto the toolbox.
@@ -178,7 +180,7 @@ sets:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         runner_image: *toolbox
-        runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/homeassistant
     profiles:
       ci:
@@ -186,27 +188,27 @@ sets:
         max: 6
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 850m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       ci-ha:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (at max 65%; queue p50 28 min / 24h).
         max: 3
         job_image: registry.vallery.net/jvallery/homeassistant-ci-homeassistant@sha256:ee28d5eaa7269fbbb3a8049f1bbd9723e784636cd3576be719c2471f9e704b90
         job_uid: 1001
-        job_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 900m, memory: 1792Mi, limit_cpu: "8", limit_memory: 8Gi}
       ci-esphome:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         job_image: registry.vallery.net/jvallery/homeassistant-ci-esphome@sha256:034609288b8085f540677f856bd70cc877791e4a50f6f87fadff21b854a948cf
         job_uid: 1001
-        job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 2150m, memory: 1536Mi, limit_cpu: "8", limit_memory: 8Gi}
       # BUILD-APPS (D-22): the 5 homeassistant-* images (two CI images, teslamate,
       # mosquitto, vehicle-journal) with zot principal ci-homeassistant (ACL
       # storage-infra#1387) via Secret ci-runners/zot-push-homeassistant.
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "16", limit_memory: 12Gi}
+        kaniko_resources: {cpu: 350m, memory: 3Gi, limit_cpu: "8", limit_memory: 12Gi}
   # verdify-platform (DASH, verdify-platform#1397/#1402). It transfers to jvallery
   # first (D19), hence the jvallery URL. Sets follow #1402's job map, all uid 1001
   # (ci/gha/lib.sh makes a private writable HOME):
@@ -233,14 +235,14 @@ sets:
         max: 12
         job_image: mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779
         job_uid: 1001
-        job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: "1", memory: 768Mi, limit_cpu: "8", limit_memory: 8Gi}
       ci-tools:
         # COORD/DASH 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 2 -> 6.
         # D-39 (Jason 2026-11-06 ~21:15Z): 6 -> 18.
         max: 18
         job_image: registry.vallery.net/jvallery/agents-ci-tools@sha256:c581b862f3da5c79f71fc982455684350628bc4c9fa51dff77d3b8354cd8f214
         job_uid: 1001
-        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 600m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
       ci-pg:
         # COORD 2026-11-06 ~18:1xZ (verdify#1402 waiting on capacity): 1 -> 3.
         # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
@@ -249,7 +251,7 @@ sets:
         postgres: true
         job_image: registry.vallery.net/jvallery/agents-ci-tools@sha256:c581b862f3da5c79f71fc982455684350628bc4c9fa51dff77d3b8354cd8f214
         job_uid: 1001
-        job_resources: {cpu: 250m, memory: 1Gi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 250m, memory: 1Gi, limit_cpu: "8", limit_memory: 8Gi}
         postgres_image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-b67681006859e657@sha256:09109f553eafc0ed17dccf0c8b3af77a6e1293707a2a14d8d6458a2de3a964eb
       ci-esphome:
         # COORD/DASH 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 1 -> 2.
@@ -257,17 +259,17 @@ sets:
         max: 3
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
         job_uid: 1001
-        job_resources: {cpu: 500m, memory: 1280Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 2250m, memory: 1408Mi, limit_cpu: "8", limit_memory: 8Gi}
       ci-dashboard:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         job_image: registry.vallery.net/jvallery/weather-ci@sha256:f4fceab3222d3817baf8def870970981eb88a853cf42f2dc36efcec779f46673
         job_uid: 1001
-        job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 3900m, memory: 3200Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        kaniko_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 12Gi}
+        kaniko_resources: {cpu: 600m, memory: 640Mi, limit_cpu: "8", limit_memory: 12Gi}
   # jvallery/agents on ARC (D19, Jason first-hand). The job image is native CI's own
   # source-check image (native_ci_controller_deployment.IMAGE): Python 3.11-3.13,
   # Node 24, Ruby, kubectl, gitleaks, the prebaked wheelhouse and the PG16 +
@@ -296,10 +298,10 @@ sets:
         avoid_nodes: [vm-k3s-node5]
         job_image: registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2
         job_uid: 1001
-        job_resources: {cpu: 500m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: "2", memory: 384Mi, limit_cpu: "8", limit_memory: 8Gi}
         # COORD 2026-11-06: runner CPU limit 2 -> 4 to cut the ~2.4 min full-history checkout.
         # Limits only; requests stay at the runner default (250m / 512Mi), so no scheduling cost.
-        runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "4", limit_memory: 2Gi}
+        runner_resources: {cpu: 600m, memory: 640Mi, limit_cpu: "4", limit_memory: 2Gi}
       # BUILD-AGENTS (D-22): the 12 images native event-ci built on push to main
       # (agents .github/workflows/build.yml, ci/images.tsv). Mounts
       # ci-runners/zot-push-agents (principal ci-agents, exact jvallery/agents-* paths
@@ -309,7 +311,7 @@ sets:
       build:
         # COORD GO-FAST 2026-11-06 ~18:0xZ: 2 -> 4.
         max: 4
-        kaniko_resources: {cpu: 500m, memory: 512Mi, limit_cpu: "16", limit_memory: 12Gi}
+        kaniko_resources: {cpu: 1400m, memory: 2304Mi, limit_cpu: "8", limit_memory: 12Gi}
   # estate-ci's own self-test (R1: no GitHub-hosted runners, even here), image
   # mirrors (mirrors.txt, crane copy) and the estate-ci-toolbox build. The build
   # set mounts zot-push-estate-ci (writer for jvallery/estate-ci/** only).
@@ -319,15 +321,15 @@ sets:
         max: 2
         job_image: docker.io/library/python:3.13-slim@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc
         job_uid: 1001
-        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        kaniko_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        kaniko_resources: {cpu: 1300m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
       buildcheck:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        kaniko_resources: {cpu: 250m, memory: 1Gi, limit_cpu: "16", limit_memory: 8Gi}
+        kaniko_resources: {cpu: 1200m, memory: 1Gi, limit_cpu: "8", limit_memory: 8Gi}
   # MIGRATE-INFRA repos (jvallery/agents#6092). Every ci set runs its checks in a
   # job sidecar running the estate-ci toolbox (*toolbox; it replaced the fleet
   # agents-arc-runner-toolbox the parity runs used). Sizes follow today's validation-standard
@@ -353,11 +355,11 @@ sets:
         max: 11
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 500m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 3400m, memory: 640Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        kaniko_resources: {cpu: 500m, memory: 512Mi, limit_cpu: "16", limit_memory: 8Gi}
+        kaniko_resources: {cpu: "1", memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/network-infra
     profiles:
       ci:
@@ -366,11 +368,11 @@ sets:
         max: 8
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        kaniko_resources: {cpu: 500m, memory: 512Mi, limit_cpu: "16", limit_memory: 8Gi}
+        kaniko_resources: {cpu: 2400m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/storage-infra
     profiles:
       ci:
@@ -379,11 +381,11 @@ sets:
         max: 8
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: "1", memory: 1280Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 3.
         max: 3
-        kaniko_resources: {cpu: 300m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        kaniko_resources: {cpu: 2650m, memory: 5Gi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/cortex-ai-compute
     profiles:
       ci:
@@ -391,32 +393,32 @@ sets:
         max: 3
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 950m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        kaniko_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 12Gi}
+        kaniko_resources: {cpu: 700m, memory: 256Mi, limit_cpu: "8", limit_memory: 12Gi}
   - repo: jvallery/proxmox-infrastructure
     profiles:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         runner_image: *toolbox
-        runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        runner_resources: {cpu: "1", memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/home-dotfiles
     profiles:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         runner_image: *toolbox
-        runner_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/AI_presentation
     profiles:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         runner_image: *toolbox
-        runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        runner_resources: {cpu: 250m, memory: 384Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/immich-config
     profiles:
       ci:
@@ -424,7 +426,7 @@ sets:
         max: 2
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/orbit
     profiles:
       ci:
@@ -432,7 +434,7 @@ sets:
         max: 2
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/paige-companion
     profiles:
       ci:
@@ -440,7 +442,7 @@ sets:
         max: 2
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/wordpress
     profiles:
       ci:
@@ -448,7 +450,7 @@ sets:
         max: 2
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   # memoryos image build (J-8, memoryos#39/#40); the repo moved to jvallery on
   # 2026-11-06 (REPO-MOVE, D19). build needs the KSOPS Secret zot-push-memoryos
   # (zot principal ci-memoryos, storage-infra#1387).
@@ -473,7 +475,7 @@ sets:
         max: 2
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "16", limit_memory: 8Gi}
+        job_resources: {cpu: 750m, memory: 640Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2

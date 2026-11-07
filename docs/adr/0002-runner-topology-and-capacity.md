@@ -1,6 +1,8 @@
 # ADR-0002: Runner topology, profiles, quotas and capacity model
 
 Status: Accepted (2026-11-06). Owner: CI-ARCH; built by CI-PLATFORM.
+Capacity points 2-4 and the node8 slot value are superseded by
+[ADR-0010](0010-runner-balancing.md) (D-87).
 
 ## Context
 
