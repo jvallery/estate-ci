@@ -30,7 +30,12 @@ spec:
           spec:
             automountServiceAccountToken: false
             restartPolicy: Never
-            priorityClassName: ci-runner
+            priorityClassName: ci-preemptible
+            tolerations:
+            - key: dedicated
+              operator: Equal
+              value: frigate
+              effect: NoSchedule
             imagePullSecrets:
             - name: zot-pull
             securityContext:
@@ -45,6 +50,16 @@ spec:
               labelSelector:
                 matchLabels:
                   estate-ci.vallery.net/profile: build
+            affinity:
+              nodeAffinity:
+                preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                    - key: kubernetes.io/hostname
+                      operator: NotIn
+                      values:
+                      - vm-k3s-node8
             containers:
             - name: runner
               image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232
@@ -66,10 +81,12 @@ spec:
                   cpu: 100m
                   memory: 256Mi
                   ephemeral-storage: 1Gi
+                  agentfleet.vallery.net/ci-runner-slot: '1'
                 limits:
                   cpu: '2'
                   memory: 2Gi
                   ephemeral-storage: 16Gi
+                  agentfleet.vallery.net/ci-runner-slot: '1'
               securityContext:
                 allowPrivilegeEscalation: false
                 capabilities:
