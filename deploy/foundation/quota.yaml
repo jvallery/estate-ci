@@ -108,15 +108,30 @@ metadata:
 #   x3 maxRunners, all others >= 2. Sum at max: 214 pods, 132.5 CPU / 331.5Gi
 #   requests, 3907 CPU / 2254Gi limits, 910Gi / 7804Gi ephemeral; hard = sum
 #   + ~10%. The scheduler (node free requests) is the gate, not this quota.
+# - D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): hot pools about
+#   +30% maxRunners, delivered after node4/node5 return (pi#481), on top of
+#   the zero-sum rebalances estate-ci#63 (agents-ci 24 -> 30) and #64
+#   (monitoring-stack-ci 6 -> 9): agents-ci 30 -> 37, research-vault-ci
+#   12 -> 16, research-vault-pg 9 -> 12, monitoring-stack-ci 9 -> 11,
+#   storage-infra-ci and network-infra-ci 6 -> 8,
+#   cortex-ai-compute-ci, homeassistant-ci-ha and verdify-platform-ci-esphome
+#   2 -> 3, research-vault-build 2 -> 3 (+24 runners). Requests unchanged (#59 p50
+#   sizing). Sum at max, pod effective = max(sum containers, max init), from
+#   deploy/runners/apps: 214 -> 238 pods, 95.6 -> 108.8 CPU / 171.8 ->
+#   191.5Gi requests, 3913 -> 4362 CPU / 2234 -> 2484Gi limits, 895 -> 976Gi
+#   / 7750 -> 8548Gi ephemeral. Raised to sum + ~10% where the sum crossed
+#   hard: pods 236 -> 262, limits.cpu 4300 -> 4780, limits.memory 2480 ->
+#   2740Gi, ephemeral 1000 -> 1080Gi / 8600 -> 9400Gi. Requests hard
+#   unchanged (above sum + 10%).
 spec:
   hard:
-    pods: "236"
+    pods: "262"
     requests.cpu: "146"
     requests.memory: 365Gi
-    limits.cpu: "4300"
-    limits.memory: 2480Gi
-    requests.ephemeral-storage: 1000Gi
-    limits.ephemeral-storage: 8600Gi
+    limits.cpu: "4780"
+    limits.memory: 2740Gi
+    requests.ephemeral-storage: 1080Gi
+    limits.ephemeral-storage: 9400Gi
     persistentvolumeclaims: "0"
     services.loadbalancers: "0"
     services.nodeports: "0"
