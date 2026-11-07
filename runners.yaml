@@ -88,7 +88,8 @@ sets:
         # COORD GO-FAST 2026-11-06 ~18:0xZ (Jason first-hand: "Drive FAST"): 3 -> 4.
         # D-39 (Jason 2026-11-06 ~21:15Z): 4 -> 12.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 12 -> 16 (queue p90 7.5 min, busy hit 12).
-        max: 16
+        # D-87 hold absorb (CI-BALANCE, COORD 2026-11-07): node6 hold +4 vCPU -> 16 -> 18.
+        max: 18
         job_image: registry.vallery.net/jvallery/vault-ci@sha256:afedf20188449a65eb77b1299ae61b40285d89996c9aef04524cfe567aaab009
         job_uid: 1001
         # COORD 2026-11-06 ~20:0xZ (Jason: accelerate RV2 CI): 'unit' took 30-36 min
@@ -324,7 +325,8 @@ sets:
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 30 -> 37 (+7 on top of the rebalance; at max 100%, 148 jobs queued at 23:50Z).
         # COORD contingency (2026-11-07 ~02:14Z): 37 -> 20 HOLD. verdify-db-0 CPU-starved on node7 (111%), Verdify planner failing; restore after the #66 slot template is live and node7 < 90% for 15 min.
         # D-87 item 7 (CI-BALANCE 2026-11-07 ~05:58Z): 20 -> 30. #66 slots live; node7 10-min avg 69%; at max with 16 runs queued; quota 96.5/215. Sized from capacity, not back to 37 (node5 spikes to 104%).
-        max: 30
+        # D-87 hold absorb (CI-BALANCE, COORD 2026-11-07): node6 hold +4 vCPU -> 30 -> 32.
+        max: 32
         avoid_nodes: [vm-k3s-node5]
         job_image: registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2
         job_uid: 1001
@@ -393,7 +395,8 @@ sets:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # ARC-RAISE rebalance 2 (Jason via COORD 2026-11-07 00:35Z, zero-sum): 6 -> 9 (+3 from verdify-platform-ci; at max, ~20 jobs queued incl. fleet-CI exit PRs ms#1444/#1446/#1449).
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 9 -> 11 (+2 on top of rebalance 2; was at max 79%, queue p50 12 min).
-        max: 11
+        # D-87 hold absorb (CI-BALANCE, COORD 2026-11-07): node6 hold +4 vCPU -> 11 -> 13.
+        max: 13
         job_image: *toolbox
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
@@ -430,7 +433,8 @@ sets:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 6 -> 8 (at max 100%; queue p50 28 min).
-        max: 8
+        # D-87 hold absorb (CI-BALANCE, COORD 2026-11-07): node6 hold +4 vCPU -> 8 -> 10.
+        max: 10
         job_image: *toolbox
         job_uid: 1001
         # D-103 B: request = 6 h sample p95 where it exceeds p90 materially, else p90 (04:10Z); limit unchanged.

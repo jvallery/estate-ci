@@ -19,7 +19,7 @@ spec:
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: storage-infra-ci
         minRunners: 0
-        maxRunners: 8
+        maxRunners: 10
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller
