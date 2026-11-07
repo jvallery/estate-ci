@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""Unit tests for deploy/foundation/bin/hot-guard.py decision logic (no cluster access)."""
+import datetime as dt
+import importlib.util
+import json
+import pathlib
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+spec = importlib.util.spec_from_file_location("guard", ROOT / "deploy/foundation/bin/hot-guard.py")
+g = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(g)
+cfg = json.loads((ROOT / "deploy/foundation/hot-guard-config.json").read_text())
+SIG = cfg["signals"]
+NOW = dt.datetime(2026, 11, 7, 2, 0, tzinfo=dt.timezone.utc)
+CALM = {"node_cpu_busy_2m": 0.84, "node_memory_used_2m": 0.46, "frigate_skipped_ratio_2m": 0.0,
+        "frigate_decode_deficit_2m": 0.0, "frigate_started_age_seconds": 21000.0}
+failures = 0
+
+
+def check(name, got, want):
+    global failures
+    if got != want:
+        failures += 1
+        print(f"FAIL {name}: got {got!r} want {want!r}")
+
+
+check("calm", g.evaluate(SIG, CALM), ([], []))
+check("cpu", g.evaluate(SIG, dict(CALM, node_cpu_busy_2m=0.96))[0], ["node_cpu_busy_2m"])
+check("cpu-at-threshold", g.evaluate(SIG, dict(CALM, node_cpu_busy_2m=0.95))[0], [])
+check("mem", g.evaluate(SIG, dict(CALM, node_memory_used_2m=0.9))[0], ["node_memory_used_2m"])
+check("skip", g.evaluate(SIG, dict(CALM, frigate_skipped_ratio_2m=0.2))[0], ["frigate_skipped_ratio_2m"])
+check("decode", g.evaluate(SIG, dict(CALM, frigate_decode_deficit_2m=0.3))[0], ["frigate_decode_deficit_2m"])
+check("restart", g.evaluate(SIG, dict(CALM, frigate_started_age_seconds=60))[0], ["frigate_started_age_seconds"])
+check("missing", g.evaluate(SIG, dict(CALM, frigate_skipped_ratio_2m=None)), ([], ["frigate_skipped_ratio_2m"]))
+
+d = g.decide(NOW, ["node_cpu_busy_2m"], [], None, 900)
+check("trip sets+evicts", (d["hold"], d["evict"]), ("set", True))
+d = g.decide(NOW, [], ["x"], None, 900)
+check("missing holds, no evict", (d["hold"], d["evict"]), ("set", False))
+check("clean unheld", g.decide(NOW, [], [], None, 900)["hold"], "none")
+held = {"reason": "r", "since": NOW - dt.timedelta(minutes=30), "last_trip": NOW - dt.timedelta(minutes=14)}
+check("cooling", g.decide(NOW, [], [], held, 900)["hold"], "keep")
+held["last_trip"] = NOW - dt.timedelta(minutes=15)
+check("restore after 15 clean", g.decide(NOW, [], [], held, 900)["hold"], "clear")
+check("trip while held re-sets", g.decide(NOW, ["x"], [], held, 900)["hold"], "set")
+
+
+def pod(name, ts, node="vm-k3s-node8", label=True, phase="Running", deleting=False):
+    md = {"name": name, "creationTimestamp": ts, "labels": {g.PROFILE_LABEL: "ci"} if label else {}}
+    if deleting:
+        md["deletionTimestamp"] = ts
+    return {"metadata": md, "spec": {"nodeName": node}, "status": {"phase": phase}}
+
+
+pods = [pod("old", "2026-11-07T01:00:00Z"), pod("new", "2026-11-07T01:30:00Z"),
+        pod("mid", "2026-11-07T01:10:00Z", phase="Pending"), pod("other-node", "2026-11-07T01:40:00Z", node="vm-k3s-node4"),
+        pod("guard", "2026-11-07T01:50:00Z", label=False), pod("dying", "2026-11-07T01:55:00Z", deleting=True),
+        pod("done", "2026-11-07T01:56:00Z", phase="Succeeded")]
+check("newest first", [p["metadata"]["name"] for p in g.newest_first(pods, "vm-k3s-node8")], ["new", "mid", "old"])
+check("iso roundtrip", g.parse_iso(g.iso(NOW)), NOW)
+check("bad iso", g.parse_iso("junk"), None)
+
+# main() wiring with a fake API server and Prometheus.
+import os, tempfile, urllib.error, io
+state = {"cm": None, "calls": []}
+
+
+def fake_kube(path, method="GET", body=None, content_type="application/json", dry_run=False):
+    state["calls"].append((method, path.split("?")[0], dry_run))
+    if path.endswith("/configmaps/" + g.HOLD_CM) and method == "GET":
+        if state["cm"] is None:
+            raise urllib.error.HTTPError(path, 404, "nf", {}, io.BytesIO(b""))
+        return state["cm"]
+    if path.endswith("/configmaps") and method == "POST":
+        state["cm"] = body
+        return body
+    if path.endswith("/configmaps/" + g.HOLD_CM) and method == "PATCH":
+        cm = state["cm"]
+        for k, v in body["data"].items():
+            if v is None:
+                cm["data"].pop(k, None)
+            else:
+                cm["data"][k] = v
+        for k, v in body["metadata"]["annotations"].items():
+            if v is None:
+                cm["metadata"]["annotations"].pop(k, None)
+            else:
+                cm["metadata"]["annotations"][k] = v
+        return cm
+    if "/pods?" in path:
+        return {"items": pods}
+    if path.endswith("/eviction"):
+        return {}
+    raise AssertionError(path)
+
+
+VALUES = dict(CALM)
+g.kube = fake_kube
+g.prom_scalar = lambda base, q: VALUES[[n for n, s in SIG.items() if s["query"] == q][0]]
+cfgfile = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+json.dump(cfg, cfgfile); cfgfile.close()
+g.CONFIG_PATH = cfgfile.name
+
+check("calm run rc", g.main(), 0)
+check("calm: no hold cm", state["cm"], None)
+VALUES["frigate_skipped_ratio_2m"] = 0.5
+check("trip run rc", g.main(), 0)
+check("trip: node held", "vm-k3s-node8" in state["cm"]["data"], True)
+ev = [c[1].split("/")[-2] for c in state["calls"] if c[1].endswith("/eviction")]
+check("trip: evicts 2 newest", ev, ["new", "mid"])
+VALUES["frigate_skipped_ratio_2m"] = 0.0
+state["calls"].clear()
+check("cooling rc", g.main(), 0)
+check("cooling: still held, no eviction", ("vm-k3s-node8" in state["cm"]["data"], [c for c in state["calls"] if c[1].endswith("/eviction")]), (True, []))
+state["cm"]["metadata"]["annotations"][g.LAST_TRIP] = "2026-01-01T00:00:00Z"
+check("restore rc", g.main(), 0)
+check("restore: hold cleared", state["cm"]["data"], {})
+g.prom_scalar = lambda base, q: (_ for _ in ()).throw(urllib.error.URLError("down"))
+state["calls"].clear()
+check("prom down rc", g.main(), 1)
+check("prom down: fail closed, no eviction", ("vm-k3s-node8" in state["cm"]["data"], [c for c in state["calls"] if c[1].endswith("/eviction")]), (True, []))
+os.environ["GUARD_MODE"] = "dry-run"
+state["cm"]["data"] = {}
+g.prom_scalar = lambda base, q: VALUES[[n for n, s in SIG.items() if s["query"] == q][0]]
+os.environ["GUARD_FORCE_TRIP"] = "test"
+state["calls"].clear()
+g.kube = lambda path, method="GET", body=None, content_type="application/json", dry_run=False: (
+    state["calls"].append((method, path.split("?")[0], dry_run, body)) or fake_kube(path, method, body, content_type, dry_run)
+    if method == "GET" or "/pods?" in path else state["calls"].append(("W", path, dry_run, body)) or {})
+check("forced dry-run rc", g.main(), 0)
+writes = [c for c in state["calls"] if c[0] == "W"]
+check("dry-run: every write is dry", all(c[2] or (c[3] or {}).get("deleteOptions") == {"dryRun": ["All"]} for c in writes) and len(writes) == 3, True)
+os.environ.pop("GUARD_MODE"); os.environ.pop("GUARD_FORCE_TRIP")
+
+if failures:
+    sys.exit(f"hot-guard tests: {failures} failure(s)")
+print("hot-guard tests: OK")

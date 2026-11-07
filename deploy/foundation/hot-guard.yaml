@@ -1,0 +1,191 @@
+# node8 hot guard (D-67, Jason first-hand 2026-11-07): estate-ci runners may use
+# vm-k3s-node8 (Frigate's node) as overflow, and always lose to Frigate.
+#
+# Every estate-ci runner Pod requests one agentfleet.vallery.net/ci-runner-slot
+# (advertised per node by the jvallery/agents arc-validation-pool reconciler:
+# node4-7 64, node8 16). Every minute this CronJob reads node8 and Frigate signals
+# from Prometheus (bin/hot-guard.py, thresholds in hot-guard-config.json). On a
+# trip it writes node8 into ConfigMap ci-runner-slot-hold, and the reconciler then
+# advertises 0 slots on node8 within about a minute. It also evicts node8 runner
+# Pods newest-first (evict_per_run per run, until the trip clears). It drops the
+# hold after 15 clean minutes. A missing signal or an unreachable Prometheus
+# holds node8 (fail closed) without evicting, and the run exits 1.
+#
+# Least privilege: no node or cluster-scoped permission. The guard may create
+# ConfigMaps and get/patch only ci-runner-slot-hold, list Pods, and evict Pods in
+# ci-runners. The reconciler's ServiceAccount (github-runner-ops) may get only
+# ci-runner-slot-hold.
+#
+# Operate:
+#   log:           kubectl -n ci-runners logs job/<latest ci-runner-hot-guard job>
+#   state:         kubectl -n ci-runners get cm ci-runner-slot-hold -o yaml
+#   pause guard:   set "mode": "dry-run" in hot-guard-config.json (PR); every write becomes dryRun=All
+#   forced trip:   docs/adr/0002-runner-topology-and-capacity.md "node8 overflow (D-67)"
+# Alerts (jvallery/monitoring-stack): CIRunnerNode8GuardTripped, CIRunnerNode8GuardFailing.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ci-runner-hot-guard
+  labels: {app.kubernetes.io/name: ci-runner-hot-guard, app.kubernetes.io/part-of: estate-ci}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ci-runner-hot-guard
+  labels: {app.kubernetes.io/name: ci-runner-hot-guard, app.kubernetes.io/part-of: estate-ci}
+rules:
+  # create cannot be restricted by name; the guard only ever creates ci-runner-slot-hold.
+  - apiGroups: [""]
+    resources: [configmaps]
+    verbs: [create]
+  - apiGroups: [""]
+    resources: [configmaps]
+    resourceNames: [ci-runner-slot-hold]
+    verbs: [get, patch]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [pods/eviction]
+    verbs: [create]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ci-runner-hot-guard
+  labels: {app.kubernetes.io/name: ci-runner-hot-guard, app.kubernetes.io/part-of: estate-ci}
+subjects:
+  - kind: ServiceAccount
+    name: ci-runner-hot-guard
+    namespace: ci-runners
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: ci-runner-hot-guard}
+---
+# The agents arc-validation-pool reconciler reads the hold (and nothing else here).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ci-runner-slot-hold-reader
+  labels: {app.kubernetes.io/name: ci-runner-hot-guard, app.kubernetes.io/part-of: estate-ci}
+rules:
+  - apiGroups: [""]
+    resources: [configmaps]
+    resourceNames: [ci-runner-slot-hold]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ci-runner-slot-hold-reader
+  labels: {app.kubernetes.io/name: ci-runner-hot-guard, app.kubernetes.io/part-of: estate-ci}
+subjects:
+  - kind: ServiceAccount
+    name: arc-validation-pool-reconciler
+    namespace: github-runner-ops
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: ci-runner-slot-hold-reader}
+---
+# ci-runners is default-deny. The guard reaches only DNS, the Kubernetes API and
+# the Prometheus HA query endpoint (observability admits it in monitoring-stack).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hot-guard-egress
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/name: ci-runner-hot-guard}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+          podSelector:
+            matchLabels: {k8s-app: kube-dns}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    # kube-router may enforce before or after Service DNAT: the API Service and
+    # the three control-plane endpoints.
+    - to:
+        - ipBlock: {cidr: 10.43.0.1/32}
+        - ipBlock: {cidr: 192.168.30.31/32}
+        - ipBlock: {cidr: 192.168.30.32/32}
+        - ipBlock: {cidr: 192.168.30.33/32}
+      ports:
+        - {protocol: TCP, port: 443}
+        - {protocol: TCP, port: 6443}
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: observability}
+          podSelector:
+            matchLabels: {app.kubernetes.io/name: prometheus-ha-query}
+      ports:
+        - {protocol: TCP, port: 9090}
+        - {protocol: TCP, port: 10902}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ci-runner-hot-guard
+  labels: {app.kubernetes.io/name: ci-runner-hot-guard, app.kubernetes.io/part-of: estate-ci}
+spec:
+  schedule: "* * * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 50
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels: {app.kubernetes.io/name: ci-runner-hot-guard, app.kubernetes.io/part-of: estate-ci}
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 55
+      ttlSecondsAfterFinished: 600
+      template:
+        metadata:
+          # Deliberately NO estate-ci.vallery.net/profile label: the guard is not
+          # a runner (no runner NetworkPolicy, never evicted by itself).
+          labels: {app.kubernetes.io/name: ci-runner-hot-guard, app.kubernetes.io/part-of: estate-ci}
+        spec:
+          serviceAccountName: ci-runner-hot-guard
+          automountServiceAccountToken: true
+          enableServiceLinks: false
+          restartPolicy: Never
+          priorityClassName: estate-default
+          imagePullSecrets: [{name: zot-pull}]
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            runAsGroup: 1001
+            seccompProfile: {type: RuntimeDefault}
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - {key: kubernetes.io/hostname, operator: NotIn, values: [vm-k3s-node8]}
+          containers:
+            - name: guard
+              # estate-ci-toolbox (python3), the image every ci runner already caches.
+              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:fe6107cb7dab551e5afe90527fc084a4930a7433b6b733f38c6cc8a0330d6d5b
+              imagePullPolicy: IfNotPresent
+              command: [python3, /opt/hot-guard/hot-guard.py]
+              env:
+                - {name: GUARD_CONFIG, value: /etc/hot-guard/config.json}
+              resources:
+                requests: {cpu: 50m, memory: 64Mi, ephemeral-storage: 16Mi}
+                limits: {cpu: 500m, memory: 128Mi, ephemeral-storage: 64Mi}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: {drop: [ALL]}
+              volumeMounts:
+                - {name: source, mountPath: /opt/hot-guard, readOnly: true}
+                - {name: config, mountPath: /etc/hot-guard, readOnly: true}
+          volumes:
+            - name: source
+              configMap: {name: ci-runner-hot-guard, defaultMode: 0555}
+            - name: config
+              configMap:
+                name: ci-runner-hot-guard-config
+                items: [{key: hot-guard-config.json, path: config.json}]
