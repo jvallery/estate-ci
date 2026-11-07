@@ -64,7 +64,7 @@ spec:
                       - vm-k3s-node8
             initContainers:
             - name: estate-ci-tools
-              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:fe6107cb7dab551e5afe90527fc084a4930a7433b6b733f38c6cc8a0330d6d5b
+              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:e130c841bad833b34a19c6dc39ecfbae13a87553591cfe569c70aaf240850554
               command:
               - /bin/sh
               - -ec
@@ -90,7 +90,7 @@ spec:
               - name: estate-ci-tools
                 mountPath: /tools
             - name: estate-ci-nss
-              image: mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779
+              image: mirror.gcr.io/library/python@sha256:cc55e4ded9c95f6ce2133b3d096db43f214d280c2a8af65d83e246c8fa7d168c
               command:
               - /bin/sh
               - -ec
@@ -163,7 +163,7 @@ spec:
                 mountPath: /opt/estate-ci
                 readOnly: true
             - name: job
-              image: mirror.gcr.io/library/python@sha256:353cf2106d143e1d28f5d7c10c5f5c0387085bba22ef0f7f7e52c2c330fb1779
+              image: mirror.gcr.io/library/python@sha256:cc55e4ded9c95f6ce2133b3d096db43f214d280c2a8af65d83e246c8fa7d168c
               command:
               - /bin/sh
               - /opt/estate-ci/sidecar-agent.sh
