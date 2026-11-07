@@ -27,6 +27,7 @@ spec:
           metadata:
             labels:
               estate-ci.vallery.net/profile: build
+              estate-ci.vallery.net/runner: 'true'
           spec:
             automountServiceAccountToken: false
             restartPolicy: Never
@@ -47,9 +48,10 @@ spec:
             - maxSkew: 1
               topologyKey: kubernetes.io/hostname
               whenUnsatisfiable: ScheduleAnyway
+              nodeTaintsPolicy: Honor
               labelSelector:
                 matchLabels:
-                  estate-ci.vallery.net/profile: build
+                  estate-ci.vallery.net/runner: 'true'
             affinity:
               nodeAffinity:
                 preferredDuringSchedulingIgnoredDuringExecution:
@@ -124,7 +126,7 @@ spec:
                   memory: 1Gi
                   ephemeral-storage: 8Gi
                 limits:
-                  cpu: '16'
+                  cpu: '8'
                   memory: 8Gi
                   ephemeral-storage: 40Gi
               volumeMounts:

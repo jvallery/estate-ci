@@ -27,6 +27,7 @@ spec:
           metadata:
             labels:
               estate-ci.vallery.net/profile: build
+              estate-ci.vallery.net/runner: 'true'
           spec:
             automountServiceAccountToken: false
             restartPolicy: Never
@@ -47,9 +48,10 @@ spec:
             - maxSkew: 1
               topologyKey: kubernetes.io/hostname
               whenUnsatisfiable: ScheduleAnyway
+              nodeTaintsPolicy: Honor
               labelSelector:
                 matchLabels:
-                  estate-ci.vallery.net/profile: build
+                  estate-ci.vallery.net/runner: 'true'
             affinity:
               nodeAffinity:
                 preferredDuringSchedulingIgnoredDuringExecution:
@@ -120,11 +122,11 @@ spec:
                 value: /busybox:/kaniko:/usr/local/bin:/usr/bin:/bin
               resources:
                 requests:
-                  cpu: 100m
-                  memory: 256Mi
+                  cpu: 550m
+                  memory: 384Mi
                   ephemeral-storage: 8Gi
                 limits:
-                  cpu: '16'
+                  cpu: '8'
                   memory: 12Gi
                   ephemeral-storage: 40Gi
               volumeMounts:
