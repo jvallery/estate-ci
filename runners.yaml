@@ -381,7 +381,10 @@ sets:
         max: 8
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: "1", memory: 1280Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # D-87 correction (CI-BALANCE 2026-11-07 03:00Z): since si#1428 (01:45Z) the gates
+        # shard across the CPU limit; live 6 Pods used 40.9 CPU (~6.8 each, at the limit),
+        # so the pre-si#1428 p90 (1 CPU) under-requested and node4/6 stayed at ~108%.
+        job_resources: {cpu: "6", memory: 1280Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 3.
         max: 3
