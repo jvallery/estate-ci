@@ -8,8 +8,9 @@ python3 deploy/foundation/bin/lint-workflows.py --require-forgejo-notes .
 python3 tests/lint/run.py
 python3 tests/hot_guard/run.py >/dev/null
 python3 tests/lint-images/run.py
+bash tests/sidecar_run/run.sh
 actionlint -color
-shellcheck deploy/foundation/bin/*.sh scripts/*.sh
+shellcheck deploy/foundation/bin/*.sh scripts/*.sh tests/sidecar_run/*.sh
 python3 -m py_compile deploy/foundation/bin/hot-guard.py deploy/foundation/bin/pin-rewrite.py deploy/foundation/bin/lint-workflows.py deploy/foundation/bin/lint-images.py scripts/render_runners.py
 python3 scripts/render_runners.py --check
 echo "self-test: OK"
