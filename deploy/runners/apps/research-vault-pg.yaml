@@ -218,7 +218,7 @@ spec:
                 -c fsync=off -c full_page_writes=off -c synchronous_commit=off -c max_connections=200
               resources:
                 requests:
-                  cpu: 500m
+                  cpu: 400m
                   memory: 1Gi
                   ephemeral-storage: 1Gi
                 limits:

@@ -23,9 +23,10 @@ the same.
 
 1. **Requests are measured, per runner class.** Each container of each scale
    set (`runner`, `job`, `kaniko`, `postgres`) requests about the p90 of its own
-   CPU use while active, and the p90 of its peak working set, rounded up to
-   50m / 128 MiB. Requests are never lowered below the previous value by a
-   sizing pass. The values live in `runners.yaml` (`*_resources`). With
+   CPU use (p90 of all 1-minute samples of its running Pods over the last
+   6 h, so idle stretches inside a job count), and the p90 of its peak working
+   set, rounded up to 50m / 128 MiB. A sizing pass moves requests up or down
+   but never below that p90; classes with fewer than 5 Pods keep their value. The values live in `runners.yaml` (`*_resources`). With
    realistic requests the scheduler stops placing runners on a worker once its
    CPU is spoken for, and the default `LeastAllocated` scoring spreads them.
 2. **Limits protect neighbours.** No container may set a CPU limit above 8
@@ -67,8 +68,7 @@ the same.
 ## Re-sizing
 
 Run when a class changes shape (new test suite, sharding) or every few weeks.
-Use at least 24 h of data that includes busy periods; data gathered while the
-workers were saturated understates demand, so never lower a request from it.
+Use the last 6 h (or more) of data that includes busy periods.
 
 ```promql
 # per set and container: p90 of active CPU (5m rate, 1m step); pod names are
@@ -81,9 +81,9 @@ max_over_time(container_memory_working_set_bytes{namespace="ci-runners", contain
 ```
 
 A suite that shards across its cgroup CPU limit (CI-SHARD-ALL: storage-infra,
-research-vault) uses the whole limit, so it requests close to it (6 of 8 CPU);
-size such classes from the last hours after the sharding change, not the
-older window (estate-ci#77, 2026-11-07).
+research-vault) bursts to the limit while its tests run; its request still
+follows the 6 h sample p90, and the burst comes from idle CPU (2026-11-07:
+requesting 6 CPU made CPU requests the bottleneck and left runners pending).
 
 Group the per-Pod results by set (strip `-<hash>-runner-<id>`) and take the
 p90 across Pods. The first sizing (this ADR) used 14 h of data
