@@ -1,0 +1,25 @@
+# D-67: the jvallery/agents arc-validation-pool reconciler reads ConfigMap
+# ci-runner-slot-hold (written by the ci-runner-hot-guard CronJob) and advertises
+# 0 agentfleet.vallery.net/ci-runner-slot on a held node. It may get only that
+# ConfigMap. A 404 (no hold yet) is "no holds"; a 403 would freeze ci-runner-slot.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ci-runner-slot-hold-reader
+  labels: {app.kubernetes.io/name: ci-runner-hot-guard, app.kubernetes.io/part-of: estate-ci}
+rules:
+  - apiGroups: [""]
+    resources: [configmaps]
+    resourceNames: [ci-runner-slot-hold]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ci-runner-slot-hold-reader
+  labels: {app.kubernetes.io/name: ci-runner-hot-guard, app.kubernetes.io/part-of: estate-ci}
+subjects:
+  - kind: ServiceAccount
+    name: arc-validation-pool-reconciler
+    namespace: github-runner-ops
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: ci-runner-slot-hold-reader}
