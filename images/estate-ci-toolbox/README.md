@@ -29,6 +29,7 @@ by `.github/workflows/build.yml` (Kaniko on `estate-ci-buildcheck` for PRs,
 | shellcheck | v0.11.0 | GitHub release, sha256 recorded from the asset |
 | actionlint | 1.7.12 | GitHub release, checksums.txt |
 | gh | 2.103.3 | GitHub release, checksums.txt. **ADR-0009 exception E-1**: only `gh attestation verify` of upstream artifacts (sentinel frigate-promotion); no token in the image |
+| monitoring-stack Static Validation archives (ms#1560) | kustomize v5.4.2, kubeconform v0.6.7, prometheus 3.13.5, alertmanager 0.34.1, tempo 3.0.2, blackbox_exporter 0.29.1 | Upstream release archives kept whole under their original basenames at `/opt/estate-ci-tools/<tool>/<version>/` (off PATH), each sha256-verified against the monitoring-stack pins and the upstream checksum files. Callers check the archive sha256 and use it only on an exact match. Bump together with monitoring-stack |
 
 `versions.sh --assert` runs at build time and fails on any drift; the result is
 in the image at `/usr/local/share/estate-ci-toolbox/versions.txt`.
