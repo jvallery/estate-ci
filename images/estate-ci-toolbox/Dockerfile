@@ -66,7 +66,7 @@ RUN set -eu; \
 
 # fetch <url> <sha256> <file>: download and verify, or fail the build.
 RUN printf '%s\n' '#!/bin/sh' 'set -eu' \
-      'curl -fsSL --retry 3 -o "$3" "$1"' \
+      'curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors -o "$3" "$1"' \
       'echo "$2  $3" | sha256sum -c -' > /usr/local/bin/fetch-verified \
     && chmod 0755 /usr/local/bin/fetch-verified && mkdir -p /tmp/tools
 
@@ -140,6 +140,28 @@ RUN cd /tmp/tools && fetch-verified "https://github.com/cli/cli/releases/downloa
     && tar -xzf gh.tgz "gh_${GH_VERSION}_linux_amd64/bin/gh" \
     && install -m 0755 "gh_${GH_VERSION}_linux_amd64/bin/gh" /usr/local/bin/gh \
     && rm -rf /tmp/tools/*
+
+# monitoring-stack Static Validation archives (ms ci/static-validation lib.sh and rules.sh;
+# consumer ms#1560): the UPSTREAM RELEASE ARCHIVES under their original basenames, not
+# unpacked binaries, because the callers sha256-check the archive and use this copy only
+# on an exact match, falling back to the download. Path:
+# /opt/estate-ci-tools/<tool>/<version>/<basename>. Off PATH, so kustomize v5.8.3 and
+# kubeconform v0.8.0 above stay authoritative. sha256s equal the ms pins (prometheus,
+# alertmanager, blackbox_exporter, tempo) and the upstream checksum files (all six;
+# ms pins only the kustomize and kubeconform versions). amd64 only, like this image.
+# Bump together with monitoring-stack's pins; versions.sh asserts every archive.
+RUN set -eu; \
+    archive() { \
+      dir="/opt/estate-ci-tools/$1/$2"; mkdir -p "$dir"; \
+      fetch-verified "$3" "$4" "$dir/$(basename "$3")"; \
+      chmod 0444 "$dir/$(basename "$3")"; \
+    }; \
+    archive kustomize v5.4.2 "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.2/kustomize_v5.4.2_linux_amd64.tar.gz" 881c6e9007c7ea2b9ecc214d13f4cdd1f837635dcf4db49ce4479898f7d911a3; \
+    archive kubeconform v0.6.7 "https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz" 95f14e87aa28c09d5941f11bd024c1d02fdc0303ccaa23f61cef67bc92619d73; \
+    archive prometheus 3.13.5 "https://github.com/prometheus/prometheus/releases/download/v3.13.5/prometheus-3.13.5.linux-amd64.tar.gz" 0388822ace519c5a3a8ef556a541ce1b536e21d872f82deded465bd27a5a0699; \
+    archive alertmanager 0.34.1 "https://github.com/prometheus/alertmanager/releases/download/v0.34.1/alertmanager-0.34.1.linux-amd64.tar.gz" 265b9d1e55ef0d5306a436018af6d2b686c2ce051f03d968f7464ecb1372a7e8; \
+    archive tempo 3.0.2 "https://github.com/grafana/tempo/releases/download/v3.0.2/tempo_3.0.2_linux_amd64.tar.gz" d2b95c01774c81c4494c4162e2f3511699a66b46506c96028745f5d4f0a78086; \
+    archive blackbox_exporter 0.29.1 "https://github.com/prometheus/blackbox_exporter/releases/download/v0.29.1/blackbox_exporter-0.29.1.linux-amd64.tar.gz" b82b81839e6317e84fdd367f46d7ddd3b773fa09cbe2e3d5633a59171d741e76
 
 COPY --from=gitleaks-build /out/gitleaks /usr/local/bin/gitleaks
 

@@ -32,6 +32,17 @@ check gh          2.103.3     "$(gh --version | first | awk '{print $3}')"
 check git         ok          "$(git --version >/dev/null && echo ok)"
 check g++         ok          "$(g++ --version >/dev/null && echo ok)"
 check sqlite3     ok          "$(sqlite3 --version >/dev/null && echo ok)"
+# monitoring-stack Static Validation archives (Dockerfile): exact path and sha256.
+archive() { # tool version basename sha256
+  f="/opt/estate-ci-tools/$1/$2/$3"
+  check "$1-archive" "$2 $4" "$2 $(sha256sum "$f" 2>/dev/null | awk '{print $1}')"
+}
+archive kustomize         v5.4.2 kustomize_v5.4.2_linux_amd64.tar.gz           881c6e9007c7ea2b9ecc214d13f4cdd1f837635dcf4db49ce4479898f7d911a3
+archive kubeconform       v0.6.7 kubeconform-linux-amd64.tar.gz                95f14e87aa28c09d5941f11bd024c1d02fdc0303ccaa23f61cef67bc92619d73
+archive prometheus        3.13.5 prometheus-3.13.5.linux-amd64.tar.gz          0388822ace519c5a3a8ef556a541ce1b536e21d872f82deded465bd27a5a0699
+archive alertmanager      0.34.1 alertmanager-0.34.1.linux-amd64.tar.gz        265b9d1e55ef0d5306a436018af6d2b686c2ce051f03d968f7464ecb1372a7e8
+archive tempo             3.0.2  tempo_3.0.2_linux_amd64.tar.gz                d2b95c01774c81c4494c4162e2f3511699a66b46506c96028745f5d4f0a78086
+archive blackbox_exporter 0.29.1 blackbox_exporter-0.29.1.linux-amd64.tar.gz   b82b81839e6317e84fdd367f46d7ddd3b773fa09cbe2e3d5633a59171d741e76
 check runner-uid  1001        "$(id -u runner)"
 check runner-sh   ok          "$(test -x /home/runner/run.sh && echo ok)"
 exit "$bad"
