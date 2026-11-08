@@ -19,9 +19,10 @@
 # (deploy/foundation/quota.yaml) is the hard envelope across all sets.
 defaults:
   # estate-ci-toolbox (ADR-0004, estate-ci#16; images/estate-ci-toolbox), built
-  # in-cluster by build.yml on main 11c064f3 (tag gha-11c064f31332; helm v3.22.1). FROM the
+  # in-cluster by build.yml on main 65beebe3 (run 42480807071; + monitoring-stack SV archives
+  # under /opt/estate-ci-tools, estate-ci#102). FROM the
   # stock runner (uid 1001), so it serves as runner_image and as job_image.
-  toolbox: &toolbox registry.vallery.net/jvallery/estate-ci/toolbox@sha256:e130c841bad833b34a19c6dc39ecfbae13a87553591cfe569c70aaf240850554
+  toolbox: &toolbox registry.vallery.net/jvallery/estate-ci/toolbox@sha256:b534747edf13c03d04f4b2bd6b735e1efd611abb6582aa43739464db032582d2
   chart_version: 0.14.2
   controller_service_account: {namespace: arc-systems, name: arc-gha-rs-controller}
   # Stock actions-runner 2.338.2, mirrored by mirrors.txt (same index digest as upstream).
