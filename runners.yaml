@@ -304,6 +304,8 @@ sets:
   #   -ci-pg         agents-ci-tools + a PostgreSQL 16.15/pgvector sidecar on 127.0.0.1:5432
   #                  (the research-vault pg digest): the 7 private-Postgres campaign test
   #                  files in #1402 (COORD 2026-11-06); checks.yml postgres: true.
+  #   -buildcheck    Kaniko, no push credential: ci.yml PR build-check of the
+  #                  path-impacted images (verdify-platform#1534, STD-CI-12).
   # Quota moves in when native verdify slots are lowered.
   - repo: jvallery/verdify-platform
     profiles:
@@ -368,6 +370,11 @@ sets:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
+        kaniko_resources: {cpu: 450m, memory: 640Mi, limit_cpu: "8", limit_memory: 12Gi}
+      # PR image builds without a push credential (verdify-platform#1534, STD-CI-12):
+      # ci.yml builds only the images whose Dockerfile inputs a PR changes, push false.
+      # Same Kaniko size as build; max 1 (default) so PR builds never crowd the build set.
+      buildcheck:
         kaniko_resources: {cpu: 450m, memory: 640Mi, limit_cpu: "8", limit_memory: 12Gi}
   # jvallery/agents on ARC (D19, Jason first-hand). The job image is native CI's own
   # source-check image (native_ci_controller_deployment.IMAGE): Python 3.11-3.13,
