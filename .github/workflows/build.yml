@@ -1,15 +1,24 @@
 # estate-ci's own images: estate-ci-toolbox (images/estate-ci-toolbox) and
 # ci-tools (images/ci-tools, moved from jvallery/agents by estate-platform#48).
-# PRs build it without push on estate-ci-buildcheck. The push to
-# registry.vallery.net/jvallery/estate-ci/toolbox runs on estate-ci-build by
-# dispatch on main until the estate-ci zot writer (zot-push-estate-ci) is live;
-# then add `push: {branches: [main], paths: [images/estate-ci-toolbox/**]}`.
-# Bases come from mirrors.txt: run mirror-images first when they change.
+# PRs build them without push on estate-ci-buildcheck.
+# Toolbox: a push to main that changes it builds and pushes
+# registry.vallery.net/jvallery/estate-ci/toolbox on estate-ci-build
+# (zot-push-estate-ci), then the pin job opens the pin PR for runners.yaml and
+# the rendered sets as vallery-pin-bot (D-52), so its checks run. That job is the
+# only writer of the toolbox digest (STD-CI-13, D-273). workflow_dispatch on main
+# rebuilds and pins the same way.
+# ci-tools: pushed by workflow_dispatch on main (image ci-tools or all); its
+# consumers pin it in their own repositories.
+# Bases come from mirrors.txt: mirror-images runs on push when it changes; land
+# a new base row before the Dockerfile that uses it.
 name: build
 
 on:
   pull_request:
     paths: [images/estate-ci-toolbox/**, images/ci-tools/**, .github/workflows/build.yml]
+  push:
+    branches: [main]
+    paths: [images/estate-ci-toolbox/**, .github/workflows/build.yml]
   workflow_dispatch:
     inputs:
       image:
@@ -33,11 +42,12 @@ jobs:
       image: jvallery/estate-ci/toolbox
       context: images/estate-ci-toolbox
       dockerfile: images/estate-ci-toolbox/Dockerfile
-      push: ${{ github.event_name == 'workflow_dispatch' }}
+      push: ${{ github.event_name != 'pull_request' }}
       timeout-minutes: 60
 
+  # Not on a push to main: that trigger is the toolbox's.
   ci-tools:
-    if: github.event_name != 'workflow_dispatch' || inputs.image != 'toolbox'
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.image != 'toolbox')
     uses: ./.github/workflows/image-build.yml
     with:
       image: jvallery/estate-ci/ci-tools
@@ -45,3 +55,19 @@ jobs:
       dockerfile: images/ci-tools/Dockerfile
       push: ${{ github.event_name == 'workflow_dispatch' }}
       timeout-minutes: 60
+
+  # Every file that pins the toolbox: runners.yaml (the source) and the rendered
+  # sets (pin-rewrite.py rewrites the same string the renderer copies, so
+  # render_runners.py --check stays clean). A glob skips files without the image.
+  pin:
+    needs: [toolbox]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || inputs.image != 'ci-tools')
+    permissions: {contents: write, pull-requests: write, actions: write}
+    uses: ./.github/workflows/pin-bump.yml
+    secrets:
+      pin-bot-private-key: ${{ secrets.PIN_BOT_PRIVATE_KEY }}
+    with:
+      checks-workflow: self-test.yml
+      pins: |
+        runners.yaml registry.vallery.net/jvallery/estate-ci/toolbox ${{ needs.toolbox.outputs.digest }}
+        deploy/runners/apps/*.yaml registry.vallery.net/jvallery/estate-ci/toolbox ${{ needs.toolbox.outputs.digest }}

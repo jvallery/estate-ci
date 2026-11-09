@@ -90,7 +90,7 @@ spec:
               - name: estate-ci-tools
                 mountPath: /tools
             - name: estate-ci-nss
-              image: docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
+              image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
               command:
               - /bin/sh
               - -ec
@@ -163,7 +163,7 @@ spec:
                 mountPath: /opt/estate-ci
                 readOnly: true
             - name: job
-              image: docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
+              image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
               command:
               - /bin/sh
               - /opt/estate-ci/sidecar-agent.sh
