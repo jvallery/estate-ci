@@ -63,6 +63,7 @@ resources:
 - verdify-platform-ci-tools.yaml
 - verdify-platform-ci.yaml
 - verdify-www-build.yaml
+- verdify-www-buildcheck.yaml
 - verdify-www-ci.yaml
 - weather-build.yaml
 - weather-buildcheck.yaml
