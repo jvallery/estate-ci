@@ -23,3 +23,6 @@ docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc
 docker.io/library/python@sha256:cc55e4ded9c95f6ce2133b3d096db43f214d280c2a8af65d83e246c8fa7d168c  jvallery/estate-ci/mirror/docker.io/library/python
 docker.io/library/python:3.13-slim@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc  jvallery/estate-ci/mirror/docker.io/library/python
 docker.io/library/python:3.13.5-alpine3.22@sha256:37b14db89f587f9eaa890e4a442a3fe55db452b69cca1403cc730bd0fbdc8aaf  jvallery/estate-ci/mirror/docker.io/library/python
+# Renovate 44.200.0 (2026-11-02), linux/amd64 child only: the estate version
+# detector's job image (estate-ci#110, DR-51), runners.yaml estate-ci ci-renovate.
+docker.io/renovate/renovate:44.200.0@sha256:c63c97e566f98e976a0726e8cab7150b880b292affbf049db183561234d8f313  jvallery/estate-ci/mirror/docker.io/renovate/renovate
