@@ -22,3 +22,13 @@ jobs:
       run: bash scripts/self-test.sh
       in-job-image: true
       timeout-minutes: 15
+  # estate-ci#111 (STD-IAC-17): kustomize build + kubeconform of deploy/foundation,
+  # the Argo-delivered path. Context "foundation / foundation". Runs bare on the
+  # toolbox-image set (the estate-ci-ci job image has neither tool).
+  foundation:
+    uses: ./.github/workflows/checks.yml
+    with:
+      name: foundation
+      run: bash scripts/foundation-check.sh
+      runner: estate-ci-ci-toolbox
+      timeout-minutes: 10

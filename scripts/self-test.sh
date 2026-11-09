@@ -6,6 +6,7 @@ export PIP_DISABLE_PIP_VERSION_CHECK=1 PATH="$HOME/.local/bin:$PATH"
 python3 -m pip install --quiet --user pyyaml==6.0.2 actionlint-py==1.7.12.25 shellcheck-py==0.11.0.1
 python3 deploy/foundation/bin/lint-workflows.py --require-forgejo-notes .
 python3 tests/lint/run.py
+python3 tests/lint_allow/run.py
 python3 tests/hot_guard/run.py >/dev/null
 python3 tests/lint-images/run.py
 # estate-ci enforces its own R4-tag-only now (callers from TAG_ONLY_ENFORCE_FROM, estate-ci#104).
