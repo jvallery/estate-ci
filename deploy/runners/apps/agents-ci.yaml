@@ -19,7 +19,7 @@ spec:
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: agents-ci
         minRunners: 0
-        maxRunners: 32
+        maxRunners: 40
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller
@@ -61,7 +61,6 @@ spec:
                     - key: kubernetes.io/hostname
                       operator: NotIn
                       values:
-                      - vm-k3s-node5
                       - vm-k3s-node8
             initContainers:
             - name: estate-ci-tools
