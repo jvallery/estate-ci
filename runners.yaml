@@ -366,9 +366,12 @@ sets:
         kaniko_resources: {cpu: 1200m, memory: 1Gi, limit_cpu: "8", limit_memory: 8Gi}
       ci-toolbox:
         # estate-ci#111: the deploy/foundation render check (kustomize build +
-        # kubeconform). The estate-ci-ci job image (python:3.13-slim) has neither
-        # tool; the toolbox ships kustomize v5.8.3 and kubeconform v0.8.0. Bare
-        # run: steps in the runner container, no job sidecar. Quota: +1 pod,
+        # kubeconform). The estate-ci-ci job sidecar does get both tools, copied
+        # by its estate-ci-tools initContainer and put on PATH by sidecar-agent.sh,
+        # but that path runs the deploy/foundation scripts this check validates.
+        # Bare run: steps in the toolbox runner container (kustomize v5.8.3,
+        # kubeconform v0.8.0), no job sidecar, so a broken sidecar script cannot
+        # stop the check on the PR that fixes it. Quota: +1 pod,
         # +100m / +256Mi requests (live ci-runners pods 41/272 on 2026-11-09).
         max: 1
         runner_image: *toolbox
