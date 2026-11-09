@@ -21,6 +21,14 @@ Program owner: lane CI-ARCH. Program epic and issue tree: jvallery/agents
 | [0008](0008-cutover-parity-rollback.md) | Cutover, parity, ruleset switch, rollback and decommission order | Accepted |
 | [0009](0009-phase-2-forge.md) | Phase 2: self-hosted forge selection and portability rules | Proposed (research) |
 | [0010](0010-runner-balancing.md) | Runner balancing: measured requests, one spread, node8 the only exception (D-87) | Accepted |
+| [0011](0011-phase-1-exceptions.md) | Accepted phase-1 exceptions E-1 and E-2 to the portability and secrets rules (D-52, D-373) | Accepted |
+
+**Superseding notes (2026-11-09, estate-ci#105).** Later decisions changed
+parts of ADR-0001, 0002, 0005, 0006, 0008, 0009 and 0010. Each of those ADRs
+carries a dated note naming the decision. Native CI is retired (D-43 step 7,
+jvallery/agents#6254, merged 2026-11-07; D-141 completed the fleet CI
+decommission), so statements about moving quota from native CI and about
+parallel runs next to native CI are history, not current rules.
 
 The per-repo dependency matrix carries internal detail (namespaces, credential
 names, pin files), so it lives in the private jvallery/agents repository at

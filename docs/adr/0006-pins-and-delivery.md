@@ -23,13 +23,21 @@ Status: Accepted (2026-11-06). Owner: CI-ARCH; built by CI-PLATFORM.
 - **Checks on pin PRs.** A PR opened with `GITHUB_TOKEN` does not trigger
   workflows, so the pin job dispatches the repository's `ci` workflow on the pin
   branch. The required contexts therefore appear on the pin head.
+  *Superseded 2026-11-06 by D-52 (note 2026-11-09, estate-ci#105):* the pin PR
+  is opened with a repo-scoped installation token of the GitHub App
+  `vallery-pin-bot` (`app-token.py`, ADR-0011 E-2), so `pull_request`
+  workflows run and the required checks attach. The dispatch is only the
+  fallback when a caller passes no pin-bot key, and a PR from that path stays
+  BLOCKED on required checks.
 - **One pin writer.** A repository's native pin writer (Sensor, build row, or
   bespoke direct-commit template) is disabled in the same window that the GHA
   pin job is enabled. Never two writers.
 - **Direct commits.** Repositories whose contract today is a direct pin commit
   to the default branch move to pin PRs with auto-merge where the plan allows; a
   direct commit stays only where a ruleset bypass already exists and the owner
-  lane documents why.
+  lane documents why. *Note 2026-11-09 (STD-CI-01, estate-ci#105):* a standing
+  bypass is not allowed; a direct pin commit needs an enumerated STD-CI-01
+  exception row, otherwise pins land by PR.
 
 ## Consequences
 

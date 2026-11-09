@@ -8,6 +8,8 @@ cells, brokers, repo-auth, the fleet registry or its ARC renderer).
 
 Migrating a repo: [`docs/MIGRATION-RUNBOOK.md`](docs/MIGRATION-RUNBOOK.md).
 Tracking: jvallery/agents#6092 (FLEET-DECOM epic), jvallery/agents#6094 (this foundation).
+Decisions and exceptions: [`docs/adr/`](docs/adr/README.md); the one Actions-secret
+exception (D-52, `PIN_BOT_PRIVATE_KEY`) is E-2 in ADR-0011.
 
 ## What is here
 
@@ -21,8 +23,8 @@ Tracking: jvallery/agents#6092 (FLEET-DECOM epic), jvallery/agents#6094 (this fo
 | `.github/workflows/pin-bump.yml` | Thin reusable wrapper over `pin-bump.sh`. |
 | `.github/workflows/lint.yml` | Reusable R1-R3 workflow lint (`deploy/foundation/bin/lint-workflows.py`, stdlib Python; fixtures in `tests/lint/`; recorded exceptions in the caller's `.estate-ci/workflow-lint-allow.txt`, one `<path glob> <rule> <expiry> <issue URL>` row per dated exception row in the estate GitHub security baseline, tests in `tests/lint_allow/`), plus R4 image lint (`deploy/foundation/bin/lint-images.py`: `imagePullPolicy: Always` on an image outside registry.vallery.net fails, and so does an image or Helm `repository`/`tag` pair with no `@sha256` digest (`R4-tag-only`, a warning until `TAG_ONLY_ENFORCE_FROM` in `lint-workflows.py`, estate-ci#104); allowlist `.estate-ci/image-lint-allow.txt` rows carry an expiry and an issue; fixtures in `tests/lint-images/`), plus the STD-OPS-02 component version register check (`deploy/foundation/bin/lint-version-register.py`, schema `deploy/foundation/schemas/version-register.schema.json`, estate-ci#121): opt-in, it runs only when the caller has a `version-register.json` at its root; fixtures in `tests/version_register/`. |
 | `scripts/fork-policy.sh` | Operator check/apply of the fork-PR approval policy for onboarded repos. |
-| `.github/workflows/mirror.yml`, `mirrors.txt` | Reusable digest-preserving image mirror (`crane copy`, `deploy/foundation/bin/mirror.sh`); estate-ci's own mirror list. |
-| `images/estate-ci-toolbox/`, `.github/workflows/build.yml` | The estate-ci-toolbox job image (tools and versions in its README), built in-cluster by Kaniko. |
+| `.github/workflows/mirror.yml`, `mirrors.txt`, `.github/workflows/mirror-images.yml` | Reusable digest-preserving image mirror (`crane copy`, `deploy/foundation/bin/mirror.sh`); estate-ci's own mirror list, validated on PRs and copied when `mirror-images` is dispatched on `main`. |
+| `images/estate-ci-toolbox/`, `.github/workflows/build.yml` | The estate-ci-toolbox job image (tools and versions in its README), built in-cluster by Kaniko: no-push on PRs, pushed when `build` is dispatched on `main`. |
 | `runners.yaml` | The runner registry: which repos get which scale sets. |
 | `scripts/render_runners.py` | Renders `runners.yaml` into `deploy/runners/apps/` (one Argo Application per scale set). |
 | `deploy/foundation/` | Namespace `ci-runners`, ResourceQuota/LimitRange, NetworkPolicies, the runner scripts ConfigMap. |
@@ -54,8 +56,7 @@ the log and exit code back. That gives "run this step in my CI image" and
 
 **Admission.** `ci-runners` enforces Pod Security `baseline` (warn/audit
 `restricted`). Only the Kaniko sidecar runs as root, with the default
-capability set and RuntimeDefault seccomp, which baseline admits (native CI
-runs the same Kaniko image in baseline `agent-fleet-ci`). Everything else runs
+capability set and RuntimeDefault seccomp, which baseline admits. Everything else runs
 as non-root with all capabilities dropped. A job-started hook
 (`job-started-guard.sh`, from a ConfigMap, so a PR cannot change it) refuses
 jobs from another repository, fork pull requests, `pull_request_target` and
@@ -66,9 +67,15 @@ jobs from another repository, fork pull requests, `pull_request_target` and
 ranges excluded), the split-horizon apps ingress `192.168.7.10:443` (how
 `registry.vallery.net` resolves in-cluster), and the zot origin on 5000.
 
-**Capacity.** One namespace ResourceQuota is the hard envelope for all sets
-(`deploy/foundation/quota.yaml`). It starts at pilot size and grows only by
-what each cutover removes from the repo's native-ci budget.
+**Capacity.** The gate is node allocatable CPU plus the per-node
+`agentfleet.vallery.net/ci-runner-slot` cap (ADR-0010; live 2026-11-09:
+node4-7 20, node8 4). Runner Pods request measured use per class. The quotas
+in `deploy/foundation/quota.yaml` are sized to every set at `maxRunners`:
+`estate-ci-runner-pods` is the compute envelope for runner Pods,
+`estate-ci-runners` holds the namespace object and ephemeral caps, and
+`estate-ci-ops` budgets the hot guard. A `maxRunners` raise raises the
+envelope in the same PR, only with live headroom on the workers. Native CI is
+retired (jvallery/agents#6254), so there is no native budget to move.
 
 **Builds and the registry.** `image-build.sh` drives Kaniko to build a
 tarball with `--no-push`; Kaniko holds only the cluster pull credential. With
@@ -102,9 +109,12 @@ credential is `ci-runners/arc-github-app-jvallery` in central KSOPS. A repositor
 joins by being added to the installation's selected repositories. ARC is jvallery
 only (D19): there is no VerdifyConsultancy installation or org-level set.
 
-**Delivery.** Argo CD Applications `estate-ci-foundation`, `estate-ci-runners`
-(app-of-apps over `deploy/runners/apps`) and `estate-ci-secrets` (central
-KSOPS) in AppProject `estate-ci` are declared once in jvallery/agents.
+**Delivery.** Argo CD Applications `estate-ci-foundation` (AppProject
+`estate-ci`), `estate-ci-runners` (app-of-apps over `deploy/runners/apps`,
+AppProject `estate-ci-apps`; the per-set `estate-ci-runner-*` Applications are
+in `estate-ci`) and `estate-ci-secrets` (central KSOPS, AppProject
+`estate-ci-secrets`) are declared once in jvallery/agents (planned to move to
+jvallery/estate-platform).
 After that, onboarding a repo touches only this repository and the repo itself.
 
 **Concurrency.** Callers set

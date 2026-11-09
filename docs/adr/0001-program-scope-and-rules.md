@@ -2,6 +2,13 @@
 
 Status: Accepted (2026-11-06). Owner: CI-ARCH.
 
+**Superseding note (2026-11-09, estate-ci#105).** End-state item 3 ("parity
+shown per ADR-0008") was replaced by D-22's hard cut-over (one green Actions
+run per repository; D-15 for jvallery/agents), and the consequence "each
+cutover moves quota from native CI to ARC" by D-34/D-39 and the native CI
+retirement (jvallery/agents#6254, D-141). See the notes in ADR-0002 and
+ADR-0008.
+
 ## Context
 
 Jason (first-hand, 2026-11-06): one lane researches, architects, designs and
