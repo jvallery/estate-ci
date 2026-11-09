@@ -42,6 +42,37 @@ defaults:
     build: 1
     buildcheck: 1
 
+# Per-worker CPU budget (estate-ci#69, ADR-0010, STD-CI-10, D-87). render_runners.py
+# checks it on every render: per worker, runner ceiling = slots x the largest
+# rendered Pod CPU request (bounded by the runner quota); headroom = allocatable
+# - reserve_cpu - non_runner_cpu (recorded requests of every non-ci-runners Pod).
+# reserve_cpu is D-486's basis (Jason 2026-11-09): runners may fill workers to
+# 95% of allocatable, so 2.35 of 47 CPU per worker (was 7, the 85% target, which
+# capped runners at 79 CPU against a 48 h runner-request p95 of 76.4).
+# bound: quota. No slot value STD-CI-10 allows fits: 20 slots x 2.8 CPU (largest
+# Pod, monitoring-stack-ci) = 56 CPU against 13-22 CPU of headroom on node4-7,
+# so the slot count cannot be the budget. The budget is the runner ResourceQuota
+# instead: estate-ci-runner-pods requests.cpu must not exceed the sum over
+# workers of min(headroom, ceiling). That bounds total runner requests to what
+# the workers hold beside the reserve in aggregate only: a namespace quota is
+# not a per-node reserve, so the scheduler can still fill one worker's free
+# requests with runners (up to its slots) and leave it no reserve. Nothing
+# per node enforces the reserve (ADR-0010 point 7). non_runner_cpu is a
+# recorded snapshot (rounded up to 0.5 CPU) with no drift check; re-measure it
+# when platform requests move. EstateCIWorkerCPUSaturated is the live signal.
+# Measured 2026-11-09T18:20Z (kubectl --context vallery: node allocatable cpu,
+# ci-runner-slot, Running Pods outside ci-runners, effective request per Pod).
+capacity:
+  reserve_cpu: "2.35"
+  bound: quota
+  quota: estate-ci-runner-pods
+  nodes:
+    vm-k3s-node4: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "24"}
+    vm-k3s-node5: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "18"}
+    vm-k3s-node6: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "22.5"}
+    vm-k3s-node7: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "27"}
+    vm-k3s-node8: {allocatable_cpu: "47", slots: 4, non_runner_cpu: "27.5"}
+
 # GitHub App registration Secret per owner (Secret in namespace ci-runners).
 owners:
   jvallery: arc-github-app-jvallery

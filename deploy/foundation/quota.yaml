@@ -140,10 +140,28 @@ spec:
     services.nodeports: "0"
 ---
 # Runner Pods only: the envelope (same values as the former estate-ci-runners).
-# requests.cpu is never the binding limit: COORD P0 2026-11-07 05:27Z raised it
-# 146 -> 215 (= node4-8 allocatable, 5 x 43) when it bound at 144.7/146 with
-# workers 42-67% used. The guard is node allocatable CPU plus the
-# agentfleet.vallery.net/ci-runner-slot extended resource (ADR-0010).
+# COORD P0 2026-11-07 05:27Z raised requests.cpu 146 -> 215 (= node4-8
+# allocatable, 5 x 43) when it bound at 144.7/146 with workers 42-67% used.
+# estate-ci#69 (2026-11-09): requests.cpu is the per-worker CPU budget again
+# (runners.yaml capacity, bound: quota; render_runners.py fails if it is above
+# the workers' runner budget): 215 -> 98, the runner budget 98.3 = the sum over
+# node4-8 of min(allocatable 47 - reserve 2.35 - non-runner requests, slots x
+# 2.8); node8 is held to 4 slots x 2.8 = 11.2. D-486 (Jason 2026-11-09): reserve
+# at 95% of allocatable; the 110 in the decision used a stale 112 CPU of
+# non-runner requests (117.3 measured 2026-11-09T23:5xZ). Runner requests used,
+# 48 h to 2026-11-09T18Z: p95 76.4, p99 110.1, max 124.9 CPU; workers reached
+# 1.0-1.09 of allocatable CPU in that window. The budget rises when
+# storage-infra#1666 frees Longhorn instance-manager requests (~15-18 CPU);
+# re-measure non_runner_cpu and raise this then. Above 98 the
+# ResourceQuota admission plugin rejects the EphemeralRunner Pod create (403
+# "exceeded quota"), the condition the P0 raise removed. ARC 0.14.2
+# (ephemeralrunner_controller.go) retries that create every 30 s and, once the
+# EphemeralRunner is 10 minutes old, deletes and re-creates it; no Pod exists
+# meanwhile and the job stays queued in GitHub (gha_assigned_jobs above
+# gha_running_jobs). So the top ~5% of bursts wait instead of scheduling beside
+# platform Pods. The bound is aggregate, not per node: the scheduler can still
+# put runners on one worker up to its slot cap and free requests, leaving that
+# worker no reserve (ADR-0010 point 7).
 apiVersion: v1
 kind: ResourceQuota
 metadata:
@@ -151,7 +169,7 @@ metadata:
 spec:
   hard:
     pods: "262"
-    requests.cpu: "215"
+    requests.cpu: "98"
     requests.memory: 365Gi
     limits.cpu: "4780"
     limits.memory: 2740Gi

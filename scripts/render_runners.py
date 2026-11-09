@@ -4,6 +4,11 @@
     python3 scripts/render_runners.py          # write
     python3 scripts/render_runners.py --check  # fail if the rendered files are stale
 
+Both also check the per-worker CPU budget (estate-ci#69, ADR-0010) from
+runners.yaml `capacity` and print it: render fails when the runner CPU that a
+worker can be asked to hold, plus its recorded non-runner requests, is more than
+allocatable minus the reserve (see budget()).
+
 Requires PyYAML. The output is deterministic; never hand-edit deploy/runners/apps/.
 """
 from __future__ import annotations
@@ -45,6 +50,7 @@ RUNNER_LABEL = "estate-ci.vallery.net/runner"
 # D-87: no container may burst past 8 CPU (1/5 of a 43-CPU worker), so one
 # runaway job cannot take a worker; p99 of every measured class is below it.
 MAX_CPU_LIMIT = 8
+QUOTA_FILE = ROOT / "deploy" / "foundation" / "quota.yaml"
 FRIGATE_TOLERATION = {"key": "dedicated", "operator": "Equal", "value": "frigate", "effect": "NoSchedule"}
 
 
@@ -274,10 +280,64 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
     }
 
 
+def pod_cpu_request(template: dict) -> float:
+    """Effective Pod CPU request: max(sum of containers, largest init container)."""
+    spec = template["spec"]
+    containers = sum(_cpu(c["resources"]["requests"]["cpu"]) for c in spec["containers"])
+    init = max([_cpu(c["resources"]["requests"]["cpu"]) for c in spec.get("initContainers", [])] + [0.0])
+    return max(containers, init)
+
+
+def quota_cpu(name: str, text: str) -> float:
+    for doc in yaml.safe_load_all(text):
+        if doc and doc.get("kind") == "ResourceQuota" and doc["metadata"]["name"] == name:
+            return _cpu(doc["spec"]["hard"]["requests.cpu"])
+    raise RenderError(f"capacity: ResourceQuota {name} not found in {QUOTA_FILE.relative_to(ROOT)}")
+
+
+def budget(cap: dict, max_pod: float, quota: float) -> list[str]:
+    """Per-worker CPU budget (estate-ci#69). Returns report lines, raises RenderError when over.
+
+    Per worker: the runner ceiling is slots x the largest rendered Pod request,
+    bounded by the runner ResourceQuota; headroom is allocatable - reserve -
+    recorded non-runner requests.
+      bound: slots  every worker's ceiling must fit its headroom.
+      bound: quota  the quota is the budget: requests.cpu must fit the sum over
+                    workers of min(headroom, ceiling). Used when no slot value
+                    allowed by STD-CI-10 (20 on node4-7, 4 on node8) fits.
+    """
+    reserve = _cpu(cap["reserve_cpu"])
+    bound = cap.get("bound", "slots")
+    if bound not in ("slots", "quota"):
+        raise RenderError(f"capacity: bound {bound!r} is not slots or quota")
+    lines, over, fit = [], [], 0.0
+    for node, n in sorted(cap["nodes"].items()):
+        alloc, other = _cpu(n["allocatable_cpu"]), _cpu(n["non_runner_cpu"])
+        ceiling = min(int(n["slots"]) * max_pod, quota)
+        headroom = alloc - reserve - other
+        fit += max(0.0, min(headroom, ceiling))
+        ok = ceiling <= headroom
+        if not ok:
+            over.append(node)
+        lines.append(f"{node}: runner ceiling {ceiling:g} CPU ({n['slots']} slots x {max_pod:g}, quota {quota:g})"
+                     f" + non-runner {other:g} vs allocatable {alloc:g} - reserve {reserve:g}"
+                     f" = headroom {headroom:g}: {'fits' if ok else 'slot ceiling over headroom'}")
+    if bound == "slots" and over:
+        raise RenderError("capacity: runner CPU ceiling exceeds allocatable - reserve on " + ", ".join(over)
+                          + "\n  " + "\n  ".join(lines))
+    if bound == "quota" and quota > fit:
+        raise RenderError(f"capacity: quota requests.cpu {quota:g} exceeds the workers' runner budget {fit:g}"
+                          + "\n  " + "\n  ".join(lines))
+    lines.append(f"budget ({bound}): quota requests.cpu {quota:g} <= runner budget {fit:g} CPU"
+                 if bound == "quota" else "budget (slots): every worker fits")
+    return lines
+
+
 def render(cfg: dict) -> dict[str, str]:
     d = cfg["defaults"]
     owners = cfg["owners"]
     out: dict[str, str] = {}
+    pod_cpu: list[float] = []
     for entry in cfg["sets"]:
         if "repo" in entry:
             owner, repo = entry["repo"].split("/", 1)
@@ -313,6 +373,7 @@ def render(cfg: dict) -> dict[str, str]:
                 "template": pod_template(d, profile, opts, expected, base, key,
                                          d["infra_priority_class"] if expected in d.get("infra_repos", []) else "ci-preemptible"),
             }
+            pod_cpu.append(pod_cpu_request(values["template"]))
             app = {
                 "apiVersion": "argoproj.io/v1alpha1",
                 "kind": "Application",
@@ -337,6 +398,7 @@ def render(cfg: dict) -> dict[str, str]:
                 },
             }
             out[f"{name}.yaml"] = HEADER + yaml.dump(app, Dumper=_NoAliasDumper, sort_keys=False, width=200)
+    cfg["_max_pod_cpu"] = max(pod_cpu) if pod_cpu else 0.0
     names = sorted(out)
     out["kustomization.yaml"] = HEADER + yaml.safe_dump(
         {"apiVersion": "kustomize.config.k8s.io/v1beta1", "kind": "Kustomization", "resources": names},
@@ -349,7 +411,11 @@ def main() -> int:
     ap.add_argument("--check", action="store_true")
     args = ap.parse_args()
     try:
-        rendered = render(yaml.safe_load((ROOT / "runners.yaml").read_text()))
+        cfg = yaml.safe_load((ROOT / "runners.yaml").read_text())
+        rendered = render(cfg)
+        cap = cfg["capacity"]
+        for line in budget(cap, cfg["_max_pod_cpu"], quota_cpu(cap["quota"], QUOTA_FILE.read_text())):
+            print(f"render_runners: {line}")
     except (RenderError, KeyError, ValueError) as exc:
         print(f"render_runners: {exc}", file=sys.stderr)
         return 2
