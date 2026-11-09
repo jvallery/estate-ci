@@ -166,14 +166,17 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.44 CPU, 2026-11-06T12Z..11-10T00Z (500m -> 450m); limits unchanged.
         kaniko_resources: {cpu: 450m, memory: 384Mi, limit_cpu: "8", limit_memory: 12Gi}
   # kepler (jvallery/agents#6092, kepler#34). Job image = the python base the
-  # app ships on (app/Dockerfile), for unit/render (pip); static and secret-scan
-  # run in the runner container. build is added with the zot principal ci-kepler.
+  # app ships on (app/Dockerfile), for unit (hash-locked pip). static, render and
+  # secret-scan run in the runner container, which is the toolbox (python3 +
+  # PyYAML, kubectl, gitleaks), so they download nothing at job time (kepler#45).
+  # build is added with the zot principal ci-kepler.
   - repo: jvallery/kepler
     profiles:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 6 -> 5 (donor: 24 h peak busy 1, peak pods 2-3).
         max: 5
+        runner_image: *toolbox
         job_image: docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 250m); limits unchanged.
