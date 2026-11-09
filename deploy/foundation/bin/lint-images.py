@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """estate-ci image lint, rule R4 (storage-infra ADR-016, jvallery/agents#5767 G6).
 
-    lint-images.py [PATH ...]
+    lint-images.py [--tags | --tags=warn] [PATH ...]
 
 PATH is a repository root (default "."). Every *.yaml / *.yml file outside
 .git, .github, vendored and dependency trees is read line by line.
@@ -14,15 +14,23 @@ Errors (exit 1):
                      every start, so the Pod cannot restart with no WAN even
                      when the node holds the bytes. Use IfNotPresent with a
                      digest-pinned reference.
+  R4-tag-only        (with --tags) an `image:` value, or a Helm values block's
+                     `repository:` + `tag:` pair with no `digest:`, has no
+                     @sha256 digest, on any registry (STD-K8S-05: every image by
+                     digest, no floating tags). --tags=warn reports it as a
+                     warning instead (rollout, estate-ci#104).
   R4-allow-expired   an allowlist row is past its expiry date.
   R4-allow-invalid   an allowlist row is malformed.
-Warnings:
-  R4-tag-only        (with --tags) an external image has no @sha256 digest.
 
 Allowlist: `.estate-ci/image-lint-allow.txt` in the repository, one row per
 exception, `<path glob> <image prefix> <YYYY-MM-DD expiry> <issue URL>`;
 `#` starts a comment. A row covers a finding when the file path matches the
-glob and the image starts with the prefix. Expired rows fail the lint.
+glob and the image starts with the prefix (both R4 rules). Expired rows fail
+the lint.
+
+lint-workflows.py (the reusable lint.yml check) runs this with --tags=warn
+until TAG_ONLY_ENFORCE_FROM and with --tags from that date, so every caller
+gets the gate from the $ESTATE_CI ConfigMap without a pin bump.
 
 Templated images (`{{ ... }}`, `${...}`) are skipped: the value is unknown here.
 Standard library only.
@@ -40,12 +48,18 @@ SKIP_DIRS = {"fixtures", ".git", ".github", ".forgejo", ".gitea", "node_modules"
 MAX_BYTES = 4 * 1024 * 1024
 ALLOW_FILE = ".estate-ci/image-lint-allow.txt"
 
+# An image reference: no spaces, braces or quotes; a value that is a bare word
+# (no "/" and no ":") is not treated as an image, so `image: true` or `image: none`
+# never match.
+IMAGE_REF = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/:@-]*$")
+DIGEST = "@sha256:"
 KEY = re.compile(r"^(\s*)(-\s+)?([A-Za-z_][\w.-]*)\s*:\s*(.*?)\s*$")
 
 
 class Finding:
-    def __init__(self, path, line, rule, msg, error=True):
+    def __init__(self, path, line, rule, msg, error=True, image=""):
         self.path, self.line, self.rule, self.msg, self.error = path, line, rule, msg, error
+        self.image = image
 
     def __str__(self):
         level = "error" if self.error else "warning"
@@ -112,17 +126,38 @@ def templated(image: str) -> bool:
     return "{{" in image or "${" in image or image.startswith("$")
 
 
-def lint_text(path: str, text: str, tags: bool):
+def image_like(value: str) -> bool:
+    return bool(IMAGE_REF.match(value)) and ("/" in value or ":" in value) and "://" not in value
+
+
+def lint_text(path: str, text: str, tags: bool, tags_error: bool = True):
     lines = text.splitlines()
     parsed = parse(lines)
     findings = []
     for i, row in enumerate(parsed):
-        if row is None or row[2] not in ("imagePullPolicy", "pullPolicy", "image"):
+        if row is None or row[2] not in ("imagePullPolicy", "pullPolicy", "image", "repository"):
             continue
         key, value = row[2], scalar(row[3] or "")
         if key == "image":
-            if tags and value and not templated(value) and external(value) and "@sha256:" not in value and "/" in value:
-                findings.append(Finding(path, i + 1, "R4-tag-only", f"{value} has no @sha256 digest", error=False))
+            if tags and value and not templated(value) and image_like(value) and DIGEST not in value:
+                findings.append(Finding(path, i + 1, "R4-tag-only", f"{value} has no @sha256 digest",
+                                        error=tags_error, image=value))
+            continue
+        if key == "repository":
+            # Helm values: repository + tag (+ optional digest) in one mapping.
+            if (not tags or not value or templated(value) or "://" in value or value.startswith("oci:")
+                    or not IMAGE_REF.match(value)):
+                continue
+            sib = siblings(parsed, i)
+            if "tag" not in sib:
+                continue
+            tag = scalar(sib["tag"][1] or "")
+            digest = scalar(sib["digest"][1] or "") if "digest" in sib else ""
+            if templated(tag) or templated(digest) or DIGEST in value or DIGEST in tag or digest.startswith("sha256:"):
+                continue
+            image = f"{value}:{tag}" if tag else value
+            findings.append(Finding(path, i + 1, "R4-tag-only", f"{image} (repository/tag) has no digest",
+                                    error=tags_error, image=image))
             continue
         if value != "Always":
             continue
@@ -134,7 +169,8 @@ def lint_text(path: str, text: str, tags: bool):
         if not image or templated(image) or not external(image):
             continue
         findings.append(Finding(path, i + 1, "R4-pull-always",
-                                f"{key}: Always on external image {image}; use IfNotPresent with @sha256 (ADR-016)"))
+                                f"{key}: Always on external image {image}; use IfNotPresent with @sha256 (ADR-016)",
+                                image=image))
     return findings
 
 
@@ -164,8 +200,7 @@ def load_allow(root: Path, today: datetime.date):
 
 
 def allowed(rows, finding):
-    image = finding.msg.split("external image ", 1)[-1].split(";", 1)[0]
-    return any(fnmatch.fnmatch(finding.path, g) and image.startswith(p) for g, p in rows)
+    return any(fnmatch.fnmatch(finding.path, g) and finding.image.startswith(p) for g, p in rows)
 
 
 def collect(root: Path):
@@ -190,7 +225,7 @@ def collect(root: Path):
     return files
 
 
-def lint_repo(root: Path, tags: bool = False, today: datetime.date | None = None):
+def lint_repo(root: Path, tags: bool = False, today: datetime.date | None = None, tags_error: bool = True):
     today = today or datetime.date.today()
     rows, findings = load_allow(root, today)
     n = 0
@@ -201,19 +236,20 @@ def lint_repo(root: Path, tags: bool = False, today: datetime.date | None = None
         except (UnicodeDecodeError, OSError):
             continue
         rel = str(f.relative_to(root))
-        for x in lint_text(rel, text, tags):
-            if x.rule == "R4-pull-always" and allowed(rows, x):
+        for x in lint_text(rel, text, tags, tags_error):
+            if x.rule in ("R4-pull-always", "R4-tag-only") and allowed(rows, x):
                 continue
             findings.append(x)
     return findings, n
 
 
 def main(argv):
-    tags = "--tags" in argv
+    tags = "--tags" in argv or "--tags=warn" in argv
+    tags_error = "--tags" in argv
     roots = [Path(a) for a in argv if not a.startswith("--")] or [Path(".")]
     findings, n = [], 0
     for root in roots:
-        got, count = lint_repo(root, tags)
+        got, count = lint_repo(root, tags, tags_error=tags_error)
         findings += got
         n += count
     for x in findings:

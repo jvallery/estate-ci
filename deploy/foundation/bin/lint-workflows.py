@@ -536,6 +536,18 @@ def collect(path: Path):
     return files
 
 
+# R4-tag-only rollout (estate-ci#104): warnings until this date so callers seed
+# .estate-ci/image-lint-allow.txt rows (each naming an open owner-repo issue),
+# errors from it. Callers get the switch from the $ESTATE_CI ConfigMap, no pin bump.
+TAG_ONLY_ENFORCE_FROM = "2026-11-23"
+
+
+def tag_mode(today=None):
+    import datetime
+    today = today or datetime.date.today()
+    return "--tags" if today >= datetime.date.fromisoformat(TAG_ONLY_ENFORCE_FROM) else "--tags=warn"
+
+
 def run_image_lint(roots):
     """Rule R4 from lint-images.py next to this file (also in the $ESTATE_CI ConfigMap)."""
     import importlib.util
@@ -545,7 +557,7 @@ def run_image_lint(roots):
     spec = importlib.util.spec_from_file_location("estate_ci_lint_images", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.main(roots)
+    return module.main([tag_mode(), *roots])
 
 
 def main(argv):

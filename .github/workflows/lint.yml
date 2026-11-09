@@ -9,8 +9,10 @@
 # services:/container:, pull_request_target/workflow_run, environment:,
 # id-token: write, Actions cache/artifacts and ghcr.io. Rule list:
 # /opt/estate-ci/lint-workflows.py (deploy/foundation/bin in estate-ci). R4 (lint-images.py,
-# same directory): imagePullPolicy Always on an external image fails (ADR-016, agents#5767);
-# exceptions in the caller's .estate-ci/image-lint-allow.txt with expiry + issue.
+# same directory): imagePullPolicy Always on an external image fails (ADR-016, agents#5767),
+# and so does an image (or Helm repository/tag pair) with no @sha256 digest (R4-tag-only,
+# STD-K8S-05, estate-ci#104; a warning until lint-workflows.py TAG_ONLY_ENFORCE_FROM).
+# Exceptions in the caller's .estate-ci/image-lint-allow.txt with expiry + issue.
 #
 # Portability (Forgejo/Gitea Actions): checkout + one script on the runner's
 # python3 (standard library only); it lints .forgejo/ and .gitea/ workflows too.
