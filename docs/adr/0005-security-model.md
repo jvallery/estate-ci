@@ -21,14 +21,31 @@ request can run arbitrary code on them.
 | Registry poisoning | Per-repository zot principal limited to its own paths; Argo CD deploys only digests committed to the default branch through a reviewed PR, so a pushed tag never deploys by itself. |
 | Runner escape or lateral movement | Pod Security baseline; no privileged containers, hostPath, host network or Docker socket; `automountServiceAccountToken: false` and no RBAC; one job per Pod (ephemeral runners); NetworkPolicy allowing only DNS, public 80/443 (private ranges excluded), the apps ingress for the registry and the registry origin. `ops` sets get one extra, named egress rule each. |
 | Secret sprawl in GitHub | No repository or organization Actions secrets in the build path. The only GitHub-side credential is the per-job `GITHUB_TOKEN`, with least-privilege `permissions:` per workflow. Deploy and registry credentials are Kubernetes Secrets from central KSOPS. |
-| Supply chain of workflow code | Only `actions/checkout` and estate-ci reusable workflows/actions, pinned by full SHA. This repository is public, secret-free and protected by a PR-only ruleset; its self-test runs on its own ARC set. |
+| Supply chain of workflow code | Only `actions/checkout` and estate-ci reusable workflows/actions, pinned by full SHA. Repository Actions policy enforces it (`allowed_actions: selected`, `sha_pinning_required: true`; estate-ci#111, estate-ci#122). This repository is public, secret-free and protected by a PR-only ruleset with required checks; its self-test and foundation render check run on its own ARC sets. |
 | Over-privileged registration App | The registration App needs repository administration (runner registration) and organization self-hosted runners only. It is renamed or replaced by a dedicated App with only those permissions before the fleet Apps are deleted (J-5). |
 
 **Bootstrap (R1 for estate-ci itself).** estate-ci's self-test runs on an
-`estate-ci-ci` set. If the runners are down, the foundation is repaired through
-Argo CD from jvallery/agents (which does not depend on estate-ci checks), and
-Jason's ruleset bypass is the documented break-glass for an estate-ci merge. No
-GitHub-hosted fallback exists.
+`estate-ci-ci` set and the foundation render check on `estate-ci-ci-toolbox`.
+Ruleset `main-pr-only-v1` requires `lint / lint` and `foundation / foundation`
+(GitHub Actions, app 15368; not up to date) and has no bypass actor
+(estate-ci#111, STD-CI-01). If the runners are down, the foundation is repaired
+through Argo CD from jvallery/agents (which does not depend on estate-ci
+checks). No GitHub-hosted fallback exists.
+
+**Break-glass: a time-boxed ruleset edit, not a bypass.** A bad script in
+`deploy/foundation/bin` can fail the required check on the very PR that fixes
+it. Then the coordinator executor, on Jason's first-hand decision line:
+
+1. writes a steer line naming the PR, the context to relax and the UTC start;
+2. saves `gh api repos/jvallery/estate-ci/rulesets/26661683` to a receipt;
+3. PUTs the ruleset with only the failing context removed (never the
+   `pull_request`, `deletion` or `non_fast_forward` rules, never a bypass actor);
+4. merges that one PR;
+5. re-PUTs the saved JSON within 60 minutes of step 3, reads it back equal, and
+   writes the closing steer line.
+
+The edit is recorded as an enumerated STD-CI-01 exception use; a standing path
+needs its own exception row.
 
 **Advisory repositories (J-2).** Where protection cannot be enforced, the same
 guard and credential split apply; only the merge gate is advisory.
