@@ -9,6 +9,7 @@ resources:
 - cortex-ai-compute-build.yaml
 - cortex-ai-compute-ci.yaml
 - docs-build.yaml
+- docs-buildcheck.yaml
 - docs-ci.yaml
 - estate-ci-build.yaml
 - estate-ci-buildcheck.yaml

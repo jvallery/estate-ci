@@ -26,3 +26,5 @@ docker.io/library/python:3.13.5-alpine3.22@sha256:37b14db89f587f9eaa890e4a442a3f
 # Renovate 44.200.0 (2026-11-02), linux/amd64 child only: the estate version
 # detector's job image (estate-ci#110, DR-51), runners.yaml estate-ci ci-renovate.
 docker.io/renovate/renovate:44.200.0@sha256:c63c97e566f98e976a0726e8cab7150b880b292affbf049db183561234d8f313  jvallery/estate-ci/mirror/docker.io/renovate/renovate
+# docs-kiwix base (docs#109): kiwix-serve, the digest jvallery/docs Dockerfile.kiwix pins today.
+ghcr.io/kiwix/kiwix-serve@sha256:e478554a9920412eeb5ce1d73f24e4b28445ebed233187cdd03c623c32be46a5  jvallery/estate-ci/mirror/ghcr.io/kiwix/kiwix-serve
