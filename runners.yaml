@@ -46,8 +46,9 @@ defaults:
 # checks it on every render: per worker, runner ceiling = slots x the largest
 # rendered Pod CPU request (bounded by the runner quota); headroom = allocatable
 # - reserve_cpu - non_runner_cpu (recorded requests of every non-ci-runners Pod).
-# reserve_cpu keeps ADR-0010's steady-state target (workers under ~85% of
-# allocatable): 7 of 47 CPU.
+# reserve_cpu is D-486's basis (Jason 2026-11-09): runners may fill workers to
+# 95% of allocatable, so 2.35 of 47 CPU per worker (was 7, the 85% target, which
+# capped runners at 79 CPU against a 48 h runner-request p95 of 76.4).
 # bound: quota. No slot value STD-CI-10 allows fits: 20 slots x 2.8 CPU (largest
 # Pod, monitoring-stack-ci) = 56 CPU against 13-22 CPU of headroom on node4-7,
 # so the slot count cannot be the budget. The budget is the runner ResourceQuota
@@ -62,7 +63,7 @@ defaults:
 # Measured 2026-11-09T18:20Z (kubectl --context vallery: node allocatable cpu,
 # ci-runner-slot, Running Pods outside ci-runners, effective request per Pod).
 capacity:
-  reserve_cpu: "7"
+  reserve_cpu: "2.35"
   bound: quota
   quota: estate-ci-runner-pods
   nodes:

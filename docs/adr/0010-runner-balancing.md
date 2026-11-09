@@ -61,8 +61,8 @@ the same.
    cap between repos, not a capacity statement: the sum of `maxRunners` may
    exceed what the workers hold at once.
 7. **The quota is also the per-worker CPU budget** (estate-ci#69, 2026-11-09).
-   `runners.yaml` `capacity` records a reserve (7 CPU of 47, the 85% target
-   below) and each worker's non-runner requests; `render_runners.py` fails when
+   `runners.yaml` `capacity` records a reserve (2.35 CPU of 47: runners may fill
+   a worker to 95% of allocatable, D-486) and each worker's non-runner requests; `render_runners.py` fails when
    the runner quota's `requests.cpu` is above the sum over workers of
    min(allocatable - reserve - non-runner, slots x largest runner Pod request).
    The slot count cannot be that budget: 20 slots x 2.8 CPU is 56 CPU against
@@ -75,10 +75,10 @@ the same.
    per-node reserve needs a per-node mechanism (slots per worker or a CPU
    boundary), which STD-CI-10's fixed slot values rule out today.
    Lowering the quota below the 48 h peak of runner requests (124.9 CPU) means
-   bursts queue in GitHub; at 79 no period can have every set at its
+   bursts queue in GitHub; at 98 no period can have every set at its
    `maxRunners`, so estate-ci#69's 7-day acceptance window needs that clause
    amended in the same decision. If node5's slots drop to 6, the budget falls
-   to about 74.5 CPU and the quota must go to 74 (render fails above it).
+   to about 88.4 CPU and the quota must go to 88 (render fails above it).
    Tests: `tests/runner_budget/run.py`.
 
 ## Capacity (2026-11-07 sample)
@@ -93,7 +93,14 @@ the same.
   only bind if requests drift low.
 - 2026-11-09 (estate-ci#69): allocatable 47 CPU per worker; non-runner requests
   node4 24, node5 18, node6 22.5, node7 27, node8 27.5 CPU; runner budget
-  79.7 CPU, quota requests.cpu 79.
+  79.7 CPU, quota requests.cpu 79 at reserve 7 (85%).
+- 2026-11-09 D-486 basis: 95% of allocatable (reserve 2.35 CPU per worker);
+  non-runner requests 117.3 measured 2026-11-09T23:5xZ (recorded rounded up:
+  node4 24, node5 18, node6 22.5, node7 27, node8 27.5); 110 in the decision
+  used a stale 112. Runner budget 98.3 CPU (node8 held to 4 slots x 2.8 =
+  11.2), quota requests.cpu 98. The budget rises when storage-infra#1666 frees
+  Longhorn instance-manager requests (~15-18 CPU); re-measure non_runner_cpu
+  and re-render the quota then.
 - Target: workers under about 85% of allocatable CPU in steady state.
 
 ## Re-sizing
