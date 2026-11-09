@@ -27,7 +27,7 @@ exception (D-52, `PIN_BOT_PRIVATE_KEY`) is E-2 in ADR-0011.
 | `images/estate-ci-toolbox/`, `.github/workflows/build.yml` | The estate-ci-toolbox job image (tools and versions in its README), built in-cluster by Kaniko: no-push on PRs, pushed when `build` is dispatched on `main`. |
 | `runners.yaml` | The runner registry: which repos get which scale sets. |
 | `scripts/render_runners.py` | Renders `runners.yaml` into `deploy/runners/apps/` (one Argo Application per scale set). |
-| `deploy/foundation/` | Namespace `ci-runners`, ResourceQuota/LimitRange, NetworkPolicies, the runner scripts ConfigMap. |
+| `deploy/foundation/` | Namespace `ci-runners`, ResourceQuota/LimitRange, NetworkPolicies, the runner scripts ConfigMap, the node8 hot guard and the `ci-runner-slot` advertiser (`runner-slots.yaml`, `bin/runner-slots.py`). |
 | `docs/examples/` | Caller workflows to copy. |
 
 ## Design

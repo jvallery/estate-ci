@@ -2,18 +2,18 @@
 # vm-k3s-node8 (Frigate's node) as overflow, and always lose to Frigate.
 #
 # Every estate-ci runner Pod requests one agentfleet.vallery.net/ci-runner-slot
-# (advertised per node by the jvallery/agents arc-validation-pool reconciler from
-# ConfigMap github-runner-ops/ci-runner-slots; live 2026-11-09: node4-7 20 (D-141),
+# (advertised per node by CronJob ci-runner-slots from ConfigMap
+# ci-runners/ci-runner-slots, runner-slots.yaml; STD-CI-10: node4-7 20 (D-141),
 # node8 4 (D-168); ADR-0010 item 5 holds the current values). Every
 # minute this CronJob reads node8 and Frigate signals from Prometheus
 # (bin/hot-guard.py, thresholds in hot-guard-config.json). Two tiers (COORD
 # 2026-11-07T03:49Z, after a CPU-only trip killed in-flight jobs):
 #   HARD (Frigate skipped/decode deficit, a frigate restart, node memory): write a
-#     reason under node8 in ConfigMap ci-runner-slot-hold (the reconciler advertises
+#     reason under node8 in ConfigMap ci-runner-slot-hold (the advertiser sets
 #     0 slots within about a minute) and evict node8 runner Pods newest-first
 #     (evict_per_run per run). The hold drops after 15 clean minutes.
 #   SOFT (node8 CPU min over 4 min > 0.85, Frigate clean): write "cap=4 ..." (the
-#     reconciler advertises min(desired, 4)); nothing is evicted. The cap drops once
+#     advertiser sets min(desired, 4)); nothing is evicted. The cap drops once
 #     node8 CPU max over 10 min is below 0.75.
 # A missing signal or an unreachable Prometheus holds node8 at 0 (fail closed)
 # without evicting, and the run exits 1.
@@ -27,7 +27,7 @@
 #
 # Least privilege: no node or cluster-scoped permission. The guard may create
 # ConfigMaps and get/patch only ci-runner-slot-hold, list Pods, and evict Pods in
-# ci-runners. The reconciler's read access to ci-runner-slot-hold is in hold-reader.yaml.
+# ci-runners. The advertisers' read access to ci-runner-slot-hold is in hold-reader.yaml.
 #
 # Operate:
 #   log:           kubectl -n ci-runners logs job/<latest ci-runner-hot-guard job>
