@@ -302,7 +302,9 @@ sets:
       ci-esphome:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        job_image: registry.vallery.net/jvallery/homeassistant-ci-esphome@sha256:034609288b8085f540677f856bd70cc877791e4a50f6f87fadff21b854a948cf
+        # homeassistant#1137: the FROM-only ESPHome base is a mirror (mirrors.txt),
+        # no longer the Kaniko build homeassistant-ci-esphome@034609288b80.
+        job_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/esphome/esphome@sha256:526a75c8d64a0d962a3b088c3af4fa7cf8ecf7161b995be57fc95b0726496a39
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 1.73 CPU, 2026-11-06T12Z..11-10T00Z (2150m -> 1750m); limits unchanged.
         job_resources: {cpu: 1750m, memory: 1536Mi, limit_cpu: "8", limit_memory: 8Gi}
