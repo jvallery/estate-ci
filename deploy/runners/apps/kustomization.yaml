@@ -30,6 +30,7 @@ resources:
 - monitoring-stack-ci-gate.yaml
 - monitoring-stack-ci.yaml
 - network-infra-build.yaml
+- network-infra-buildcheck.yaml
 - network-infra-ci-gate.yaml
 - network-infra-ci.yaml
 - options-tracker-build.yaml

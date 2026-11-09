@@ -544,6 +544,13 @@ sets:
         max: 2
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 1.43 CPU, 2026-11-06T12Z..11-10T00Z (2400m -> 1450m); limits unchanged.
         kaniko_resources: {cpu: 1450m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
+      buildcheck:
+        # network-infra#1091: PR builds of the patched kube-vip image (build.yml
+        # pull_request, push: false); no push credential. Path-filtered and rare, so
+        # one runner, sized like build. No quota change: it competes inside the
+        # existing estate-ci-runners envelope.
+        max: 1
+        kaniko_resources: {cpu: 1450m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/storage-infra
     profiles:
       ci:
