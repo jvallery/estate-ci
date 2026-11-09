@@ -54,8 +54,10 @@ the same.
    advertise 0. No other node carries a runner-specific label, taint or cap.
    The slot is a backstop: with measured requests, CPU normally binds first.
 6. **The quota is the overall envelope.** `deploy/foundation/quota.yaml`
-   bounds requests across every set. A Pod the quota refuses is retried by the
-   ARC controller; its job waits in GitHub. `maxRunners` per set is a fairness
+   bounds requests across every set. The ResourceQuota admission plugin
+   rejects a runner Pod create over it (403 "exceeded quota"); ARC 0.14.2
+   retries the create every 30 s and re-creates an EphemeralRunner that is
+   older than 10 minutes, and its job waits in GitHub meanwhile. `maxRunners` per set is a fairness
    cap between repos, not a capacity statement: the sum of `maxRunners` may
    exceed what the workers hold at once.
 7. **The quota is also the per-worker CPU budget** (estate-ci#69, 2026-11-09).
@@ -65,6 +67,18 @@ the same.
    min(allocatable - reserve - non-runner, slots x largest runner Pod request).
    The slot count cannot be that budget: 20 slots x 2.8 CPU is 56 CPU against
    13-22 CPU of headroom per worker, and STD-CI-10 fixes the slot values.
+   **The reserve is aggregate, not per node.** A namespace quota does not stop
+   the scheduler from filling one worker's free requests with runners, so a
+   single worker can still reach zero reserve while the total stays inside the
+   budget. `non_runner_cpu` is a recorded snapshot with no drift check;
+   `EstateCIWorkerCPUSaturated` (monitoring-stack) is the live signal. A
+   per-node reserve needs a per-node mechanism (slots per worker or a CPU
+   boundary), which STD-CI-10's fixed slot values rule out today.
+   Lowering the quota below the 48 h peak of runner requests (124.9 CPU) means
+   bursts queue in GitHub; at 79 no period can have every set at its
+   `maxRunners`, so estate-ci#69's 7-day acceptance window needs that clause
+   amended in the same decision. If node5's slots drop to 6, the budget falls
+   to about 74.5 CPU and the quota must go to 74 (render fails above it).
    Tests: `tests/runner_budget/run.py`.
 
 ## Capacity (2026-11-07 sample)

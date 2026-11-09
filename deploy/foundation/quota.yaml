@@ -146,10 +146,17 @@ spec:
 # (runners.yaml capacity, bound: quota; render_runners.py fails if it is above
 # the workers' runner budget): 215 -> 79, the sum over node4-8 of
 # min(allocatable 47 - reserve 7 - non-runner requests, slots x 2.8). Runner
-# requests used, 48 h to 2026-11-09T18Z: p95 76.4, p99 110.1, max 124.9 CPU, so
-# the top ~5% of bursts now queue in GitHub (Pending runners) instead of
-# scheduling beside platform Pods. Workers reached 1.0-1.09 of allocatable CPU
-# in that window.
+# requests used, 48 h to 2026-11-09T18Z: p95 76.4, p99 110.1, max 124.9 CPU;
+# workers reached 1.0-1.09 of allocatable CPU in that window. Above 79 the
+# ResourceQuota admission plugin rejects the EphemeralRunner Pod create (403
+# "exceeded quota"), the condition the P0 raise removed. ARC 0.14.2
+# (ephemeralrunner_controller.go) retries that create every 30 s and, once the
+# EphemeralRunner is 10 minutes old, deletes and re-creates it; no Pod exists
+# meanwhile and the job stays queued in GitHub (gha_assigned_jobs above
+# gha_running_jobs). So the top ~5% of bursts wait instead of scheduling beside
+# platform Pods. The bound is aggregate, not per node: the scheduler can still
+# put runners on one worker up to its slot cap and free requests, leaving that
+# worker no reserve (ADR-0010 point 7).
 apiVersion: v1
 kind: ResourceQuota
 metadata:

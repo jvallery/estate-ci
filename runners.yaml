@@ -52,10 +52,13 @@ defaults:
 # Pod, monitoring-stack-ci) = 56 CPU against 13-22 CPU of headroom on node4-7,
 # so the slot count cannot be the budget. The budget is the runner ResourceQuota
 # instead: estate-ci-runner-pods requests.cpu must not exceed the sum over
-# workers of min(headroom, ceiling). The scheduler places runners only where
-# their requests fit, so the quota bound keeps total runner requests inside
-# what the workers can hold beside the reserve. Re-measure non_runner_cpu when
-# platform requests move (it is a recorded value, rounded up to 0.5 CPU).
+# workers of min(headroom, ceiling). That bounds total runner requests to what
+# the workers hold beside the reserve in aggregate only: a namespace quota is
+# not a per-node reserve, so the scheduler can still fill one worker's free
+# requests with runners (up to its slots) and leave it no reserve. Nothing
+# per node enforces the reserve (ADR-0010 point 7). non_runner_cpu is a
+# recorded snapshot (rounded up to 0.5 CPU) with no drift check; re-measure it
+# when platform requests move. EstateCIWorkerCPUSaturated is the live signal.
 # Measured 2026-11-09T18:20Z (kubectl --context vallery: node allocatable cpu,
 # ci-runner-slot, Running Pods outside ci-runners, effective request per Pod).
 capacity:
