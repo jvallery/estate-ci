@@ -140,10 +140,16 @@ spec:
     services.nodeports: "0"
 ---
 # Runner Pods only: the envelope (same values as the former estate-ci-runners).
-# requests.cpu is never the binding limit: COORD P0 2026-11-07 05:27Z raised it
-# 146 -> 215 (= node4-8 allocatable, 5 x 43) when it bound at 144.7/146 with
-# workers 42-67% used. The guard is node allocatable CPU plus the
-# agentfleet.vallery.net/ci-runner-slot extended resource (ADR-0010).
+# COORD P0 2026-11-07 05:27Z raised requests.cpu 146 -> 215 (= node4-8
+# allocatable, 5 x 43) when it bound at 144.7/146 with workers 42-67% used.
+# estate-ci#69 (2026-11-09): requests.cpu is the per-worker CPU budget again
+# (runners.yaml capacity, bound: quota; render_runners.py fails if it is above
+# the workers' runner budget): 215 -> 79, the sum over node4-8 of
+# min(allocatable 47 - reserve 7 - non-runner requests, slots x 2.8). Runner
+# requests used, 48 h to 2026-11-09T18Z: p95 76.4, p99 110.1, max 124.9 CPU, so
+# the top ~5% of bursts now queue in GitHub (Pending runners) instead of
+# scheduling beside platform Pods. Workers reached 1.0-1.09 of allocatable CPU
+# in that window.
 apiVersion: v1
 kind: ResourceQuota
 metadata:
@@ -151,7 +157,7 @@ metadata:
 spec:
   hard:
     pods: "262"
-    requests.cpu: "215"
+    requests.cpu: "79"
     requests.memory: 365Gi
     limits.cpu: "4780"
     limits.memory: 2740Gi

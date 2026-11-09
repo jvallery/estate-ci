@@ -49,7 +49,7 @@ the same.
    slots are the hard limits.
 5. **One per-node cap, node8 the only exception.** Each runner Pod requests one
    `agentfleet.vallery.net/ci-runner-slot`. vm-k3s-node4..7 advertise the same
-   value (16); vm-k3s-node8 advertises 8, behind the hot guard (D-67), and
+   value (20); vm-k3s-node8 advertises 4, behind the hot guard (D-67), and
    prefers-away affinity keeps it the overflow node. Control-plane nodes
    advertise 0. No other node carries a runner-specific label, taint or cap.
    The slot is a backstop: with measured requests, CPU normally binds first.
@@ -58,6 +58,14 @@ the same.
    ARC controller; its job waits in GitHub. `maxRunners` per set is a fairness
    cap between repos, not a capacity statement: the sum of `maxRunners` may
    exceed what the workers hold at once.
+7. **The quota is also the per-worker CPU budget** (estate-ci#69, 2026-11-09).
+   `runners.yaml` `capacity` records a reserve (7 CPU of 47, the 85% target
+   below) and each worker's non-runner requests; `render_runners.py` fails when
+   the runner quota's `requests.cpu` is above the sum over workers of
+   min(allocatable - reserve - non-runner, slots x largest runner Pod request).
+   The slot count cannot be that budget: 20 slots x 2.8 CPU is 56 CPU against
+   13-22 CPU of headroom per worker, and STD-CI-10 fixes the slot values.
+   Tests: `tests/runner_budget/run.py`.
 
 ## Capacity (2026-11-07 sample)
 
@@ -67,7 +75,11 @@ the same.
   about 10 on node8, about 80-90 CPU in all.
 - After this change the mean runner Pod requests about 1.35 CPU (range 0.2 to
   4), so the workers hold about 60 runners at once by CPU; the slot caps
-  (4 x 16 + 8 = 72) stay above that and only bind if requests drift low.
+  (4 x 16 + 8 = 72 then; 4 x 20 + 4 = 84 from STD-CI-10) stay above that and
+  only bind if requests drift low.
+- 2026-11-09 (estate-ci#69): allocatable 47 CPU per worker; non-runner requests
+  node4 24, node5 18, node6 22.5, node7 27, node8 27.5 CPU; runner budget
+  79.7 CPU, quota requests.cpu 79.
 - Target: workers under about 85% of allocatable CPU in steady state.
 
 ## Re-sizing

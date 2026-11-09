@@ -42,6 +42,33 @@ defaults:
     build: 1
     buildcheck: 1
 
+# Per-worker CPU budget (estate-ci#69, ADR-0010, STD-CI-10, D-87). render_runners.py
+# checks it on every render: per worker, runner ceiling = slots x the largest
+# rendered Pod CPU request (bounded by the runner quota); headroom = allocatable
+# - reserve_cpu - non_runner_cpu (recorded requests of every non-ci-runners Pod).
+# reserve_cpu keeps ADR-0010's steady-state target (workers under ~85% of
+# allocatable): 7 of 47 CPU.
+# bound: quota. No slot value STD-CI-10 allows fits: 20 slots x 2.8 CPU (largest
+# Pod, monitoring-stack-ci) = 56 CPU against 13-22 CPU of headroom on node4-7,
+# so the slot count cannot be the budget. The budget is the runner ResourceQuota
+# instead: estate-ci-runner-pods requests.cpu must not exceed the sum over
+# workers of min(headroom, ceiling). The scheduler places runners only where
+# their requests fit, so the quota bound keeps total runner requests inside
+# what the workers can hold beside the reserve. Re-measure non_runner_cpu when
+# platform requests move (it is a recorded value, rounded up to 0.5 CPU).
+# Measured 2026-11-09T18:20Z (kubectl --context vallery: node allocatable cpu,
+# ci-runner-slot, Running Pods outside ci-runners, effective request per Pod).
+capacity:
+  reserve_cpu: "7"
+  bound: quota
+  quota: estate-ci-runner-pods
+  nodes:
+    vm-k3s-node4: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "24"}
+    vm-k3s-node5: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "18"}
+    vm-k3s-node6: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "22.5"}
+    vm-k3s-node7: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "27"}
+    vm-k3s-node8: {allocatable_cpu: "47", slots: 4, non_runner_cpu: "27.5"}
+
 # GitHub App registration Secret per owner (Secret in namespace ci-runners).
 owners:
   jvallery: arc-github-app-jvallery
