@@ -12,6 +12,7 @@ resources:
 - docs-ci.yaml
 - estate-ci-build.yaml
 - estate-ci-buildcheck.yaml
+- estate-ci-ci-toolbox.yaml
 - estate-ci-ci.yaml
 - estate-platform-ci.yaml
 - home-dotfiles-ci.yaml
