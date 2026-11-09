@@ -13,6 +13,7 @@ resources:
 - estate-ci-build.yaml
 - estate-ci-buildcheck.yaml
 - estate-ci-ci.yaml
+- estate-platform-build.yaml
 - estate-platform-ci.yaml
 - home-dotfiles-ci.yaml
 - homeassistant-build.yaml
