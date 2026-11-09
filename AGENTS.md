@@ -22,8 +22,6 @@ Jason's direct request authorizes the work it describes, across code, infrastruc
 - If the supported cluster path, required access, ownership/admission clearance or safe capacity is unavailable, stop the intensive work and report the exact blocker. Do not silently fall back to intensive execution on the Mac. Work that inherently requires local execution needs an explicit, task-scoped exception approved by Jason before it runs, with its workload bounds stated. This policy is the estate minimum: preserve stronger repository/subdirectory restrictions, existing holds and data-custody rules. A repository command or general task authorization does not override this placement policy; only Jason's explicit scoped exception does.
 <!-- estate-contract:end -->
 
-<!-- estate-contract:end -->
-
 ## Lane: estate-ci
 
 This repository owns the estate's standard CI/CD substrate: reusable GitHub
@@ -31,8 +29,11 @@ Actions workflows, the ARC runner scale sets in namespace `ci-runners`, and the
 per-repo migration runbook. Read `README.md` and `docs/MIGRATION-RUNBOOK.md`.
 
 - This repo is **public and secret-free**. Never commit credentials,
-  kubeconfigs, decrypted material or operator-machine paths. Secrets live only in
-  central KSOPS (registration, pull, per-repo zot push).
+  kubeconfigs, decrypted material or operator-machine paths. Runner Secrets
+  (registration, pull, per-repo zot push) live only in central KSOPS, today in
+  jvallery/agents and planned to move to jvallery/estate-platform. The one
+  Actions-secret exception is D-52: `PIN_BOT_PRIVATE_KEY` with variable
+  `PIN_BOT_CLIENT_ID` (GitHub App `vallery-pin-bot`), used only by `pin-bump.yml`.
 - Estate CI rules R1-R3 (README): no GitHub-hosted runners anywhere, including
   this repo; thin YAML (only `actions/checkout` and these workflows); logic in
   `deploy/foundation/bin/` (mounted at `/opt/estate-ci`); keep it runnable on
@@ -41,7 +42,25 @@ per-repo migration runbook. Read `README.md` and `docs/MIGRATION-RUNBOOK.md`.
   `python3 scripts/render_runners.py`, commit both. CI fails on stale output.
 - Callers pin reusable workflows by full commit SHA. A breaking change to a
   workflow interface needs a new input or a new file, not an edit in place.
-- Raising `deploy/foundation/quota.yaml` must be paired with an equal decrease
-  of the cutover repo's native-ci budget (workers are memory-tight).
+- Workers are memory-tight: raise `deploy/foundation/quota.yaml` only with
+  live headroom on the runner workers, and record the change in its header.
 - NetworkPolicy changes here are edge writes: syncing them takes
   `EDGE-WRITE.lock` (estate L11).
+- The ARC controller and the ARC foundation (`arc-runner-foundation`, which
+  advertises `ci-runner-slot`) are still delivered from jvallery/agents; they
+  are planned to move here (estate-ci#76). The Argo Applications and AppProjects
+  for this repo are declared in jvallery/agents and are planned to move to
+  jvallery/estate-platform.
+
+## Backlog and standards
+
+The standards register v1 is `docs/estate/STANDARDS.md` in jvallery/agents
+(draft PR jvallery/agents#6373; planned to move to jvallery/estate-platform).
+Issues here cite a `STD-` clause. Waves are milestones (`W1 Convergence
+foundations` to `W5 BCDR`), with matching `sprint:w1-convergence` to
+`sprint:w5-bcdr` labels and one domain label (`conv`, `cicd`, `obs`, `sec`,
+`ha`, `dr`); estate epics carry `epic` and live in jvallery/estate-platform.
+Each issue states the problem, dated evidence, the `STD-` clause and target
+state, scope, change, dependencies, priority and testable acceptance. File one
+canonical issue per remediation unit in the repo that owns the change, and link
+related issues rather than duplicating them.
