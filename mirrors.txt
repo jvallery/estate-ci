@@ -13,6 +13,9 @@ docker.io/library/ubuntu:24.04@sha256:78d4744ead1f5b19b04d0df558ab182a5300903900
 docker.io/library/golang:1.27.3-bookworm@sha256:fea12ba16096adec0f699ce1c4da2154d320450e56c1f63671f95d2a3551c77b  jvallery/estate-ci/mirror/docker.io/library/golang
 # verdify-platform firmware-secretless-compile (DASH #1402): ESPHome 2026.6.5 index.
 ghcr.io/esphome/esphome:2026.6.5@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c  jvallery/estate-ci/mirror/ghcr.io/esphome/esphome
+# homeassistant CI image homeassistant-ci-esphome (homeassistant#1137): its Dockerfile
+# was FROM-only, so it is a mirror. Same digest as homeassistant images/ci/esphome.
+ghcr.io/esphome/esphome@sha256:526a75c8d64a0d962a3b088c3af4fa7cf8ecf7161b995be57fc95b0726496a39  jvallery/estate-ci/mirror/ghcr.io/esphome/esphome
 # Research Vault vault-server bases (estate-ci#113; research-vault Dockerfile L7, L20/L44).
 docker.io/library/node:24.22.1-bookworm-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205  jvallery/estate-ci/mirror/docker.io/library/node
 docker.io/library/python:3.12-slim@sha256:4840d514c583a4d3d8cad3940e68dee6f0f6f3635c12fcd0a3d74c21a5b93a54  jvallery/estate-ci/mirror/docker.io/library/python

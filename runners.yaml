@@ -314,6 +314,10 @@ sets:
         max: 2
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.11 CPU, 2026-11-06T12Z..11-10T00Z (350m -> 250m); limits unchanged.
         kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "8", limit_memory: 12Gi}
+      # homeassistant#1137: PR build check for changed images (image-build.yml
+      # push: false), credential-free (pull-only zot-pull). Kaniko sized like -build.
+      buildcheck:
+        kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "8", limit_memory: 12Gi}
   # verdify-platform (DASH, verdify-platform#1397/#1402). It transfers to jvallery
   # first (D19), hence the jvallery URL. Sets follow #1402's job map, all uid 1001
   # (ci/gha/lib.sh makes a private writable HOME):
