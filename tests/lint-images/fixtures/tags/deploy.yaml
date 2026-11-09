@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tags
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: tag-only-external
+          image: docker.io/library/busybox:1.36
+      containers:
+        - name: tag-only-local
+          image: registry.vallery.net/jvallery/app:v1
+        - name: pinned
+          image: docker.io/library/busybox:1.36@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+        - name: templated
+          image: "{{ .Values.image }}"
+        - name: allowlisted
+          image: quay.io/example/allowed:1
+        - name: expired-row-does-not-cover
+          image: docker.io/old/thing:2
+        - name: not-an-image
+          image: none
