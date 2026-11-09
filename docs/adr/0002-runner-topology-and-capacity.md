@@ -12,8 +12,9 @@ Capacity points 2-4 and the node8 slot value are superseded by
   quota counts declared requests, not use, so it is sized to the sets at
   `maxRunners` and is not the capacity gate; node allocatable CPU and the
   `ci-runner-slot` cap are (ADR-0010). Since D-87 the compute envelope is
-  `estate-ci-runner-pods` (runner PriorityClasses only; requests.cpu 215 =
-  node4-8 allocatable), and `estate-ci-runners` keeps object and ephemeral caps.
+  `estate-ci-runner-pods` (runner PriorityClasses only; requests.cpu 215, set on
+  2026-11-07 as node4-8 allocatable 5 x 43; node4-8 read 5 x 47 = 235 on
+  2026-11-09), and `estate-ci-runners` keeps object and ephemeral caps.
   The history is in the `deploy/foundation/quota.yaml` header.
 - **Point 3 (`ci-runner`, value 0):** superseded by D-67 and D-87. Runners use
   `ci-preemptible` (-1000) or `ci-preemptible-infra` (-900), both

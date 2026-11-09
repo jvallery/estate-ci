@@ -3,7 +3,8 @@
 # budget to move capacity from. Since D-34/D-39 these quotas are sized to every
 # set at maxRunners (sum + ~10%) and are not the capacity gate; node allocatable
 # CPU and the ci-runner-slot cap are (ADR-0010). The compute envelope is
-# estate-ci-runner-pods (requests.cpu 215 = node4-8 allocatable); this object
+# estate-ci-runner-pods (requests.cpu 215, set 2026-11-07 as node4-8
+# allocatable 5 x 43; node4-8 read 5 x 47 = 235 on 2026-11-09); this object
 # keeps the object and ephemeral caps; estate-ci-ops budgets the hot guard.
 # Raise a value only with live headroom on the runner workers, and add a dated
 # block below. The blocks below are the history, oldest first; their
