@@ -24,7 +24,8 @@ jobs:
       timeout-minutes: 15
   # estate-ci#111 (STD-IAC-17): kustomize build + kubeconform of deploy/foundation,
   # the Argo-delivered path. Context "foundation / foundation". Runs bare on the
-  # toolbox-image set (the estate-ci-ci job image has neither tool).
+  # toolbox-image set, not in the estate-ci-ci job sidecar (which also has both
+  # tools), so a broken deploy/foundation sidecar script cannot block its own fix.
   foundation:
     uses: ./.github/workflows/checks.yml
     with:

@@ -3,7 +3,7 @@
 
 Builds a throwaway repository with one excepted workflow (hosted label, tag pin) and
 one unexcepted workflow, then checks: covered findings are excepted, the same rule in
-another file still fails, expired and malformed rows fail, unused rows warn.
+another file still fails, expired, malformed and over-180-day rows fail, unused rows warn.
 """
 import datetime
 import importlib.util
@@ -80,6 +80,9 @@ check("malformed row fails", [k for k in kept if k[1].startswith("allow")], [("w
 
 kept, _ = lint(f".github/workflows/upstream-*.yml * 2027-01-21 {ISSUE}\n")
 check("wildcard rule refused", [k for k in kept if k[1].startswith("allow")], [("workflow-lint-allow.txt", "allow-invalid", True)])
+
+kept, _ = lint(f".github/workflows/upstream-*.yml R1-hosted-label 2027-06-01 {ISSUE}\n")
+check("expiry over 180 days fails", [k for k in kept if k[1].startswith("allow")], [("workflow-lint-allow.txt", "allow-too-long", True)])
 
 kept, _ = lint(rows + f".github/workflows/gone.yml R1-hosted-label 2027-01-21 {ISSUE}\n")
 check("unused row warns", [k for k in kept if k[1].startswith("allow")], [("workflow-lint-allow.txt", "allow-unused", False)])

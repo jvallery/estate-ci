@@ -35,8 +35,9 @@ covers a finding when its repo-relative path matches the glob and its rule is th
 row's rule (for example R1-hosted-label); covered findings print as "excepted" and
 do not fail. Each row mirrors a dated exception row in the estate GitHub security
 baseline (github-security-baseline.yaml). Errors: allow-invalid (malformed row),
-allow-expired (past its expiry). Warning: allow-unused (a row that covers nothing;
-remove it).
+allow-expired (past its expiry), allow-too-long (expiry more than ALLOW_MAX_DAYS,
+180, days out, so a row cannot waive a finding indefinitely). Warning: allow-unused
+(a row that covers nothing; remove it).
 
 Standard library only: it runs on the stock runner image (python3, no pip).
 The YAML reader handles the block/flow subset workflow files use; scalars stay
@@ -562,6 +563,7 @@ def tag_mode(today=None):
 
 ALLOW_FILE = ".estate-ci/workflow-lint-allow.txt"
 ALLOW_RULE = re.compile(r"^R[0-9]-[a-z][a-z-]*$")
+ALLOW_MAX_DAYS = 180
 
 
 def load_allow(root: Path, today: datetime.date):
@@ -585,6 +587,9 @@ def load_allow(root: Path, today: datetime.date):
             continue
         if date < today:
             findings.append(Finding(shown, n, "allow-expired", f"expired {expiry} ({issue}); remove the exception or renew its baseline row"))
+            continue
+        if (date - today).days > ALLOW_MAX_DAYS:
+            findings.append(Finding(shown, n, "allow-too-long", f"expiry {expiry} is more than {ALLOW_MAX_DAYS} days out ({issue}); set a nearer review date"))
             continue
         rows.append([glob, rule, n, False])
     return rows, findings
