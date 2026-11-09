@@ -42,6 +42,7 @@ resources:
 - sentinel-ci-tools.yaml
 - sentinel-ci.yaml
 - storage-infra-build.yaml
+- storage-infra-buildcheck.yaml
 - storage-infra-ci.yaml
 - sunshine-club-ci.yaml
 - verdify-platform-build.yaml
