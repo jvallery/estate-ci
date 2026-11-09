@@ -44,7 +44,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
       ca-certificates curl file g++ git gnupg jq make openssh-client \
       php-cli python3 python3-pip python3-venv python3-yaml ruby-full \
-      sqlite3 tar unzip xz-utils zip \
+      sqlite3 tar unzip xz-utils zip zsh \
     && rm -rf /var/lib/apt/lists/*
 
 # CVE-2026-59873: drop every runner-bundled npm whose tar is older than 7.5.19

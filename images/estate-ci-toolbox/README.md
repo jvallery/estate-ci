@@ -25,6 +25,7 @@ on dispatch; its `pin` job then opens the digest pin PR) and published as
 | kubeconform | v0.8.0 | GitHub release, CHECKSUMS |
 | yq (mikefarah) | v4.54.1 | GitHub release, sha256 |
 | jq, git, curl, make, zip/unzip, xz, sqlite3, g++, openssh-client, file | apt | noble archive |
+| zsh | 5.9 (apt) | noble archive (`zsh -f -n` syntax checks and zsh self-tests; home-dotfiles#104 retires the workflow's inline package download) |
 | crane | v0.22.1 | GitHub release, sha256 (same pin as `image-build.sh`) |
 | gitleaks | 8.30.1 | built from module source with go1.27.3 (go.sum hash pinned; fleet recipe) |
 | shellcheck | v0.11.0 | GitHub release, sha256 recorded from the asset |
