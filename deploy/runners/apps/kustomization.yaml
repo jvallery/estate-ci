@@ -8,6 +8,7 @@ resources:
 - ai-presentation-ci.yaml
 - cortex-ai-compute-build.yaml
 - cortex-ai-compute-ci.yaml
+- crm-ci.yaml
 - docs-build.yaml
 - docs-ci.yaml
 - estate-ci-build.yaml
