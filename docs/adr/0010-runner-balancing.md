@@ -27,7 +27,17 @@ the same.
    6 h, so idle stretches inside a job count; p95 where p95 exceeds p90 by at
    least 20% and 200m, D-103 B), and the p90 of its peak working
    set, rounded up to 50m / 128 MiB. A sizing pass moves requests up or down
-   but never below that p90; classes with fewer than 5 Pods keep their value. The values live in `runners.yaml` (`*_resources`). With
+   but never below that p90; classes with fewer than 5 Pods keep their value. The values live in `runners.yaml` (`*_resources`).
+   **Amended by D-488 (Jason 2026-11-09: no more cores; CPU use stays low on the
+   existing ones).** CPU requests now follow active use, not p90: job, kaniko
+   and postgres containers, and a runner container that runs the job steps
+   itself, request the p50 of their active CPU (1-minute samples with rate >
+   0.05), floor 250m; a runner container beside a job sidecar requests its own
+   active p75, floor 100m; rounded up to 50m; classes with fewer than 20 active
+   samples keep their value. Limits and memory requests are unchanged. Runners
+   are the elastic class: a lower request lets more of them schedule on idle
+   CPU, and under contention CFS shares follow requests, so runners yield to
+   platform Pods instead of holding CPU they mostly do not use. With
    realistic requests the scheduler stops placing runners on a worker once its
    CPU is spoken for, and the default `LeastAllocated` scoring spreads them.
 2. **Limits protect neighbours.** No container may set a CPU limit above 8
@@ -101,12 +111,25 @@ the same.
   11.2), quota requests.cpu 98. The budget rises when storage-infra#1666 frees
   Longhorn instance-manager requests (~15-18 CPU); re-measure non_runner_cpu
   and re-render the quota then.
+- 2026-11-10 D-488 sizing (sample 2026-11-06T12:20Z..11-10T00:35Z, the whole
+  `ci-runners` history, about 22,000 runner Pods): weighted mean runner Pod
+  request 1.09 -> 0.87 CPU; sum at every set's `maxRunners` 308 -> 235 CPU.
+  At the 48 h peak-request minute (68 Pods, 104.8 CPU requested) the same mix
+  now requests 79.4 CPU, so quota requests.cpu 98 (unchanged) holds the slot
+  cap (84 slot Pods + 6 gate Pods) rather than about 63 Pods of that mix.
+  Largest Pod is verdify-platform-ci-dashboard at 3.9 CPU (job p50 3.72), so
+  node8's ceiling is 4 x 3.9 = 15.6 and the render budget 102.7; the quota is
+  not raised with it. Workers at that time: node CPU use p50 9.5-21 CPU, p95
+  36-42 CPU, peak 47-51 of 47 allocatable, runners using more than they
+  request at each node's peak (bursting on limits).
 - Target: workers under about 85% of allocatable CPU in steady state.
 
 ## Re-sizing
 
 Run when a class changes shape (new test suite, sharding) or every few weeks.
-Use the last 6 h (or more) of data that includes busy periods.
+Use the last 6 h (or more) of data that includes busy periods. Since D-488 the
+CPU percentile is p50 (work containers) or p75 (runner beside a job), pooled
+across every active 1-minute sample of the set, not p90 (point 1).
 
 ```promql
 # per set and container: p90 of active CPU (5m rate, 1m step); pod names are

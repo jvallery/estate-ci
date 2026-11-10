@@ -122,7 +122,7 @@ spec:
                 value: /busybox:/kaniko:/usr/local/bin:/usr/bin:/bin
               resources:
                 requests:
-                  cpu: 2650m
+                  cpu: 350m
                   memory: 5Gi
                   ephemeral-storage: 8Gi
                 limits:

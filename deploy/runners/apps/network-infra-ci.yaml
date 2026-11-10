@@ -19,7 +19,7 @@ spec:
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: network-infra-ci
         minRunners: 0
-        maxRunners: 8
+        maxRunners: 10
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller
@@ -137,7 +137,7 @@ spec:
                 value: /opt/estate-ci
               resources:
                 requests:
-                  cpu: 100m
+                  cpu: 150m
                   memory: 256Mi
                   ephemeral-storage: 1Gi
                   agentfleet.vallery.net/ci-runner-slot: '1'
@@ -174,7 +174,7 @@ spec:
                 value: /exchange
               resources:
                 requests:
-                  cpu: 150m
+                  cpu: 250m
                   memory: 256Mi
                   ephemeral-storage: 2Gi
                 limits:

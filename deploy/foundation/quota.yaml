@@ -162,6 +162,13 @@ spec:
 # platform Pods. The bound is aggregate, not per node: the scheduler can still
 # put runners on one worker up to its slot cap and free requests, leaving that
 # worker no reserve (ADR-0010 point 7).
+# D-488 (Jason 2026-11-09, no more cores): requests.cpu stays 98. Runner CPU
+# requests dropped to measured active use (runners.yaml header), so the same 98
+# holds about 20% more runners (weighted mean Pod request 1.09 -> 0.87 CPU;
+# 2026-11-09 peak mix 68 Pods at 104.8 CPU -> 79.4 CPU). The render budget is
+# now 102.7 only because the largest Pod (verdify-platform-ci-dashboard, 3.9)
+# raises node8's 4-slot ceiling to 15.6; that is not new room, so the quota is
+# not raised with it.
 apiVersion: v1
 kind: ResourceQuota
 metadata:
