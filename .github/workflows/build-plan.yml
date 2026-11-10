@@ -1,0 +1,95 @@
+# Reusable: plan a repo's image builds from its ci/images.tsv (estate-ci#156). The
+# one estate planner, /opt/estate-ci/build-plan.py, replaces each lane repo's
+# ci/build_plan.py copy. Output `images` is the matrix for image-build.yml.
+#
+#   jobs:
+#     plan:
+#       uses: jvallery/estate-ci/.github/workflows/build-plan.yml@<sha>
+#       with: {images: "${{ inputs.images }}"}
+#     image:
+#       needs: [plan]
+#       if: needs.plan.outputs.images != '[]'
+#       strategy: {matrix: {include: "${{ fromJSON(needs.plan.outputs.images) }}"}}
+#       uses: jvallery/estate-ci/.github/workflows/image-build.yml@<sha>
+#       with: {image: "jvallery/${{ matrix.name }}", dockerfile: "${{ matrix.dockerfile }}",
+#              context: "${{ matrix.context }}", push: true}
+#
+# With no `images`, the plan is every image whose paths changed in the pushed range
+# (push event "before"..HEAD, HEAD^..HEAD when unknown), so the checkout is full
+# depth by default. `split` keeps named images out of the matrix; output `split` is a
+# JSON object {name: bool} (e.g. fromJSON(needs.plan.outputs.split)['cortex-rag']).
+#
+# Portability (Forgejo/Gitea Actions): checkout + one stdlib script from the runner
+# Pod's /opt/estate-ci; no cache, artifact, Environment or OIDC use. Vendored
+# fallback: checkout + `run: python3 $ESTATE_CI/build-plan.py`.
+name: estate-ci build plan
+
+on:
+  workflow_call:
+    inputs:
+      images:
+        description: Dispatched image names (space-separated) or "all"; empty plans from changed paths
+        type: string
+        default: ""
+      tsv:
+        description: Images file, repo-relative
+        type: string
+        default: ci/images.tsv
+      test:
+        description: Also run each picked image's pre-build check (images.tsv column 5)
+        type: boolean
+        default: false
+      split:
+        description: Space-separated image names kept out of the matrix (built by a dedicated caller job)
+        type: string
+        default: ""
+      revision:
+        description: 40-hex commit for a split image's dedicated job; accepted only when only split images are requested
+        type: string
+        default: ""
+      runner:
+        description: Scale set label. Default "<repo>-ci"
+        type: string
+        default: ""
+      fetch-depth:
+        type: number
+        default: 0
+      timeout-minutes:
+        type: number
+        default: 10
+    outputs:
+      images:
+        value: ${{ jobs.plan.outputs.images }}
+      split:
+        value: ${{ jobs.plan.outputs.split }}
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ${{ inputs.runner != '' && inputs.runner || format('{0}-ci', github.event.repository.name) }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    outputs:
+      images: ${{ steps.plan.outputs.images }}
+      split: ${{ steps.plan.outputs.split }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: ${{ inputs.fetch-depth }}
+          persist-credentials: false
+      - id: plan
+        shell: bash
+        env:
+          IMAGES: ${{ inputs.images }}
+          TSV: ${{ inputs.tsv }}
+          TEST: ${{ inputs.test }}
+          SPLIT: ${{ inputs.split }}
+          REVISION: ${{ inputs.revision }}
+        run: |
+          set -euo pipefail
+          args=(--tsv "$TSV")
+          [[ "$TEST" != true ]] || args+=(--test)
+          for s in $SPLIT; do args+=(--split "$s"); done
+          python3 "$ESTATE_CI/build-plan.py" "${args[@]}"

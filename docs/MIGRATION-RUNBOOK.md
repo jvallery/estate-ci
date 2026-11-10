@@ -34,7 +34,8 @@ Map each native step to a profile:
 | command in a repo CI image (`image: registry.vallery.net/...-ci@sha256`) | `ci` profile with `job_image:` that digest, `checks.yml` `in-job-image: true` |
 | plain command (python/node/ruby on the toolbox) | `ci` profile, `checks.yml` (use `actions/setup-*` steps in a custom job if tools are missing) |
 | Postgres-backed suite | `pg` profile, `runner: <r>-pg`, `postgres: true`; shard with a matrix of `checks.yml` calls, each under 15 min |
-| image build | `build` profile, `image-build.yml` |
+| image build | `build` profile, `image-build.yml`; plan the matrix with `build-plan.yml` (not a repo copy of `build_plan.py`) |
+| kustomize build + kubeconform | `kustomize-validate.yml` (repo-specific gates stay repo scripts via `checks.yml`) |
 
 ## 2. Registry principal (only if the repo builds images)
 

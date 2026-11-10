@@ -22,3 +22,24 @@ jobs:
       run: bash scripts/self-test.sh
       in-job-image: true
       timeout-minutes: 15
+  # estate-ci#111 (STD-IAC-17): kustomize build + kubeconform of deploy/foundation,
+  # the Argo-delivered path. Context "foundation / foundation". Runs bare on the
+  # toolbox-image set, not in the estate-ci-ci job sidecar (which also has both
+  # tools), so a broken deploy/foundation sidecar script cannot block its own fix.
+  foundation:
+    uses: ./.github/workflows/checks.yml
+    with:
+      name: foundation
+      run: bash scripts/foundation-check.sh
+      runner: estate-ci-ci-toolbox
+      timeout-minutes: 10
+  # estate-ci#156: the shared build planner and kustomize-validate entry point
+  # (deploy/foundation/bin/build-plan.py, kustomize-validate.sh) against their
+  # fixtures. Needs git, kustomize and kubeconform: the toolbox set, bare.
+  planner:
+    uses: ./.github/workflows/checks.yml
+    with:
+      name: planner
+      run: python3 tests/build_plan/run.py && bash tests/kustomize_validate/run.sh
+      runner: estate-ci-ci-toolbox
+      timeout-minutes: 10

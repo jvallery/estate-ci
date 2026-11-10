@@ -1,0 +1,6 @@
+# fixture for tests/build_plan/run.py: name<TAB>dockerfile<TAB>context<TAB>paths<TAB>optional check
+app	Dockerfile.app	.	app/ Dockerfile.app
+web	web/Dockerfile	web	web/	true
+bad	bad/Dockerfile	bad	bad/	false
+solo	solo/Dockerfile	.	
+rag-svc	rag/Dockerfile	.	rag/	

@@ -3,6 +3,24 @@
 Status: Accepted (2026-11-06). Owner: CI-ARCH. The executable recipe is
 [`docs/MIGRATION-RUNBOOK.md`](../MIGRATION-RUNBOOK.md); this ADR sets the gates.
 
+**Superseding notes (2026-11-09, estate-ci#105).** The cutover is complete and
+this ADR is now a record of how it ran:
+
+- **D-15 (Jason, 2026-11-06 ~15:3xZ):** jvallery/agents counted as at parity
+  after 3 agreeing PRs instead of the Tier A 5, then switched its ruleset to
+  the Actions contexts and turned native PR checks off.
+- **D-22 (Jason first-hand, 2026-11-06T16:51:05Z, "Cut over now"):** a hard
+  cut-over replaced parity counting for every repository. Once one Actions run
+  was green per repository, its required checks switched to Actions and native
+  was refused for it. The parity table, the 7-day soak before step 5 and the
+  wave order below were not applied as written.
+- **D-43 / D-141:** native CI is retired (jvallery/agents#6254, merged
+  2026-11-07; D-141 completed the fleet CI decommission on 2026-11-07). Steps
+  that run "next to native CI" or lower a native quota no longer apply.
+- **STD-CI-01 (standards v1, D-463):** changes land by PR with required checks
+  and no standing bypass; the estate-ci break-glass is the time-boxed ruleset
+  edit in ADR-0005.
+
 ## Per-repository cutover
 
 1. **Prepare.** Sets in `runners.yaml` (quota moved, not added); `ci.yml`

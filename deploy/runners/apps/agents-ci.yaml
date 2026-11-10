@@ -19,7 +19,7 @@ spec:
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: agents-ci
         minRunners: 0
-        maxRunners: 32
+        maxRunners: 40
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller
@@ -61,7 +61,6 @@ spec:
                     - key: kubernetes.io/hostname
                       operator: NotIn
                       values:
-                      - vm-k3s-node5
                       - vm-k3s-node8
             initContainers:
             - name: estate-ci-tools
@@ -138,7 +137,7 @@ spec:
                 value: /opt/estate-ci
               resources:
                 requests:
-                  cpu: 500m
+                  cpu: 600m
                   memory: 640Mi
                   ephemeral-storage: 1Gi
                   agentfleet.vallery.net/ci-runner-slot: '1'
@@ -175,7 +174,7 @@ spec:
                 value: /exchange
               resources:
                 requests:
-                  cpu: 1300m
+                  cpu: 900m
                   memory: 384Mi
                   ephemeral-storage: 2Gi
                 limits:

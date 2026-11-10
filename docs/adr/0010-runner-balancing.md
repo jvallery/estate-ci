@@ -27,7 +27,17 @@ the same.
    6 h, so idle stretches inside a job count; p95 where p95 exceeds p90 by at
    least 20% and 200m, D-103 B), and the p90 of its peak working
    set, rounded up to 50m / 128 MiB. A sizing pass moves requests up or down
-   but never below that p90; classes with fewer than 5 Pods keep their value. The values live in `runners.yaml` (`*_resources`). With
+   but never below that p90; classes with fewer than 5 Pods keep their value. The values live in `runners.yaml` (`*_resources`).
+   **Amended by D-488 (Jason 2026-11-09: no more cores; CPU use stays low on the
+   existing ones).** CPU requests now follow active use, not p90: job, kaniko
+   and postgres containers, and a runner container that runs the job steps
+   itself, request the p50 of their active CPU (1-minute samples with rate >
+   0.05), floor 250m; a runner container beside a job sidecar requests its own
+   active p75, floor 100m; rounded up to 50m; classes with fewer than 20 active
+   samples keep their value. Limits and memory requests are unchanged. Runners
+   are the elastic class: a lower request lets more of them schedule on idle
+   CPU, and under contention CFS shares follow requests, so runners yield to
+   platform Pods instead of holding CPU they mostly do not use. With
    realistic requests the scheduler stops placing runners on a worker once its
    CPU is spoken for, and the default `LeastAllocated` scoring spreads them.
 2. **Limits protect neighbours.** No container may set a CPU limit above 8
@@ -49,15 +59,51 @@ the same.
    slots are the hard limits.
 5. **One per-node cap, node8 the only exception.** Each runner Pod requests one
    `agentfleet.vallery.net/ci-runner-slot`. vm-k3s-node4..7 advertise the same
-   value (16); vm-k3s-node8 advertises 8, behind the hot guard (D-67), and
+   value (16 at D-87; 20 now, see the note below); vm-k3s-node8 advertises 8
+   (4 now), behind the hot guard (D-67), and
    prefers-away affinity keeps it the overflow node. Control-plane nodes
    advertise 0. No other node carries a runner-specific label, taint or cap.
    The slot is a backstop: with measured requests, CPU normally binds first.
+
+   *Superseding note (2026-11-09, estate-ci#105).* D-141 (Jason first-hand,
+   2026-11-07T21:06:45Z, "bump runner slots on all the worker nodes") raised
+   vm-k3s-node4..7 to 20. D-168 corrected vm-k3s-node8 back to its live 4
+   (Frigate node). Live `ci-runner-slot` allocatable read 2026-11-09:
+   node4 20, node5 20, node6 20, node7 20, node8 4, node1-3 0 (84 in all).
+   D-168 was first decided (c) (keep as is) and the 2026-11-09 sweep then
+   accepted its recommendation (a): cap vm-k3s-node5 (the GPU node that went
+   NotReady on 2026-11-07, cortex-ai-compute#549) at 6, keeping node4/6/7 at 20
+   and node8 at 4, with a follow-up on runner CPU limits. That cap is delivered
+   in ConfigMap `github-runner-ops/ci-runner-slots` (jvallery/agents, moving here
+   under estate-ci#76) and is not live yet; update these values in the same PR
+   that delivers it.
 6. **The quota is the overall envelope.** `deploy/foundation/quota.yaml`
-   bounds requests across every set. A Pod the quota refuses is retried by the
-   ARC controller; its job waits in GitHub. `maxRunners` per set is a fairness
+   bounds requests across every set. The ResourceQuota admission plugin
+   rejects a runner Pod create over it (403 "exceeded quota"); ARC 0.14.2
+   retries the create every 30 s and re-creates an EphemeralRunner that is
+   older than 10 minutes, and its job waits in GitHub meanwhile. `maxRunners` per set is a fairness
    cap between repos, not a capacity statement: the sum of `maxRunners` may
    exceed what the workers hold at once.
+7. **The quota is also the per-worker CPU budget** (estate-ci#69, 2026-11-09).
+   `runners.yaml` `capacity` records a reserve (2.35 CPU of 47: runners may fill
+   a worker to 95% of allocatable, D-486) and each worker's non-runner requests; `render_runners.py` fails when
+   the runner quota's `requests.cpu` is above the sum over workers of
+   min(allocatable - reserve - non-runner, slots x largest runner Pod request).
+   The slot count cannot be that budget: 20 slots x 2.8 CPU is 56 CPU against
+   13-22 CPU of headroom per worker, and STD-CI-10 fixes the slot values.
+   **The reserve is aggregate, not per node.** A namespace quota does not stop
+   the scheduler from filling one worker's free requests with runners, so a
+   single worker can still reach zero reserve while the total stays inside the
+   budget. `non_runner_cpu` is a recorded snapshot with no drift check;
+   `EstateCIWorkerCPUSaturated` (monitoring-stack) is the live signal. A
+   per-node reserve needs a per-node mechanism (slots per worker or a CPU
+   boundary), which STD-CI-10's fixed slot values rule out today.
+   Lowering the quota below the 48 h peak of runner requests (124.9 CPU) means
+   bursts queue in GitHub; at 98 no period can have every set at its
+   `maxRunners`, so estate-ci#69's 7-day acceptance window needs that clause
+   amended in the same decision. If node5's slots drop to 6, the budget falls
+   to about 88.4 CPU and the quota must go to 88 (render fails above it).
+   Tests: `tests/runner_budget/run.py`.
 
 ## Capacity (2026-11-07 sample)
 
@@ -67,13 +113,37 @@ the same.
   about 10 on node8, about 80-90 CPU in all.
 - After this change the mean runner Pod requests about 1.35 CPU (range 0.2 to
   4), so the workers hold about 60 runners at once by CPU; the slot caps
-  (4 x 16 + 8 = 72) stay above that and only bind if requests drift low.
+  (4 x 16 + 8 = 72 then; 4 x 20 + 4 = 84 since D-141 and D-168, fixed by STD-CI-10) stay above that and
+  only bind if requests drift low.
+- 2026-11-09 (estate-ci#69): allocatable 47 CPU per worker; non-runner requests
+  node4 24, node5 18, node6 22.5, node7 27, node8 27.5 CPU; runner budget
+  79.7 CPU, quota requests.cpu 79 at reserve 7 (85%).
+- 2026-11-09 D-486 basis: 95% of allocatable (reserve 2.35 CPU per worker);
+  non-runner requests 117.3 measured 2026-11-09T23:5xZ (recorded rounded up:
+  node4 24, node5 18, node6 22.5, node7 27, node8 27.5); 110 in the decision
+  used a stale 112. Runner budget 98.3 CPU (node8 held to 4 slots x 2.8 =
+  11.2), quota requests.cpu 98. The budget rises when storage-infra#1666 frees
+  Longhorn instance-manager requests (~15-18 CPU); re-measure non_runner_cpu
+  and re-render the quota then.
+- 2026-11-10 D-488 sizing (sample 2026-11-06T12:20Z..11-10T00:35Z, the whole
+  `ci-runners` history, about 22,000 runner Pods): weighted mean runner Pod
+  request 1.09 -> 0.87 CPU; sum at every set's `maxRunners` 308 -> 235 CPU.
+  At the 48 h peak-request minute (68 Pods, 104.8 CPU requested) the same mix
+  now requests 79.4 CPU, so quota requests.cpu 98 (unchanged) holds the slot
+  cap (84 slot Pods + 6 gate Pods) rather than about 63 Pods of that mix.
+  Largest Pod is verdify-platform-ci-dashboard at 3.9 CPU (job p50 3.72), so
+  node8's ceiling is 4 x 3.9 = 15.6 and the render budget 102.7; the quota is
+  not raised with it. Workers at that time: node CPU use p50 9.5-21 CPU, p95
+  36-42 CPU, peak 47-51 of 47 allocatable, runners using more than they
+  request at each node's peak (bursting on limits).
 - Target: workers under about 85% of allocatable CPU in steady state.
 
 ## Re-sizing
 
 Run when a class changes shape (new test suite, sharding) or every few weeks.
-Use the last 6 h (or more) of data that includes busy periods.
+Use the last 6 h (or more) of data that includes busy periods. Since D-488 the
+CPU percentile is p50 (work containers) or p75 (runner beside a job), pooled
+across every active 1-minute sample of the set, not p90 (point 1).
 
 ```promql
 # per set and container: p90 of active CPU (5m rate, 1m step); pod names are

@@ -7,6 +7,8 @@ resources:
   - networkpolicies.yaml
   - hold-reader.yaml
   - hot-guard.yaml
+  # Rendered by scripts/render_runners.py from runners.yaml ops sets.
+  - ops-egress.generated.yaml
 generatorOptions:
   # Runner Pod templates reference this name; keep it stable.
   disableNameSuffixHash: true
@@ -27,7 +29,12 @@ configMapGenerator:
       - bin/check-runner-labels.sh
       - bin/lint-workflows.py
       - bin/lint-images.py
+      - bin/lint-version-register.py
+      # Read by lint-version-register.py from next to it (/opt/estate-ci).
+      - schemas/version-register.schema.json
       - bin/mirror.sh
+      - bin/build-plan.py
+      - bin/kustomize-validate.sh
   # node8 hot guard (D-67): script and thresholds (hot-guard.yaml).
   - name: ci-runner-hot-guard
     files:

@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "owner": "jvallery/example-infra",
+  "components": [
+    {
+      "component": "hosts",
+      "kind": "host",
+      "ref": {
+        "file": "inventory/baseline.yml",
+        "key": "version_targets.containerd"
+      }
+    },
+    {
+      "component": "escape",
+      "kind": "host",
+      "ref": {
+        "file": "../good/inventory/baseline.yml",
+        "key": "version_targets"
+      }
+    },
+    {
+      "component": "gone",
+      "kind": "host",
+      "ref": {
+        "file": "inventory/missing.yml",
+        "key": "version_targets"
+      }
+    },
+    {
+      "component": "copied",
+      "kind": "host",
+      "ref": {
+        "file": "inventory/baseline.yml",
+        "key": "version_targets"
+      },
+      "installed": {
+        "version": "9.1",
+        "source": "x"
+      }
+    },
+    {
+      "component": "zot",
+      "kind": "service",
+      "installed": {
+        "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source": "kubectl get deploy zot -o jsonpath"
+      },
+      "upstream": {
+        "project": "https://github.com/project-zot/zot",
+        "latest": "v2.1.10"
+      },
+      "support": {
+        "policy": "rolling",
+        "source": "https://github.com/project-zot/zot/releases"
+      }
+    },
+    {
+      "component": "zot",
+      "kind": "widget",
+      "installed": {
+        "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source": "kubectl get deploy zot -o jsonpath"
+      },
+      "upstream": {
+        "project": "https://example.invalid",
+        "latest": "1",
+        "checked": "2026-02-30"
+      },
+      "support": {
+        "policy": "rolling",
+        "source": "https://github.com/project-zot/zot/releases"
+      }
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+# Estate version detector (STD-OPS-02, DR-51, estate-ci#110): self-hosted
+# Renovate on ARC. Pilot batch: this repository only (RENOVATE_REPOSITORIES);
+# later batches add owner repositories one at a time, each with its own
+# renovate.json and a run whose token is scoped to that repository.
+#
+# Runs on estate-ci-ci-renovate (runners.yaml: job image renovate/renovate,
+# mirrored). Identity: the runner mints a vallery-pin-bot installation token
+# for this repository only (D-52, $ESTATE_CI/app-token.py: contents and
+# pull_requests write, 1 h) and revokes it when the step ends, so Renovate's
+# PRs start pull_request workflows and their required checks attach. Renovate
+# only opens PRs: it never merges, pins digests or touches Argo.
+#
+# Portability (Forgejo/Gitea Actions): one run step calling
+# $ESTATE_CI/app-token.py and $ESTATE_CI/sidecar-run.sh; Renovate supports
+# platform=gitea/forgejo with a forge token instead of the App token.
+name: renovate
+
+on:
+  schedule:
+    - cron: "17 9 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+jobs:
+  renovate:
+    name: renovate
+    runs-on: ${{ format('{0}-ci-renovate', github.event.repository.name) }}
+    timeout-minutes: 30
+    steps:
+      - name: renovate
+        shell: bash
+        env:
+          APP_CLIENT_ID: ${{ vars.PIN_BOT_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.PIN_BOT_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          RENOVATE_TOKEN="$(python3 "$ESTATE_CI/app-token.py" "$GITHUB_REPOSITORY")"
+          echo "::add-mask::$RENOVATE_TOKEN"
+          trap 'APP_TOKEN="$RENOVATE_TOKEN" python3 "$ESTATE_CI/app-token.py" --revoke || true' EXIT
+          unset APP_PRIVATE_KEY
+          export RENOVATE_TOKEN RENOVATE_PLATFORM=github RENOVATE_REPOSITORIES="$GITHUB_REPOSITORY"
+          export RENOVATE_ONBOARDING=false RENOVATE_REQUIRE_CONFIG=required LOG_LEVEL=info
+          export RENOVATE_GIT_AUTHOR="estate-ci renovate <estate-ci@users.noreply.github.com>"
+          ENV_NAMES="RENOVATE_TOKEN RENOVATE_PLATFORM RENOVATE_REPOSITORIES RENOVATE_ONBOARDING RENOVATE_REQUIRE_CONFIG LOG_LEVEL RENOVATE_GIT_AUTHOR" \
+            TIMEOUT_MINUTES=25 "$ESTATE_CI/sidecar-run.sh" job <<< 'cd /tmp && /usr/local/sbin/renovate-entrypoint.sh renovate'

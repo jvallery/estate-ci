@@ -1,6 +1,10 @@
 # ADR-0009: Phase 2 self-hosted forge, and the portability rules for phase 1
 
 Status: Proposed (research). Owner: CI-ARCH. Phase 2 has its own epic.
+D-349 (2026-11-09): phase 1 (GitHub Actions on ARC) is the one pipeline shape;
+this ADR stays Proposed and creates no work. The portability rules below still
+bind phase 1; their accepted exceptions E-1 and E-2 are in
+[ADR-0011](0011-phase-1-exceptions.md) (moved 2026-11-09).
 
 ## Candidates
 
@@ -54,29 +58,9 @@ its workflows run unmodified) that confirms the version-specific items marked
 
 ## Exceptions
 
-Each exception names its scope, why no portable alternative exists, and what
-replaces it on the phase-2 forge. The lint does not police them; review does.
-
-- **E-1 (2026-11-06, COORD): upstream supply-chain attestation verification.**
-  The estate-ci-toolbox image ships the `gh` CLI (pinned, sha256-checked) so
-  jobs can run `gh attestation verify` on upstream release artifacts (first
-  user: sentinel's frigate-promotion jobs, moving off GitHub-hosted runners).
-  Scope: verification of upstream GitHub-issued attestations only. Not allowed:
-  `gh` for forge API calls (rule 7: those go through `forge-api.sh`), or any
-  credential beyond the per-job token. Phase 2: the upstream attestations stay
-  on GitHub, so verification keeps working from any forge (it needs only
-  outbound HTTPS to the public Sigstore/GitHub endpoints); if a token-free path
-  is required, replace it with `cosign verify-blob-attestation` against the
-  same bundles.
-- **E-2 (2026-11-06, D-52, Jason first-hand): the vallery-pin-bot App key.**
-  Each repository has the Actions secret `PIN_BOT_PRIVATE_KEY` and the variable
-  `PIN_BOT_CLIENT_ID`. Callers pass the secret to `pin-bump.yml` as
-  `pin-bot-private-key`. `app-token.py` mints an installation token from it,
-  scoped to the calling repository with contents and pull_requests write, and
-  revokes it when the step exits. The pin PR is opened with that token. A PR
-  opened with the per-job token starts no `pull_request` workflows, so its
-  required checks never attach. Jason chose Actions-secret custody for this
-  key (D-52, 2026-11-06), and lint allows exactly this secret name.
-  Custody: storage-infra `inventory/recovery-key-custody/pin-pr-app-20261106/`.
-  Phase 2: if the forge starts workflows for job-token PRs, drop the key and
-  E-2. Otherwise give a forge bot account token the same scope.
+**Moved 2026-11-09 (estate-ci#105).** The accepted exceptions to these rules,
+E-1 (upstream attestation verification with `gh`, accepted under D-373) and
+E-2 (the vallery-pin-bot App key, D-52), are recorded in
+[ADR-0011](0011-phase-1-exceptions.md), which is Accepted. This ADR stays
+Proposed, so it no longer holds an exception. Rule 4's "Apps tokens" and
+rule 8 carry the E-2 exception; rule 7 carries E-1.

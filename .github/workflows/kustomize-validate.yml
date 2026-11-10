@@ -1,0 +1,86 @@
+# Reusable: kustomize build + kubeconform -strict of one or more kustomize roots
+# (estate-ci#156). The one estate entry point, /opt/estate-ci/kustomize-validate.sh,
+# replaces each lane repo's own kustomize-validate script.
+#
+#   jobs:
+#     kustomize:
+#       uses: jvallery/estate-ci/.github/workflows/kustomize-validate.yml@<sha>
+#       with: {roots: deploy/networking, forbid-secrets: true}
+#
+# Check context: "<caller job id> / <name>". Runs on "<repo>-ci" in its job sidecar
+# (in-job-image, default), which gets kustomize and kubeconform from the estate-ci
+# toolbox; set in-job-image: false on a set whose runner image is the toolbox.
+# Repo-specific gates (schema fetchers, render policies) stay repo scripts run
+# through checks.yml; schema-locations points kubeconform at what they produce.
+#
+# Portability (Forgejo/Gitea Actions): checkout + /opt/estate-ci scripts from the
+# runner Pod; no cache, artifact, Environment or OIDC use. Vendored fallback:
+# checkout + `run: $ESTATE_CI/kustomize-validate.sh ROOT...`.
+name: estate-ci kustomize validate
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        type: string
+        default: kustomize-validate
+      roots:
+        description: Space-separated kustomize roots, repo-relative
+        type: string
+        required: true
+      kubernetes-version:
+        description: kubeconform -kubernetes-version (empty uses kubeconform's default)
+        type: string
+        default: ""
+      schema-locations:
+        description: Newline-separated extra kubeconform -schema-location values (tried after the default)
+        type: string
+        default: ""
+      ignore-missing-schemas:
+        type: boolean
+        default: false
+      forbid-secrets:
+        description: Fail when a render contains a kind Secret
+        type: boolean
+        default: false
+      runner:
+        description: Scale set label. Default "<repo>-ci"
+        type: string
+        default: ""
+      in-job-image:
+        type: boolean
+        default: true
+      timeout-minutes:
+        type: number
+        default: 20
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: ${{ inputs.name }}
+    runs-on: ${{ inputs.runner != '' && inputs.runner || format('{0}-ci', github.event.repository.name) }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: ${{ inputs.name }}
+        shell: bash
+        env:
+          KV_ROOTS: ${{ inputs.roots }}
+          KV_KUBERNETES_VERSION: ${{ inputs.kubernetes-version }}
+          KV_SCHEMA_LOCATIONS: ${{ inputs.schema-locations }}
+          KV_IGNORE_MISSING_SCHEMAS: ${{ inputs.ignore-missing-schemas }}
+          KV_FORBID_SECRETS: ${{ inputs.forbid-secrets }}
+          IN_JOB_IMAGE: ${{ inputs.in-job-image }}
+          TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+        run: |
+          set -euo pipefail
+          if [[ "$IN_JOB_IMAGE" == true ]]; then
+            ENV_NAMES="KV_ROOTS KV_KUBERNETES_VERSION KV_SCHEMA_LOCATIONS KV_IGNORE_MISSING_SCHEMAS KV_FORBID_SECRETS" \
+              "$ESTATE_CI/sidecar-run.sh" job <<< "bash $ESTATE_CI/kustomize-validate.sh"
+          else
+            bash "$ESTATE_CI/kustomize-validate.sh"
+          fi

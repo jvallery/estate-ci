@@ -28,12 +28,29 @@ Warnings (exit 0 unless --strict):
                       pin-bot key (ADR-0009 rule 8)
   R2-inline-shell     a run: block longer than 15 lines (keep logic in scripts)
 
+Recorded exceptions (estate-ci#5, D-373): `.estate-ci/workflow-lint-allow.txt` in a
+linted repository root, one row per exception,
+`<path glob> <rule> <YYYY-MM-DD expiry> <issue URL>`; `#` starts a comment. A row
+covers a finding when its repo-relative path matches the glob and its rule is the
+row's rule (for example R1-hosted-label); covered findings print as "excepted" and
+do not fail. Each row mirrors a dated exception row in the estate GitHub security
+baseline (github-security-baseline.yaml). Errors: allow-invalid (malformed row),
+allow-expired (past its expiry), allow-too-long (expiry more than ALLOW_MAX_DAYS,
+180, days out, so a row cannot waive a finding indefinitely). Warning: allow-unused
+(a row that covers nothing; remove it).
+
+Also runs, from the same directory: R4 image lint (lint-images.py) on every linted
+root, and the STD-OPS-02 version register check (lint-version-register.py,
+estate-ci#121) on each root that holds a version-register.json (opt-in).
+
 Standard library only: it runs on the stock runner image (python3, no pip).
 The YAML reader handles the block/flow subset workflow files use; scalars stay
 strings (like PyYAML's BaseLoader), so `on:` is never read as a boolean.
 """
 from __future__ import annotations
 
+import datetime
+import fnmatch
 import re
 import sys
 from pathlib import Path
@@ -536,6 +553,73 @@ def collect(path: Path):
     return files
 
 
+# R4-tag-only rollout (estate-ci#104): warnings until this date so callers seed
+# .estate-ci/image-lint-allow.txt rows (each naming an open owner-repo issue),
+# errors from it. Callers get the switch from the $ESTATE_CI ConfigMap, no pin bump.
+TAG_ONLY_ENFORCE_FROM = "2026-11-23"
+
+
+def tag_mode(today=None):
+    import datetime
+    today = today or datetime.date.today()
+    return "--tags" if today >= datetime.date.fromisoformat(TAG_ONLY_ENFORCE_FROM) else "--tags=warn"
+
+
+ALLOW_FILE = ".estate-ci/workflow-lint-allow.txt"
+ALLOW_RULE = re.compile(r"^R[0-9]-[a-z][a-z-]*$")
+ALLOW_MAX_DAYS = 180
+
+
+def load_allow(root: Path, today: datetime.date):
+    """Rows of root/ALLOW_FILE as [glob, rule, line, used]; findings for bad rows."""
+    rows, findings = [], []
+    f = root / ALLOW_FILE
+    if not f.is_file():
+        return rows, findings
+    shown = str(f)
+    for n, raw in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+        line = raw.split("#", 1)[0].strip()
+        if not line:
+            continue
+        try:
+            glob, rule, expiry, issue = line.split()
+            date = datetime.date.fromisoformat(expiry)
+            if not ALLOW_RULE.match(rule) or not issue.startswith("https://github.com/"):
+                raise ValueError(line)
+        except ValueError:
+            findings.append(Finding(shown, n, "allow-invalid", "want '<path glob> <rule, e.g. R1-hosted-label> <YYYY-MM-DD> <issue URL>'"))
+            continue
+        if date < today:
+            findings.append(Finding(shown, n, "allow-expired", f"expired {expiry} ({issue}); remove the exception or renew its baseline row"))
+            continue
+        if (date - today).days > ALLOW_MAX_DAYS:
+            findings.append(Finding(shown, n, "allow-too-long", f"expiry {expiry} is more than {ALLOW_MAX_DAYS} days out ({issue}); set a nearer review date"))
+            continue
+        rows.append([glob, rule, n, False])
+    return rows, findings
+
+
+def apply_allow(root: Path, findings, today: datetime.date | None = None):
+    """Split findings for files under root into (kept, excepted) using the allow file."""
+    rows, kept = load_allow(root, today or datetime.date.today())
+    excepted = []
+    for x in findings:
+        try:
+            rel = Path(x.path).relative_to(root).as_posix()
+        except ValueError:
+            kept.append(x)
+            continue
+        row = next((r for r in rows if r[1] == x.rule and fnmatch.fnmatch(rel, r[0])), None)
+        if row is None:
+            kept.append(x)
+        else:
+            row[3] = True
+            excepted.append(x)
+    shown = str(root / ALLOW_FILE)
+    kept += [Finding(shown, r[2], "allow-unused", f"row '{r[0]} {r[1]}' covers no finding; remove it", error=False) for r in rows if not r[3]]
+    return kept, excepted
+
+
 def run_image_lint(roots):
     """Rule R4 from lint-images.py next to this file (also in the $ESTATE_CI ConfigMap)."""
     import importlib.util
@@ -545,7 +629,23 @@ def run_image_lint(roots):
     spec = importlib.util.spec_from_file_location("estate_ci_lint_images", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.main(roots)
+    return module.main([tag_mode(), *roots])
+
+
+def run_version_register(roots):
+    """STD-OPS-02 register check (lint-version-register.py, estate-ci#121) for each root that
+    holds a version-register.json: opt-in by adding the file, no workflow pin bump."""
+    import importlib.util
+    with_register = [r for r in roots if (Path(r) / "version-register.json").is_file()]
+    if not with_register:
+        return 0
+    path = Path(__file__).resolve().parent / "lint-version-register.py"
+    if not path.is_file():
+        path = Path(__file__).parent / "lint-version-register.py"
+    spec = importlib.util.spec_from_file_location("estate_ci_lint_version_register", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.main(with_register)
 
 
 def main(argv):
@@ -556,29 +656,39 @@ def main(argv):
     if unknown:
         print(f"unknown option(s): {' '.join(unknown)}", file=sys.stderr)
         return 2
-    findings, n = [], 0
+    findings, excepted, n = [], [], 0
     for p in paths:
+        found = []
         for f in collect(p):
             n += 1
             text = f.read_text(encoding="utf-8")
             if f.name.startswith("action.") and f.parent.parent.name == "actions":
-                findings += lint_action(str(f), text)
+                found += lint_action(str(f), text)
             else:
-                findings += lint_workflow(str(f), text, notes)
+                found += lint_workflow(str(f), text, notes)
+        if p.is_dir():
+            found, skipped = apply_allow(p, found)
+            excepted += skipped
+        findings += found
+    for x in excepted:
+        print(f"{x.path}:{x.line}: excepted [{x.rule}] {x.msg} ({ALLOW_FILE})", file=sys.stderr)
     for x in findings:
         print(x, file=sys.stderr)
     # R4 (image pull policy, ADR-016 / agents#5767 G6) runs from the same mounted script set, so
     # every caller of lint.yml gets it without a workflow pin bump.
     roots = [str(p) for p in paths if p.is_dir()]
     image_rc = run_image_lint(roots) if roots else 0
+    register_rc = run_version_register(roots)
     errors = [x for x in findings if x.error or strict]
     warns = len(findings) - len([x for x in findings if x.error])
     if image_rc:
         errors = errors or ["R4"]
+    if register_rc:
+        errors = errors or ["VR"]
     if errors:
         print(f"lint-workflows: FAILED: {len(errors)} error(s), {warns} warning(s) in {n} file(s) (estate rules R1-R3; see estate-ci docs/adr/0009)", file=sys.stderr)
         return 1
-    print(f"lint-workflows: {n} file(s) OK ({warns} warning(s))")
+    print(f"lint-workflows: {n} file(s) OK ({warns} warning(s), {len(excepted)} excepted)")
     return 0
 
 

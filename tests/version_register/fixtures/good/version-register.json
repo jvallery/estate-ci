@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "owner": "jvallery/example-infra",
+  "components": [
+    {
+      "component": "pve-and-k3s-hosts",
+      "kind": "host",
+      "notes": "Host versions live in version_targets; no second copy here.",
+      "ref": {"file": "inventory/baseline.yml", "key": "version_targets"}
+    },
+    {
+      "component": "k3s",
+      "kind": "runtime",
+      "ref": {"file": "inventory/baseline.yml", "key": "version_targets.k3s"}
+    },
+    {
+      "component": "longhorn-manager",
+      "kind": "operator",
+      "installed": {"version": "v1.9.2-backup-deadline", "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "image": "registry.vallery.net/longhorn-manager-backup-deadline", "source": "deploy/longhorn/values.yaml", "read_at": "2026-11-09"},
+      "upstream": {"project": "https://github.com/longhorn/longhorn", "latest": "v1.10.1", "checked": "2026-11-09"},
+      "support": {"until": "2099-01-01", "source": "https://github.com/longhorn/longhorn/wiki/Release-Schedule-&-Support-Matrix"},
+      "patched": {"upstream_base": "v1.9.2", "patch_set": "patches/longhorn-manager/", "rebase_owner": "jvallery/storage-infra", "sla_class": "critical-7d"}
+    },
+    {
+      "component": "zot",
+      "kind": "service",
+      "installed": {"digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "source": "kubectl get deploy zot -o jsonpath"},
+      "upstream": {"project": "https://github.com/project-zot/zot", "latest": "v2.1.10"},
+      "support": {"policy": "rolling", "source": "https://github.com/project-zot/zot/releases"}
+    }
+  ]
+}

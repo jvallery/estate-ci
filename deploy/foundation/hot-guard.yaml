@@ -3,7 +3,8 @@
 #
 # Every estate-ci runner Pod requests one agentfleet.vallery.net/ci-runner-slot
 # (advertised per node by the jvallery/agents arc-validation-pool reconciler from
-# ConfigMap github-runner-ops/ci-runner-slots; D-87: node4-7 16, node8 8). Every
+# ConfigMap github-runner-ops/ci-runner-slots; live 2026-11-09: node4-7 20 (D-141),
+# node8 4 (D-168); ADR-0010 item 5 holds the current values). Every
 # minute this CronJob reads node8 and Frigate signals from Prometheus
 # (bin/hot-guard.py, thresholds in hot-guard-config.json). Two tiers (COORD
 # 2026-11-07T03:49Z, after a CPU-only trip killed in-flight jobs):
