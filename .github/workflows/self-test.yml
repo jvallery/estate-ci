@@ -33,3 +33,13 @@ jobs:
       run: bash scripts/foundation-check.sh
       runner: estate-ci-ci-toolbox
       timeout-minutes: 10
+  # estate-ci#156: the shared build planner and kustomize-validate entry point
+  # (deploy/foundation/bin/build-plan.py, kustomize-validate.sh) against their
+  # fixtures. Needs git, kustomize and kubeconform: the toolbox set, bare.
+  planner:
+    uses: ./.github/workflows/checks.yml
+    with:
+      name: planner
+      run: python3 tests/build_plan/run.py && bash tests/kustomize_validate/run.sh
+      runner: estate-ci-ci-toolbox
+      timeout-minutes: 10

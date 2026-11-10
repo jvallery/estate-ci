@@ -1,0 +1,9 @@
+# Unknown field: kubeconform -strict rejects it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: kv-invalid
+spec:
+  ports:
+    - port: 80
+  notAField: true
