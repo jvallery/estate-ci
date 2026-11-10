@@ -18,15 +18,22 @@ Errors (exit 1):
                      `repository:` + `tag:` pair with no `digest:`, has no
                      @sha256 digest, on any registry (STD-K8S-05: every image by
                      digest, no floating tags). --tags=warn reports it as a
-                     warning instead (rollout, estate-ci#104).
+                     warning instead (rollout, estate-ci#104). An `image:` whose
+                     name a kustomization.yaml pins is not reported: an
+                     `images:` entry with that `name:` and a `digest: sha256:`,
+                     in a kustomization that reaches the file through
+                     resources, components, bases or patches (the form
+                     pin-rewrite.py maintains; the rendered reference is by
+                     digest).
   R4-allow-expired   an allowlist row is past its expiry date.
   R4-allow-invalid   an allowlist row is malformed.
 
 Allowlist: `.estate-ci/image-lint-allow.txt` in the repository, one row per
 exception, `<path glob> <image prefix> <YYYY-MM-DD expiry> <issue URL>`;
 `#` starts a comment. A row covers a finding when the file path matches the
-glob and the image starts with the prefix (both R4 rules). Expired rows fail
-the lint.
+glob and the image starts with the prefix (both R4 rules). The prefix `*`
+covers every image under the glob, for trees that are never applied (evidence
+captures, archives). Expired rows fail the lint.
 
 lint-workflows.py (the reusable lint.yml check) runs this with --tags=warn
 until TAG_ONLY_ENFORCE_FROM and with --tags from that date, so every caller
@@ -57,9 +64,9 @@ KEY = re.compile(r"^(\s*)(-\s+)?([A-Za-z_][\w.-]*)\s*:\s*(.*?)\s*$")
 
 
 class Finding:
-    def __init__(self, path, line, rule, msg, error=True, image=""):
+    def __init__(self, path, line, rule, msg, error=True, image="", kustomize=False):
         self.path, self.line, self.rule, self.msg, self.error = path, line, rule, msg, error
-        self.image = image
+        self.image, self.kustomize = image, kustomize
 
     def __str__(self):
         level = "error" if self.error else "warning"
@@ -141,7 +148,7 @@ def lint_text(path: str, text: str, tags: bool, tags_error: bool = True):
         if key == "image":
             if tags and value and not templated(value) and image_like(value) and DIGEST not in value:
                 findings.append(Finding(path, i + 1, "R4-tag-only", f"{value} has no @sha256 digest",
-                                        error=tags_error, image=value))
+                                        error=tags_error, image=value, kustomize=True))
             continue
         if key == "repository":
             # Helm values: repository + tag (+ optional digest) in one mapping.
@@ -200,7 +207,78 @@ def load_allow(root: Path, today: datetime.date):
 
 
 def allowed(rows, finding):
-    return any(fnmatch.fnmatch(finding.path, g) and finding.image.startswith(p) for g, p in rows)
+    return any(fnmatch.fnmatch(finding.path, g) and (p == "*" or finding.image.startswith(p)) for g, p in rows)
+
+
+KUSTOMIZATIONS = ("kustomization.yaml", "kustomization.yml")
+KUSTOMIZE_LISTS = ("resources", "components", "bases", "patchesStrategicMerge", "patches")
+SHA256 = re.compile(r"^sha256:[0-9a-f]{64}$")
+
+
+def read_kustomization(path: Path):
+    """(image names pinned by digest, local paths it reaches) of one kustomization file."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (UnicodeDecodeError, OSError):
+        return set(), []
+    pins, paths, top = set(), [], None
+    parsed = parse(lines)
+    for i, raw in enumerate(lines):
+        row = parsed[i]
+        if row is None:
+            continue
+        indent, _, key, value = row
+        if indent == 0 and key and not raw.startswith("-"):
+            top = key
+            continue
+        if top == "images" and key == "name":
+            sib = siblings(parsed, i)
+            digest = scalar(sib["digest"][1] or "") if "digest" in sib else ""
+            if SHA256.match(digest):
+                pins.add(scalar(value or ""))
+        elif top in KUSTOMIZE_LISTS:
+            entry = None
+            if key == "path":
+                entry = scalar(value or "")
+            elif key is None:
+                m = re.match(r"^\s*-\s+(\S.*?)\s*$", raw)
+                entry = scalar(m.group(1)) if m else None
+            if entry and "://" not in entry and not entry.startswith(("github.com/", "git@")):
+                paths.append(entry)
+    return pins, paths
+
+
+def kustomize_pins(root: Path, files):
+    """{file relative to root: image names a kustomization pins by digest for it}."""
+    dirs = {}
+    for f in files:
+        if f.name in KUSTOMIZATIONS:
+            dirs.setdefault(f.parent.resolve(), read_kustomization(f))
+    base = root.resolve()
+    cover = {}
+    for start, (own, _) in dirs.items():
+        if not own:
+            continue
+        seen, stack = set(), [start]
+        while stack:
+            d = stack.pop()
+            if d in seen or d not in dirs:
+                continue
+            seen.add(d)
+            for entry in dirs[d][1]:
+                target = (d / entry).resolve()
+                if base != target and base not in target.parents:
+                    continue
+                if target.is_dir():
+                    stack.append(target)
+                elif target.is_file():
+                    cover.setdefault(str(target.relative_to(base)), set()).update(own)
+    return cover
+
+
+def image_name(image: str) -> str:
+    head, sep, last = image.rpartition("/")
+    return head + sep + last.split(":", 1)[0]
 
 
 def collect(root: Path):
@@ -229,7 +307,9 @@ def lint_repo(root: Path, tags: bool = False, today: datetime.date | None = None
     today = today or datetime.date.today()
     rows, findings = load_allow(root, today)
     n = 0
-    for f in collect(root):
+    files = collect(root)
+    pinned = kustomize_pins(root, files) if tags else {}
+    for f in files:
         n += 1
         try:
             text = f.read_text(encoding="utf-8")
@@ -238,6 +318,8 @@ def lint_repo(root: Path, tags: bool = False, today: datetime.date | None = None
         rel = str(f.relative_to(root))
         for x in lint_text(rel, text, tags, tags_error):
             if x.rule in ("R4-pull-always", "R4-tag-only") and allowed(rows, x):
+                continue
+            if x.rule == "R4-tag-only" and x.kustomize and image_name(x.image) in pinned.get(rel, ()):
                 continue
             findings.append(x)
     return findings, n

@@ -1,0 +1,11 @@
+# A capture that is never applied; the allowlist row uses the * prefix.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: capture
+spec:
+  containers:
+    - name: a
+      image: alpine:3.20
+    - name: b
+      image: docker.io/library/busybox:1.36

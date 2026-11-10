@@ -1,0 +1,2 @@
+# path glob, image prefix, expiry, issue
+evidence/* * 2999-01-01 https://github.com/jvallery/estate-ci/issues/104
