@@ -37,3 +37,6 @@ ghcr.io/actions/gha-runner-scale-set-controller:0.14.2@sha256:1b4c7f62e971ab259a
 # the digest the Deployment pins today. The guardian and reconciler python image is
 # the 3.13.5-alpine3.22 row above.
 docker.io/ubuntu/squid:6.6-24.04_beta@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029  jvallery/estate-ci/mirror/docker.io/ubuntu/squid
+# verdify-www Dockerfile build and runtime stages (verdify-www#64): node 22.23.4 alpine
+# index, the digest node:22-alpine resolved to on 2026-11-09.
+docker.io/library/node:22.23.4-alpine@sha256:0e1754758c2df4cfa3e68d59e2e1b7374bb7fd9ea6328eaaacf15cc934af8202  jvallery/estate-ci/mirror/docker.io/library/node
