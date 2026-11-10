@@ -696,6 +696,13 @@ sets:
   # (zot principal ci-memoryos, storage-infra#1387).
   - repo: jvallery/memoryos
     profiles:
+      # estate-ci#5 / D-186: ci.yml "Kubernetes manifest validation" (ruby validators and
+      # kubectl kustomize, both in the toolbox) moves off ubuntu-latest as bare run: steps
+      # in the toolbox runner, no job sidecar. Required by ruleset 26894408 (estate-ci#112).
+      ci:
+        max: 2
+        runner_image: *toolbox
+        runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "4", limit_memory: 4Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2

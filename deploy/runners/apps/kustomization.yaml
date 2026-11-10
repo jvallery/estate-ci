@@ -29,6 +29,7 @@ resources:
 - kepler-ci.yaml
 - memoryos-build.yaml
 - memoryos-buildcheck.yaml
+- memoryos-ci.yaml
 - monitoring-stack-build.yaml
 - monitoring-stack-ci-gate.yaml
 - monitoring-stack-ci.yaml
