@@ -24,6 +24,16 @@ if [ -d /opt/estate-ci-tools/bin ]; then PATH="${PATH}:/opt/estate-ci-tools/bin"
 # A root sidecar (kaniko) would leave its exchange dir root:root 0755, so the
 # runner (uid 1001) could not drop requests into it. Hand it to the runner.
 if [ "$(id -u)" = 0 ]; then chown "${CI_RUNNER_UID:-1001}:${CI_RUNNER_UID:-1001}" "$ex"; fi
+# A job sidecar running as another uid (job_uid, e.g. renovate's 12021) would
+# leave it <uid>:<fsGroup> 0755 under the default umask, so the runner could not
+# mkdir its request dir (estate-ci#110: "mkdir: cannot create directory
+# /exchange/job/<id>: Permission denied"). Every container carries the Pod
+# fsGroup (the runner gid) as a supplemental group, so hand the directory to
+# that group and make it group-writable (setgid keeps new entries in it).
+if [ "$(id -u)" != 0 ] && [ "$(id -u)" != "${CI_RUNNER_UID:-1001}" ]; then
+  chgrp "${CI_RUNNER_UID:-1001}" "$ex" 2>/dev/null || true
+  chmod 2770 "$ex"
+fi
 : > "$ex/.alive"
 echo "estate-ci sidecar agent '${name}' watching ${ex}"
 while :; do
