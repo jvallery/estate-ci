@@ -32,8 +32,10 @@
 # (deploy/foundation/quota.yaml) is the hard envelope across all sets.
 defaults:
   # estate-ci-toolbox (ADR-0004, estate-ci#16; images/estate-ci-toolbox), built
-  # in-cluster by build.yml on main 11c064f3 (tag gha-11c064f31332; helm v3.22.1). FROM the
-  # stock runner (uid 1001), so it serves as runner_image and as job_image.
+  # in-cluster by build.yml on every push to main that changes it. build.yml's pin
+  # job is the only writer of this digest (STD-CI-13, D-273): it opens the pin PR
+  # (commit trailer Estate-CI-Source names the built commit). FROM the stock
+  # runner (uid 1001), so it serves as runner_image and as job_image.
   toolbox: &toolbox registry.vallery.net/jvallery/estate-ci/toolbox@sha256:e130c841bad833b34a19c6dc39ecfbae13a87553591cfe569c70aaf240850554
   chart_version: 0.14.2
   controller_service_account: {namespace: arc-systems, name: arc-gha-rs-controller}
@@ -126,8 +128,9 @@ sets:
   # Native steps -> profiles: lint-unit and manifests -> research-vault-ci,
   # postgres -> research-vault-pg (2 shards, run one at a time), vault-server and
   # vault-ci images -> research-vault-build. Every job runs in the vault-ci job
-  # image: the GHA Kaniko build of Dockerfile.ci at research-vault 29277aac
-  # (tag gha-29277aace592, build run 42254218463), which carries Chromium and
+  # image: the GHA Kaniko build of Dockerfile.ci at research-vault 691b7b87
+  # (#263: Debian security fixes, Go-patched gitleaks, pip dropped; build run
+  # 42337736988; estate-ci#114), which carries Chromium and
   # RV_BROWSER so the lint job runs the web browser specs (research-vault#209).
   # The pg sidecar is the production CNPG image (PostgreSQL 16.15 + pgvector
   # 0.8.7), the same digest as research-vault deploy/k8s/database/cluster.yaml.
@@ -144,7 +147,7 @@ sets:
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 12 -> 16 (queue p90 7.5 min, busy hit 12).
         # D-87 hold absorb (CI-BALANCE, COORD 2026-11-07): node6 hold +4 vCPU -> 16 -> 18.
         max: 18
-        job_image: registry.vallery.net/jvallery/vault-ci@sha256:afedf20188449a65eb77b1299ae61b40285d89996c9aef04524cfe567aaab009
+        job_image: registry.vallery.net/jvallery/vault-ci@sha256:5aa9ce134834104c594e2dd0883c3a8443534eee9659b3cb59022a153be14412
         job_uid: 1001
         # COORD 2026-11-06 ~20:0xZ (Jason: accelerate RV2 CI): 'unit' took 30-36 min
         # pinned at ~1 core under limit 2 / 4Gi. Was 500m / 768Mi req, 2 / 4Gi lim.
@@ -158,7 +161,7 @@ sets:
         # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 9 -> 12 (running+pending hit 9; queue p90 7.5 min).
         max: 12
-        job_image: registry.vallery.net/jvallery/vault-ci@sha256:afedf20188449a65eb77b1299ae61b40285d89996c9aef04524cfe567aaab009
+        job_image: registry.vallery.net/jvallery/vault-ci@sha256:5aa9ce134834104c594e2dd0883c3a8443534eee9659b3cb59022a153be14412
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.74 CPU, 2026-11-06T12Z..11-10T00Z (800m -> 750m); limits unchanged.
@@ -185,7 +188,7 @@ sets:
         # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 6 -> 5 (donor: 24 h peak busy 1, peak pods 2-3).
         max: 5
         runner_image: *toolbox
-        job_image: docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
+        job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 250m); limits unchanged.
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
@@ -349,8 +352,9 @@ sets:
         # ARC-RAISE rebalance 2 (Jason via COORD 2026-11-07 00:35Z, zero-sum): 15 -> 12 (donor: listener busy peak 6 since 21:46Z).
         # COORD P0 fair share 2026-11-07 05:08Z (CI-BALANCE): 12 -> 6 until the infra backlog drains, then back to 12.
         max: 6
-        # python:3.13-bookworm (3.13.18, 2026-11-05 bookworm updates: perl/brotli/imagemagick/linux-libc-dev criticals).
-        job_image: mirror.gcr.io/library/python@sha256:cc55e4ded9c95f6ce2133b3d096db43f214d280c2a8af65d83e246c8fa7d168c
+        # python:3.13-bookworm (3.13.18, 2026-11-05 bookworm updates: perl/brotli/imagemagick/linux-libc-dev criticals),
+        # mirrored by mirrors.txt (same index digest as docker.io/library/python).
+        job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:cc55e4ded9c95f6ce2133b3d096db43f214d280c2a8af65d83e246c8fa7d168c
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.76 CPU, 2026-11-06T12Z..11-10T00Z (950m -> 800m); limits unchanged.
@@ -480,7 +484,7 @@ sets:
     profiles:
       ci:
         max: 2
-        job_image: docker.io/library/python:3.13-slim@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc
+        job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.14 CPU, 2026-11-06T12Z..11-10T00Z (150m -> 250m); limits unchanged.
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
