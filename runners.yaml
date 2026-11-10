@@ -288,9 +288,10 @@ sets:
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 1.73 CPU, 2026-11-06T12Z..11-10T00Z (2150m -> 1750m); limits unchanged.
         job_resources: {cpu: 1750m, memory: 1536Mi, limit_cpu: "8", limit_memory: 8Gi}
-      # BUILD-APPS (D-22): the 5 homeassistant-* images (two CI images, teslamate,
-      # mosquitto, vehicle-journal) with zot principal ci-homeassistant (ACL
-      # storage-infra#1387) via Secret ci-runners/zot-push-homeassistant.
+      # BUILD-APPS (D-22): the homeassistant-* images listed in homeassistant
+      # scripts/ci/build/images.tsv (2026-11-10: the two CI images, teslamate and
+      # mosquitto) with zot principal ci-homeassistant (ACL storage-infra#1387)
+      # via Secret ci-runners/zot-push-homeassistant.
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
