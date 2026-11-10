@@ -100,8 +100,8 @@ the same.
    the per-node reserve is enforced at runtime (estate-ci#69, 2026-11-10,
    after node4/5/7 reached 1.02 of allocatable within 4 h of #160): the hot
    guard's reserve tier (`hot-guard-config.json` `reserve`) writes
-   `cap=16` into `ci-runner-slot-hold` for any of node4-7 whose CPU busy /
-   allocatable stays above 0.92 (D-502 (b), Jason 2026-11-10; was cap 10 at 0.85) for 2 minutes, so the slot advertiser offers
+   `cap=10` into `ci-runner-slot-hold` for any of node4-7 whose CPU busy /
+   allocatable stays above 0.92 (D-502 (b) trip-threshold half, Jason 2026-11-10; was 0.85. A cap of 16 at 0.92 never limited node6 and its kubelet stalled, estate-ci#177) for 2 minutes, so the slot advertiser offers
    min(desired, 10) there and new runners go to other workers or queue in
    GitHub. Nothing is evicted; the cap drops once the 10-minute maximum is
    below 0.85. A failed or empty reserve query writes nothing, so a
