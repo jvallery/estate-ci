@@ -24,6 +24,17 @@ lose to Frigate, but node CPU alone must not kill in-flight jobs):
   soft + calm    -> drop the cap once soft_recover holds (CPU max over 10 min
                     below 0.75). The reconciler then restores the desired slots.
 
+Per-node reserve (estate-ci#69, D-486: runners may fill a worker to 95% of
+allocatable). The quota bounds runner requests only in aggregate, so for each
+node in config `reserve.nodes` (node4-7) the guard also reads that node's CPU
+busy ratio. Above `reserve.trip` it writes "cap=<reserve.cap> ... reserve:..."
+under the node, so the slot advertiser offers min(desired, cap) there and no
+new runner lands until the node calms; nothing is evicted, and in-flight jobs
+finish. The cap drops once `reserve.recover` holds. An empty or failed
+reserve query changes nothing (CI on node4-7 does not stop because Prometheus
+is down); a Prometheus error still makes the run exit 1. The guard never
+touches a hold value it did not write as a reserve cap.
+
 The guard has no node permission. It writes only its own ConfigMap and
 evicts only Pods that carry the estate-ci.vallery.net/profile label in
 ci-runners. GUARD_MODE=dry-run does every API write with dryRun=All.
@@ -123,6 +134,29 @@ def decide(now: dt.datetime, tripped: list[str], missing: list[str], hold: dict 
     if recovered:
         return {"hold": "clear", "evict": False, "reason": "soft-recovered"}
     return {"hold": "keep", "evict": False, "reason": "soft-capped"}
+
+
+RESERVE_TAG = " reserve:"
+
+
+def reserve_decide(busy: float | None, calm: float | None, reason: str | None, trip: dict, recover: dict) -> str:
+    """Per-node reserve decision: "set", "clear", "keep" (no write) or "foreign" (a hold this
+    tier did not write; leave it alone). busy/calm are the trip/recover signal values."""
+    text = (reason or "").strip()
+    if text and RESERVE_TAG not in " " + text:
+        return "foreign"
+    held = bool(text)
+    if busy is None or calm is None:
+        return "keep"
+    if evaluate({"t": trip}, {"t": busy})[0]:
+        return "keep" if held else "set"
+    if held and evaluate({"r": recover}, {"r": calm})[0]:
+        return "clear"
+    return "keep"
+
+
+def reserve_query(template: str, node: str) -> str:
+    return template.replace("$NODE", node)
 
 
 def newest_first(pods: list[dict], node: str) -> list[dict]:
@@ -337,6 +371,57 @@ def main() -> int:
     except (urllib.error.URLError, OSError, ValueError, KeyError) as err:
         log["errors"].append("kube:%s" % type(err).__name__)
         rc = 1
+    res = cfg.get("reserve")
+    if res:
+        reserve_log = {}
+        try:
+            cm = kube("/api/v1/namespaces/%s/configmaps/%s" % (NAMESPACE, HOLD_CM))
+        except urllib.error.HTTPError as err:
+            cm = None
+            if err.code != 404:
+                log["errors"].append("kube:reserve:http%d" % err.code)
+                rc = 1
+                res = None
+        except (urllib.error.URLError, OSError, ValueError) as err:
+            log["errors"].append("kube:reserve:%s" % type(err).__name__)
+            rc, res = 1, None
+        for rnode in (res or {}).get("nodes", []):
+            got = {}
+            for key in ("trip", "recover"):
+                try:
+                    got[key] = prom_scalar(cfg["prometheus_url"], reserve_query(res[key]["query"], rnode))
+                except (urllib.error.URLError, OSError, ValueError, KeyError, GuardError) as err:
+                    prom_failed = True
+                    got[key] = None
+                    log["errors"].append("prometheus:reserve:%s:%s:%s" % (rnode, key, type(err).__name__))
+            reason = ((cm or {}).get("data") or {}).get(rnode)
+            action = reserve_decide(got["trip"], got["recover"], reason, res["trip"], res["recover"])
+            reserve_log[rnode] = {"busy": got["trip"], "calm": got["recover"], "action": action}
+            if action not in ("set", "clear"):
+                continue
+            value = ("cap=%d %s%sbusy>%g" % (int(res["cap"]), iso(now), RESERVE_TAG, res["trip"]["threshold"])
+                     if action == "set" else None)
+            try:
+                if cm is None:
+                    cm = {"metadata": {"annotations": {}}, "data": {}}
+                    kube("/api/v1/namespaces/%s/configmaps" % NAMESPACE, "POST",
+                         {"apiVersion": "v1", "kind": "ConfigMap",
+                          "metadata": {"name": HOLD_CM, "namespace": NAMESPACE,
+                                       "labels": {"app.kubernetes.io/name": "ci-runner-hot-guard",
+                                                  "app.kubernetes.io/part-of": "estate-ci"}},
+                          "data": {rnode: value}}, dry_run=dry)
+                else:
+                    kube("/api/v1/namespaces/%s/configmaps/%s" % (NAMESPACE, HOLD_CM), "PATCH",
+                         {"metadata": {"annotations": {}}, "data": {rnode: value}},
+                         content_type="application/merge-patch+json", dry_run=dry)
+                if value is None:
+                    (cm.get("data") or {}).pop(rnode, None)
+                else:
+                    cm.setdefault("data", {})[rnode] = value
+            except (urllib.error.URLError, OSError, ValueError, KeyError) as err:
+                log["errors"].append("kube:reserve:%s:%s" % (rnode, type(err).__name__))
+                rc = 1
+        log["reserve"] = reserve_log
     if prom_failed:
         rc = 1
     print(json.dumps(log, sort_keys=True), flush=True)
