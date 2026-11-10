@@ -48,6 +48,7 @@ resources:
 - storage-infra-buildcheck.yaml
 - storage-infra-ci.yaml
 - sunshine-club-ci.yaml
+- vallery-family-ci.yaml
 - verdify-platform-build.yaml
 - verdify-platform-ci-dashboard.yaml
 - verdify-platform-ci-esphome.yaml
