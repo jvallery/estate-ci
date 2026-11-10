@@ -33,7 +33,7 @@
   },
   "reserve": {
     "nodes": ["vm-k3s-node4", "vm-k3s-node5", "vm-k3s-node6", "vm-k3s-node7"],
-    "cap": 16,
+    "cap": 10,
     "trip": {
       "op": ">", "threshold": 0.92,
       "query": "min_over_time((sum(rate(node_cpu_seconds_total{nodename=\"$NODE\",mode!~\"idle|iowait|steal\"}[2m])) / max(kube_node_status_allocatable{node=\"$NODE\",resource=\"cpu\"}))[2m:30s])"
