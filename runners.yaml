@@ -772,3 +772,11 @@ sets:
         job_image: *toolbox
         job_uid: 1001
         job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "4", limit_memory: 2Gi}
+      # estate-platform#48: the retained control-plane images (argocd,
+      # cnpg-bootstrap-timeline, cnpg-barman-ha; estate-platform ci/images.tsv) build
+      # here into jvallery/estate-platform/**. Mounts ci-runners/zot-push-estate-platform
+      # (principal ci-estate-platform, storage-infra ACL). Sizes as agents-build (the
+      # argocd and CNPG Go builds). No buildcheck set: these never built on PRs.
+      build:
+        max: 1
+        kaniko_resources: {cpu: 1400m, memory: 2304Mi, limit_cpu: "8", limit_memory: 12Gi}

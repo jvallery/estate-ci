@@ -1,4 +1,5 @@
-# estate-ci's own image: estate-ci-toolbox (images/estate-ci-toolbox).
+# estate-ci's own images: estate-ci-toolbox (images/estate-ci-toolbox) and
+# ci-tools (images/ci-tools, moved from jvallery/agents by estate-platform#48).
 # PRs build it without push on estate-ci-buildcheck. The push to
 # registry.vallery.net/jvallery/estate-ci/toolbox runs on estate-ci-build by
 # dispatch on main until the estate-ci zot writer (zot-push-estate-ci) is live;
@@ -8,8 +9,14 @@ name: build
 
 on:
   pull_request:
-    paths: [images/estate-ci-toolbox/**, .github/workflows/build.yml]
+    paths: [images/estate-ci-toolbox/**, images/ci-tools/**, .github/workflows/build.yml]
   workflow_dispatch:
+    inputs:
+      image:
+        description: Which image to build and push (toolbox, ci-tools or all)
+        type: choice
+        options: [all, toolbox, ci-tools]
+        default: all
 
 permissions:
   contents: read
@@ -20,10 +27,21 @@ concurrency:
 
 jobs:
   toolbox:
+    if: github.event_name != 'workflow_dispatch' || inputs.image != 'ci-tools'
     uses: ./.github/workflows/image-build.yml
     with:
       image: jvallery/estate-ci/toolbox
       context: images/estate-ci-toolbox
       dockerfile: images/estate-ci-toolbox/Dockerfile
+      push: ${{ github.event_name == 'workflow_dispatch' }}
+      timeout-minutes: 60
+
+  ci-tools:
+    if: github.event_name != 'workflow_dispatch' || inputs.image != 'toolbox'
+    uses: ./.github/workflows/image-build.yml
+    with:
+      image: jvallery/estate-ci/ci-tools
+      context: images/ci-tools
+      dockerfile: images/ci-tools/Dockerfile
       push: ${{ github.event_name == 'workflow_dispatch' }}
       timeout-minutes: 60
