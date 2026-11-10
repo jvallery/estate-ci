@@ -333,8 +333,8 @@ sets:
   #                  path-impact, validate, lint, build.yml impact
   #   -ci-tools      estate-ci/ci-tools (uv, verdify-campaign-ci with its private PG16):
   #                  platform-static/-tests, campaign-qualification, firmware-logic, campaign
-  #   -ci-esphome    ESPHome 2026.6.5, mirrored into zot by mirrors.txt (index digest
-  #                  unchanged): firmware-secretless-compile
+  #   -ci-esphome    verdifyconsultancy/verdify-esphome-ci (ESPHome + baked PlatformIO
+  #                  toolchain, verdify-platform#1535): firmware-secretless-compile
   #   -ci-dashboard  weather-ci (node, pnpm, Playwright): dashboard
   #   -build         Kaniko; mounts zot-push-verdify-platform (ci-verdify-platform,
   #                  writes verdifyconsultancy/verdify-* only; registry paths unchanged)
@@ -388,7 +388,9 @@ sets:
         # COORD/DASH 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 1 -> 2.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (at max 89%; queue p90 65 min / 24h).
         max: 3
-        job_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/esphome/esphome@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c
+        # verdify-platform#1535: baked ESPHome CI image (PlatformIO core + toolchain inside, built by
+        # verdify-platform build.yml esphome-ci profile, gha-c962f188dad8, run 42838703363).
+        job_image: registry.vallery.net/verdifyconsultancy/verdify-esphome-ci@sha256:288643bd5b25a534ba22205062c5c87b2acec6c8913806e6768f09111d54cc70
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 1.90 CPU, 2026-11-06T12Z..11-10T00Z (2000m -> 1950m); limits unchanged.
