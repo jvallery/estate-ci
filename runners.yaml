@@ -211,6 +211,10 @@ sets:
         max: 2
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (250m -> 350m); limits unchanged.
         kaniko_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
+      # docs#114: PR image builds (push: false, no zot credential) for docs-portal,
+      # docs-kiwix and docs-kolibri; same Kaniko size as docs-build, default max 1.
+      buildcheck:
+        kaniko_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/options-tracker
     profiles:
       ci:

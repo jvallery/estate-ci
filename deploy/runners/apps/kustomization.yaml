@@ -11,6 +11,7 @@ resources:
 - cortex-ai-compute-ci.yaml
 - crm-ci.yaml
 - docs-build.yaml
+- docs-buildcheck.yaml
 - docs-ci.yaml
 - estate-ci-build.yaml
 - estate-ci-buildcheck.yaml
