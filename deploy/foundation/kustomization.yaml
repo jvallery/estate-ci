@@ -7,6 +7,7 @@ resources:
   - networkpolicies.yaml
   - hold-reader.yaml
   - hot-guard.yaml
+  - runner-slots.yaml
   # Rendered by scripts/render_runners.py from runners.yaml ops sets.
   - ops-egress.generated.yaml
 generatorOptions:
@@ -42,3 +43,7 @@ configMapGenerator:
   - name: ci-runner-hot-guard-config
     files:
       - hot-guard-config.json
+  # Runner-slot advertiser (estate-ci#76): script for CronJob ci-runner-slots (runner-slots.yaml).
+  - name: ci-runner-slots-advertiser
+    files:
+      - bin/runner-slots.py

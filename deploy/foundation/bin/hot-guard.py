@@ -9,7 +9,7 @@ lose to Frigate, but node CPU alone must not kill in-flight jobs):
 
   HARD trip      -> (Frigate degraded or restarted, node memory) write a reason
                     under the node name in ConfigMap ci-runner-slot-hold, so the
-                    agents arc-validation-pool reconciler advertises 0
+                    slot advertiser (CronJob ci-runner-slots) advertises 0
                     agentfleet.vallery.net/ci-runner-slot on the node within
                     about a minute (no new runners land). If the previous run
                     had already recorded a HARD trip (confirmed), also evict up
@@ -17,12 +17,12 @@ lose to Frigate, but node CPU alone must not kill in-flight jobs):
                     each later run evicts more while the trip holds.
   signal missing -> hold the node at 0 (fail closed) but evict nothing.
   SOFT trip      -> (node CPU, Frigate clean) write "cap=<soft_cap> ..." so the
-                    reconciler advertises min(desired, soft_cap). Nothing is
+                    advertiser sets min(desired, soft_cap). Nothing is
                     evicted; runners drain as their jobs finish.
   hard + clean   -> once no trip has been seen for clean_seconds, drop the hold
                     (or step down to the soft cap if the soft signal still trips).
   soft + calm    -> drop the cap once soft_recover holds (CPU max over 10 min
-                    below 0.75). The reconciler then restores the desired slots.
+                    below 0.75). The advertiser then restores the desired slots.
 
 Per-node reserve (estate-ci#69, D-486: runners may fill a worker to 95% of
 allocatable). The quota bounds runner requests only in aggregate, so for each

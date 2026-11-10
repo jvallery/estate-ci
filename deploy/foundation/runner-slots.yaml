@@ -1,0 +1,183 @@
+# Runner-slot advertiser (estate-ci#76; D-67, D-87, D-168; STD-CI-10, ADR-0010).
+#
+# Every estate-ci runner Pod requests one agentfleet.vallery.net/ci-runner-slot, the
+# per-node runner cap. This CronJob (bin/runner-slots.py) applies the values in
+# ConfigMap ci-runner-slots to each node's status every minute, lowered by the node8
+# hot guard's ConfigMap ci-runner-slot-hold (a plain hold advertises 0, "cap=N ..."
+# advertises min(desired, N)). It replaces the ci-runner-slot path of the
+# jvallery/agents arc-validation-pool reconciler (ConfigMap
+# github-runner-ops/ci-runner-slots), which keeps only the legacy arc-validation-slot
+# until the github-runners sets retire.
+#
+# Cutover (estate-ci#76): this file goes live with the same values the agents
+# ConfigMap holds, so the first run only takes field ownership (server-side apply,
+# fieldManager estate-ci-runner-slots) and the advertised slot never changes. The
+# agents writer is removed afterwards through the agents merge train.
+#
+# Least privilege: the ClusterRole grants nodes get/list and nodes/status patch only
+# (no nodes update/patch, no labels, no Pods). It needs AppProject estate-ci to allow
+# exactly this ClusterRole and ClusterRoleBinding by name (jvallery/agents
+# platform/gitops/projects/estate-ci.yaml).
+#
+# Operate:
+#   values:    edit the ConfigMap below (PR); STD-CI-10 fixes node4-7 20, node8 4,
+#              node1-3 0, so any change is a new decision.
+#   log:       kubectl -n ci-runners logs job/<latest ci-runner-slots job>
+#   readback:  kubectl get nodes -o custom-columns='NAME:.metadata.name,CAP:.status.capacity.agentfleet\.vallery\.net/ci-runner-slot,ALLOC:.status.allocatable.agentfleet\.vallery\.net/ci-runner-slot'
+#   run now:   kubectl -n ci-runners create job --from=cronjob/ci-runner-slots ci-runner-slots-manual-$(date +%s)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ci-runner-slots
+  labels: {app.kubernetes.io/name: ci-runner-slots, app.kubernetes.io/part-of: estate-ci}
+data:
+  # node name -> slots. node1..3 MUST stay 0 (the script also refuses anything else).
+  vm-k3s-node1: "0"
+  vm-k3s-node2: "0"
+  vm-k3s-node3: "0"
+  vm-k3s-node4: "20"
+  vm-k3s-node5: "20"
+  vm-k3s-node6: "20"
+  vm-k3s-node7: "20"
+  # node8 is the Frigate node (dedicated=frigate): 4 (D-168, COORD 2026-11-08T14:54:45Z).
+  vm-k3s-node8: "4"
+---
+# Written only by the node8 hot guard (bin/hot-guard.py, merge patch of data and
+# annotations). Declared here so the object is owned in Git; Git sets no data, and
+# the server-side diff keeps the guard's fields out of the comparison.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ci-runner-slot-hold
+  labels: {app.kubernetes.io/name: ci-runner-hot-guard, app.kubernetes.io/part-of: estate-ci}
+  annotations:
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ci-runner-slots
+  labels: {app.kubernetes.io/name: ci-runner-slots, app.kubernetes.io/part-of: estate-ci}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: estate-ci-runner-slots
+  labels: {app.kubernetes.io/name: ci-runner-slots, app.kubernetes.io/part-of: estate-ci}
+rules:
+  - apiGroups: [""]
+    resources: [nodes]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [nodes/status]
+    verbs: [patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: estate-ci-runner-slots
+  labels: {app.kubernetes.io/name: ci-runner-slots, app.kubernetes.io/part-of: estate-ci}
+subjects:
+  - kind: ServiceAccount
+    name: ci-runner-slots
+    namespace: ci-runners
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: estate-ci-runner-slots}
+---
+# ci-runners is default-deny: DNS and the Kubernetes API only.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: runner-slots-egress
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/name: ci-runner-slots}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+          podSelector:
+            matchLabels: {k8s-app: kube-dns}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    # kube-router may enforce before or after Service DNAT: the API Service and
+    # the three control-plane endpoints.
+    - to:
+        - ipBlock: {cidr: 10.43.0.1/32}
+        - ipBlock: {cidr: 192.168.30.31/32}
+        - ipBlock: {cidr: 192.168.30.32/32}
+        - ipBlock: {cidr: 192.168.30.33/32}
+      ports:
+        - {protocol: TCP, port: 443}
+        - {protocol: TCP, port: 6443}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ci-runner-slots
+  labels: {app.kubernetes.io/name: ci-runner-slots, app.kubernetes.io/part-of: estate-ci}
+spec:
+  # Every minute: slot values drop back to absent on a kubelet restart, and a hot
+  # guard hold must close node8 within about a minute. Each run is a few node GETs;
+  # it writes only on drift or to take ownership.
+  schedule: "* * * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 50
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels: {app.kubernetes.io/name: ci-runner-slots, app.kubernetes.io/part-of: estate-ci}
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 55
+      ttlSecondsAfterFinished: 600
+      template:
+        metadata:
+          # No estate-ci.vallery.net/profile label: not a runner (no runner NetworkPolicy).
+          labels: {app.kubernetes.io/name: ci-runner-slots, app.kubernetes.io/part-of: estate-ci}
+        spec:
+          serviceAccountName: ci-runner-slots
+          automountServiceAccountToken: true
+          enableServiceLinks: false
+          restartPolicy: Never
+          priorityClassName: estate-default
+          imagePullSecrets: [{name: zot-pull}]
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            runAsGroup: 1001
+            seccompProfile: {type: RuntimeDefault}
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - {key: kubernetes.io/hostname, operator: NotIn, values: [vm-k3s-node8]}
+          containers:
+            - name: advertiser
+              # Same small stdlib python as the hot guard (layers cached on the workers):
+              # docker.io/library/python:3.13.5-alpine3.22 from the origin (mirrors.txt).
+              image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:37b14db89f587f9eaa890e4a442a3fe55db452b69cca1403cc730bd0fbdc8aaf
+              imagePullPolicy: IfNotPresent
+              command: [python3, /opt/runner-slots/runner-slots.py]
+              env:
+                - {name: DESIRED_DIR, value: /etc/ci-runner-slots}
+              resources:
+                requests: {cpu: 50m, memory: 64Mi, ephemeral-storage: 16Mi}
+                limits: {cpu: 250m, memory: 128Mi, ephemeral-storage: 64Mi}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: {drop: [ALL]}
+              volumeMounts:
+                - {name: source, mountPath: /opt/runner-slots, readOnly: true}
+                - {name: desired, mountPath: /etc/ci-runner-slots, readOnly: true}
+          volumes:
+            - name: source
+              configMap: {name: ci-runner-slots-advertiser, defaultMode: 0555}
+            - name: desired
+              configMap: {name: ci-runner-slots, defaultMode: 0444}

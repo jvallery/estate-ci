@@ -46,9 +46,11 @@ per-repo migration runbook. Read `README.md` and `docs/MIGRATION-RUNBOOK.md`.
   live headroom on the runner workers, and record the change in its header.
 - NetworkPolicy changes here are edge writes: syncing them takes
   `EDGE-WRITE.lock` (estate L11).
-- The ARC controller and the ARC foundation (`arc-runner-foundation`, which
-  advertises `ci-runner-slot`) are still delivered from jvallery/agents; they
-  are planned to move here (estate-ci#76). The Argo Applications and AppProjects
+- `ci-runner-slot` is advertised from here (CronJob `ci-runner-slots`,
+  `deploy/foundation/runner-slots.yaml`; values fixed by STD-CI-10). The ARC
+  controller and the rest of the ARC foundation (`arc-runner-foundation`) are
+  still delivered from jvallery/agents; they are planned to move here
+  (estate-ci#76). The Argo Applications and AppProjects
   for this repo are declared in jvallery/agents and are planned to move to
   jvallery/estate-platform.
 
