@@ -22,6 +22,7 @@ resources:
 - estate-platform-ci.yaml
 - home-dotfiles-ci.yaml
 - homeassistant-build.yaml
+- homeassistant-buildcheck.yaml
 - homeassistant-ci-esphome.yaml
 - homeassistant-ci-ha.yaml
 - homeassistant-ci.yaml
