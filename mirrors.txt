@@ -1,6 +1,7 @@
 # estate-ci image mirrors (estate-ci#6). Copied byte-for-byte into the zot origin by
 # .github/workflows/mirror-images.yml (reusable mirror.yml, deploy/foundation/bin/mirror.sh)
-# when it is dispatched on main; PRs that touch this file only validate it.
+# on a push to main that changes this file (or on dispatch); PRs that touch this file only
+# validate it.
 # Format: <upstream-ref>@sha256:<digest>  <dest-repository under jvallery/estate-ci/>
 # Pin as registry.vallery.net/<dest-repository>@<same digest>.
 #

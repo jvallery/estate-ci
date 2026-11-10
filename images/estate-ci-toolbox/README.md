@@ -7,8 +7,8 @@ AI_presentation) and as the `job` sidecar image for repositories without their
 own CI image. It replaces the fleet `agents-arc-runner-toolbox`
 and removes the need for `actions/setup-*` (R2). Secret-free; built in-cluster
 by `.github/workflows/build.yml` (Kaniko on `estate-ci-buildcheck` for PRs,
-`estate-ci-build` with push when the workflow is dispatched on `main`; there
-is no push trigger) and published as
+`estate-ci-build` with push on a push to `main` that changes this directory, or
+on dispatch; its `pin` job then opens the digest pin PR) and published as
 `registry.vallery.net/jvallery/estate-ci/toolbox@sha256:<digest>`.
 
 | Tool | Version | Source and check |
