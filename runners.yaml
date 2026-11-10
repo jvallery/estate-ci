@@ -48,7 +48,9 @@ defaults:
   # schedule ahead of app-repo runners (ci-preemptible, -1000). Neither preempts
   # anything; every production tier preempts both.
   infra_priority_class: ci-preemptible-infra
-  infra_repos: [jvallery/agents, jvallery/monitoring-stack, jvallery/storage-infra, jvallery/network-infra, jvallery/proxmox-infrastructure, jvallery/estate-ci, jvallery/sentinel, jvallery/homeassistant]
+  # Jason 2026-11-10 (RV2 OCR critical path: "CI is stuck again for cortex/RV2. Help those lanes"):
+  # cortex-ai-compute and research-vault join the infra tier.
+  infra_repos: [jvallery/agents, jvallery/monitoring-stack, jvallery/storage-infra, jvallery/network-infra, jvallery/proxmox-infrastructure, jvallery/estate-ci, jvallery/sentinel, jvallery/homeassistant, jvallery/cortex-ai-compute, jvallery/research-vault]
   max:
     ci: 3
     pg: 1
