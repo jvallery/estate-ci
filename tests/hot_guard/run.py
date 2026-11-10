@@ -77,8 +77,14 @@ check("reserve hot sets", rd(0.95, 0.95), "set")
 check("reserve at threshold does not set", rd(0.92, 0.95), "keep")
 check("reserve hot + held keeps", rd(0.95, 0.95, RHELD), "keep")
 check("reserve held, not calm keeps", rd(0.88, 0.88, RHELD), "keep")
-check("reserve held, calm clears", rd(0.5, 0.8, RHELD), "clear")
-check("reserve missing signal keeps", (rd(None, 0.5, RHELD), rd(0.95, None)), ("keep", "keep"))
+check("reserve recover below 0.75 over 30 min", (RES["recover"]["threshold"], "[30m:" in RES["recover"]["query"]), (0.75, True))
+check("reserve held, 0.8 is not calm", rd(0.5, 0.8, RHELD), "keep")
+check("reserve held, calm clears", rd(0.5, 0.7, RHELD), "clear")
+check("reserve empty signal is hot", (rd(None, 0.5, RHELD), rd(0.5, None), rd(None, 0.5)), ("keep", "set", "set"))
+rdc = lambda cov, reason=None, failed=False: g.reserve_decide(0.5, 0.5, reason, RES["trip"], RES["recover"], cov, RES["coverage"], failed)
+check("reserve partial samples are hot", (rdc(0.88), rdc(0.88, RHELD), rdc(None), rdc(0.97, RHELD)), ("set", "keep", "set", "clear"))
+check("reserve partial samples block a clear", g.reserve_decide(0.5, 0.5, RHELD, RES["trip"], RES["recover"], 0.9, RES["coverage"]), "keep")
+check("reserve failed query writes nothing", (rdc(None, failed=True), g.reserve_decide(None, None, RHELD, RES["trip"], RES["recover"], None, RES["coverage"], True)), ("keep", "keep"))
 check("reserve leaves a foreign hold", (rd(0.5, 0.5, "2026 trip:x"), rd(0.95, 0.95, "cap=4 2026 soft:x")), ("foreign", "foreign"))
 
 
@@ -135,9 +141,9 @@ g.wait_network = lambda base, budget: 0.0
 VALUES = dict(CALM)
 QUERIES = dict({n: s_["query"] for n, s_ in SIG.items()}, soft_recover=cfg["soft_recover"]["query"])
 for _n in cfg["reserve"]["nodes"]:
-    for _k in ("trip", "recover"):
+    for _k in ("trip", "recover", "coverage"):
         QUERIES["reserve_%s:%s" % (_k, _n)] = g.reserve_query(cfg["reserve"][_k]["query"], _n)
-        VALUES["reserve_%s:%s" % (_k, _n)] = 0.5
+        VALUES["reserve_%s:%s" % (_k, _n)] = 1.0 if _k == "coverage" else 0.5
 CALM = dict(VALUES)
 g.kube = fake_kube
 g.prom_scalar = lambda base, q: VALUES[[n for n, q_ in QUERIES.items() if q_ == q][0]]
@@ -181,14 +187,27 @@ check("reserve: node5 capped at 10, node6 hold kept, no eviction",
 VALUES["reserve_trip:vm-k3s-node5"] = 0.88
 check("reserve cooling rc", g.main(), 0)
 check("reserve: still capped while recover fails", state["cm"]["data"]["vm-k3s-node5"].split()[0], "cap=10")
-VALUES["reserve_trip:vm-k3s-node5"] = VALUES["reserve_recover:vm-k3s-node5"] = 0.5
+VALUES["reserve_trip:vm-k3s-node5"] = 0.5
+VALUES["reserve_recover:vm-k3s-node5"] = 0.8
+check("reserve not calm under 0.75 rc", g.main(), 0)
+check("reserve: still capped at recover 0.8", state["cm"]["data"]["vm-k3s-node5"].split()[0], "cap=10")
+VALUES["reserve_recover:vm-k3s-node5"] = 0.5
 check("reserve recover rc", g.main(), 0)
 check("reserve: cap dropped, foreign hold kept", state["cm"]["data"], {"vm-k3s-node6": "2026 trip:operator"})
 state["cm"]["data"] = {}
 _prom = g.prom_scalar
 g.prom_scalar = lambda base, q: None if "vm-k3s-node7" in q else _prom(base, q)
 check("reserve missing signal rc", g.main(), 0)
-check("reserve missing signal: no write", state["cm"]["data"], {})
+check("reserve missing signal: node7 capped as hot", (list(state["cm"]["data"]), state["cm"]["data"]["vm-k3s-node7"].split()[0]), (["vm-k3s-node7"], "cap=10"))
+state["cm"]["data"] = {}
+g.prom_scalar = lambda base, q: (_ for _ in ()).throw(urllib.error.URLError("x")) if "vm-k3s-node7" in q else _prom(base, q)
+check("reserve failed query rc", g.main(), 1)
+check("reserve failed query: no write", state["cm"]["data"], {})
+VALUES["reserve_coverage:vm-k3s-node6"] = 0.85
+check("reserve partial coverage rc", g.main() in (0, 1), True)
+check("reserve partial coverage: node6 capped", state["cm"]["data"].get("vm-k3s-node6", "").split()[:1], ["cap=10"])
+VALUES["reserve_coverage:vm-k3s-node6"] = 1.0
+state["cm"]["data"] = {}
 g.prom_scalar = _prom
 VALUES.update(CALM)
 g.prom_scalar = lambda base, q: (_ for _ in ()).throw(urllib.error.URLError("down"))

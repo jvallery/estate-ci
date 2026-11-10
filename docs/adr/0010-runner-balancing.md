@@ -103,9 +103,13 @@ the same.
    `cap=10` into `ci-runner-slot-hold` for any of node4-7 whose CPU busy /
    allocatable stays above 0.92 (D-502 (b) trip-threshold half, Jason 2026-11-10; was 0.85. A cap of 16 at 0.92 never limited node6 and its kubelet stalled, estate-ci#177) for 2 minutes, so the slot advertiser offers
    min(desired, 10) there and new runners go to other workers or queue in
-   GitHub. Nothing is evicted; the cap drops once the 10-minute maximum is
-   below 0.85. A failed or empty reserve query writes nothing, so a
-   Prometheus outage does not stop CI on node4-7.
+   GitHub. Nothing is evicted; the cap drops once the 30-minute maximum is
+   below 0.75 (2026-11-10: a 10-minute window below 0.85 cleared node6's cap
+   after one quiet window and its kubelet stalled when the runners refilled).
+   An empty reserve result, or node CPU sample coverage below 0.95 over 30
+   minutes, counts as hot, because a saturated node stalls its own telemetry.
+   A failed reserve query writes nothing, so a Prometheus outage does not
+   stop CI on node4-7.
    Lowering the quota below the 48 h peak of runner requests (124.9 CPU) means
    bursts queue in GitHub; at 98 no period can have every set at its
    `maxRunners`, so estate-ci#69's 7-day acceptance window needs that clause

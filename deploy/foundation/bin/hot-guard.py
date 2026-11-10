@@ -30,9 +30,12 @@ node in config `reserve.nodes` (node4-7) the guard also reads that node's CPU
 busy ratio. Above `reserve.trip` it writes "cap=<reserve.cap> ... reserve:..."
 under the node, so the slot advertiser offers min(desired, cap) there and no
 new runner lands until the node calms; nothing is evicted, and in-flight jobs
-finish. The cap drops once `reserve.recover` holds. An empty or failed
-reserve query changes nothing (CI on node4-7 does not stop because Prometheus
-is down); a Prometheus error still makes the run exit 1. The guard never
+finish. The cap drops once `reserve.recover` holds (max over 30 min below
+0.75). An empty reserve result, or `reserve.coverage` below its threshold (the
+node's own CPU samples are missing because it is saturated), counts as hot.
+A failed query (Prometheus unreachable) changes nothing, so CI on node4-7 does
+not stop because Prometheus is down; a Prometheus error still makes the run
+exit 1. The guard never
 touches a hold value it did not write as a reserve cap.
 
 The guard has no node permission. It writes only its own ConfigMap and
@@ -139,16 +142,24 @@ def decide(now: dt.datetime, tripped: list[str], missing: list[str], hold: dict 
 RESERVE_TAG = " reserve:"
 
 
-def reserve_decide(busy: float | None, calm: float | None, reason: str | None, trip: dict, recover: dict) -> str:
+def reserve_decide(busy: float | None, calm: float | None, reason: str | None, trip: dict, recover: dict,
+                   coverage: float | None = 1.0, cover: dict | None = None, failed: bool = False) -> str:
     """Per-node reserve decision: "set", "clear", "keep" (no write) or "foreign" (a hold this
-    tier did not write; leave it alone). busy/calm are the trip/recover signal values."""
+    tier did not write; leave it alone). busy/calm are the trip/recover signal values and
+    coverage the share of the node's expected CPU samples present over the recover window.
+
+    A query that raised (failed=True, Prometheus unreachable) writes nothing. An empty
+    trip/recover/coverage result or coverage below cover's threshold means the node's own
+    telemetry is stalling, which happens when the node is saturated (estate-ci#177 follow-up), so it
+    counts as hot: an unheld node is capped and a held node stays capped."""
     text = (reason or "").strip()
     if text and RESERVE_TAG not in " " + text:
         return "foreign"
     held = bool(text)
-    if busy is None or calm is None:
+    if failed:
         return "keep"
-    if evaluate({"t": trip}, {"t": busy})[0]:
+    partial = coverage is None or (cover is not None and evaluate({"c": cover}, {"c": coverage})[0])
+    if busy is None or calm is None or partial or evaluate({"t": trip}, {"t": busy})[0]:
         return "keep" if held else "set"
     if held and evaluate({"r": recover}, {"r": calm})[0]:
         return "clear"
@@ -386,17 +397,21 @@ def main() -> int:
             log["errors"].append("kube:reserve:%s" % type(err).__name__)
             rc, res = 1, None
         for rnode in (res or {}).get("nodes", []):
-            got = {}
-            for key in ("trip", "recover"):
+            got, failed = {"coverage": 1.0}, False
+            for key in ("trip", "recover", "coverage"):
+                if key not in res:
+                    continue
                 try:
                     got[key] = prom_scalar(cfg["prometheus_url"], reserve_query(res[key]["query"], rnode))
                 except (urllib.error.URLError, OSError, ValueError, KeyError, GuardError) as err:
-                    prom_failed = True
+                    prom_failed = failed = True
                     got[key] = None
                     log["errors"].append("prometheus:reserve:%s:%s:%s" % (rnode, key, type(err).__name__))
             reason = ((cm or {}).get("data") or {}).get(rnode)
-            action = reserve_decide(got["trip"], got["recover"], reason, res["trip"], res["recover"])
-            reserve_log[rnode] = {"busy": got["trip"], "calm": got["recover"], "action": action}
+            action = reserve_decide(got["trip"], got["recover"], reason, res["trip"], res["recover"],
+                                    got["coverage"], res.get("coverage"), failed)
+            reserve_log[rnode] = {"busy": got["trip"], "calm": got["recover"], "coverage": got["coverage"],
+                                  "action": action}
             if action not in ("set", "clear"):
                 continue
             value = ("cap=%d %s%sbusy>%g" % (int(res["cap"]), iso(now), RESERVE_TAG, res["trip"]["threshold"])

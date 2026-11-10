@@ -39,8 +39,12 @@
       "query": "min_over_time((sum(rate(node_cpu_seconds_total{nodename=\"$NODE\",mode!~\"idle|iowait|steal\"}[2m])) / max(kube_node_status_allocatable{node=\"$NODE\",resource=\"cpu\"}))[2m:30s])"
     },
     "recover": {
-      "op": "<", "threshold": 0.85,
-      "query": "max_over_time((sum(rate(node_cpu_seconds_total{nodename=\"$NODE\",mode!~\"idle|iowait|steal\"}[2m])) / max(kube_node_status_allocatable{node=\"$NODE\",resource=\"cpu\"}))[10m:30s])"
+      "op": "<", "threshold": 0.75,
+      "query": "max_over_time((sum(rate(node_cpu_seconds_total{nodename=\"$NODE\",mode!~\"idle|iowait|steal\"}[2m])) / max(kube_node_status_allocatable{node=\"$NODE\",resource=\"cpu\"}))[30m:30s])"
+    },
+    "coverage": {
+      "op": "<", "threshold": 0.95,
+      "query": "count_over_time(node_cpu_seconds_total{nodename=\"$NODE\",cpu=\"0\",mode=\"idle\"}[30m]) / 60"
     }
   }
 }
