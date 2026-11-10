@@ -29,3 +29,11 @@ docker.io/library/python:3.13.5-alpine3.22@sha256:37b14db89f587f9eaa890e4a442a3f
 docker.io/renovate/renovate:44.200.0@sha256:c63c97e566f98e976a0726e8cab7150b880b292affbf049db183561234d8f313  jvallery/estate-ci/mirror/docker.io/renovate/renovate
 # docs-kiwix base (docs#109): kiwix-serve, the digest jvallery/docs Dockerfile.kiwix pins today.
 ghcr.io/kiwix/kiwix-serve@sha256:e478554a9920412eeb5ce1d73f24e4b28445ebed233187cdd03c623c32be46a5  jvallery/estate-ci/mirror/ghcr.io/kiwix/kiwix-serve
+# ARC controller and listener image 0.14.2 (estate-ci#107): the index digest every
+# arc-systems container resolved live on 2026-11-10 (pod imageID). The chart
+# values in jvallery/agents github-runners-arc.yaml pin it from the origin next.
+ghcr.io/actions/gha-runner-scale-set-controller:0.14.2@sha256:1b4c7f62e971ab259a4b8798e48e2adaad4af747f45990f474ea5feefa03531d  jvallery/estate-ci/mirror/ghcr.io/actions/gha-runner-scale-set-controller
+# arc-pr-container-egress-proxy (github-runners, estate-ci#107): squid 6.6-24.04_beta,
+# the digest the Deployment pins today. The guardian and reconciler python image is
+# the 3.13.5-alpine3.22 row above.
+docker.io/ubuntu/squid:6.6-24.04_beta@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029  jvallery/estate-ci/mirror/docker.io/ubuntu/squid
