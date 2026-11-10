@@ -30,6 +30,7 @@ resources:
 - memoryos-build.yaml
 - memoryos-buildcheck.yaml
 - monitoring-stack-build.yaml
+- monitoring-stack-buildcheck.yaml
 - monitoring-stack-ci-gate.yaml
 - monitoring-stack-ci.yaml
 - network-infra-build.yaml
