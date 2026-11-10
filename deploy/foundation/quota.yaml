@@ -1,8 +1,16 @@
-# Hard envelope for every estate-ci runner Pod. Workers are memory-tight
-# (node4/5/7 at 92-95% of allocatable memory requested on 2026-11-06), so this
-# starts small for the pilot. Each repo cutover raises it by exactly what that
-# repo's native-ci budget (agent-fleet-ci-*) gives up: capacity moves, it is
-# never added. Target envelope after all cutovers: ~40 CPU / 64Gi requests.
+# Quotas for namespace ci-runners. Current state (2026-11-09, estate-ci#105):
+# native CI is retired (jvallery/agents#6254, D-141), so there is no native
+# budget to move capacity from. D-34/D-39 sized these quotas to every set at
+# maxRunners (sum + ~10%), and the COORD P0 of 2026-11-07 set the compute
+# envelope estate-ci-runner-pods to requests.cpu 215 (node4-8 allocatable
+# 5 x 43; node4-8 read 5 x 47 = 235 on 2026-11-09). Since estate-ci#69
+# (2026-11-09, D-486, D-488) its requests.cpu 98 is the per-worker CPU budget
+# again (ADR-0010 point 7; its dated block below); this object keeps the object
+# and ephemeral caps; estate-ci-ops budgets the hot guard.
+# Raise a value only with live headroom on the runner workers, and add a dated
+# block below. The blocks below are the history, oldest first; their
+# "native side" lines and the original pilot target (~40 CPU / 64Gi) are
+# superseded.
 apiVersion: v1
 kind: ResourceQuota
 metadata:

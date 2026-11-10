@@ -59,10 +59,24 @@ the same.
    slots are the hard limits.
 5. **One per-node cap, node8 the only exception.** Each runner Pod requests one
    `agentfleet.vallery.net/ci-runner-slot`. vm-k3s-node4..7 advertise the same
-   value (20); vm-k3s-node8 advertises 4, behind the hot guard (D-67), and
+   value (16 at D-87; 20 now, see the note below); vm-k3s-node8 advertises 8
+   (4 now), behind the hot guard (D-67), and
    prefers-away affinity keeps it the overflow node. Control-plane nodes
    advertise 0. No other node carries a runner-specific label, taint or cap.
    The slot is a backstop: with measured requests, CPU normally binds first.
+
+   *Superseding note (2026-11-09, estate-ci#105).* D-141 (Jason first-hand,
+   2026-11-07T21:06:45Z, "bump runner slots on all the worker nodes") raised
+   vm-k3s-node4..7 to 20. D-168 corrected vm-k3s-node8 back to its live 4
+   (Frigate node). Live `ci-runner-slot` allocatable read 2026-11-09:
+   node4 20, node5 20, node6 20, node7 20, node8 4, node1-3 0 (84 in all).
+   D-168 was first decided (c) (keep as is) and the 2026-11-09 sweep then
+   accepted its recommendation (a): cap vm-k3s-node5 (the GPU node that went
+   NotReady on 2026-11-07, cortex-ai-compute#549) at 6, keeping node4/6/7 at 20
+   and node8 at 4, with a follow-up on runner CPU limits. That cap is delivered
+   in ConfigMap `github-runner-ops/ci-runner-slots` (jvallery/agents, moving here
+   under estate-ci#76) and is not live yet; update these values in the same PR
+   that delivers it.
 6. **The quota is the overall envelope.** `deploy/foundation/quota.yaml`
    bounds requests across every set. The ResourceQuota admission plugin
    rejects a runner Pod create over it (403 "exceeded quota"); ARC 0.14.2
@@ -99,7 +113,7 @@ the same.
   about 10 on node8, about 80-90 CPU in all.
 - After this change the mean runner Pod requests about 1.35 CPU (range 0.2 to
   4), so the workers hold about 60 runners at once by CPU; the slot caps
-  (4 x 16 + 8 = 72 then; 4 x 20 + 4 = 84 from STD-CI-10) stay above that and
+  (4 x 16 + 8 = 72 then; 4 x 20 + 4 = 84 since D-141 and D-168, fixed by STD-CI-10) stay above that and
   only bind if requests drift low.
 - 2026-11-09 (estate-ci#69): allocatable 47 CPU per worker; non-runner requests
   node4 24, node5 18, node6 22.5, node7 27, node8 27.5 CPU; runner budget
