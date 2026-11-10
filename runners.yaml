@@ -596,6 +596,11 @@ sets:
         max: 2
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.17 CPU, 2026-11-06T12Z..11-10T00Z (700m -> 250m); limits unchanged.
         kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 12Gi}
+      # PR image builds without a push credential (cortex-ai-compute#552, STD-CI-12):
+      # build.yml builds only the first-party contexts a PR changes, push false.
+      # Same Kaniko size as build; max 1 (default) so PR builds never crowd the build set.
+      buildcheck:
+        kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 12Gi}
   - repo: jvallery/proxmox-infrastructure
     profiles:
       ci:
