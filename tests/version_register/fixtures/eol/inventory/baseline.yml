@@ -1,0 +1,8 @@
+# host baseline (fixture)
+service_vms:
+  pbs: {}
+version_targets:
+  pve:
+    version: "9.1"
+  k3s:
+    version: v1.34.2+k3s1

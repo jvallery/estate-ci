@@ -27,6 +27,9 @@ configMapGenerator:
       - bin/check-runner-labels.sh
       - bin/lint-workflows.py
       - bin/lint-images.py
+      - bin/lint-version-register.py
+      # Read by lint-version-register.py from next to it (/opt/estate-ci).
+      - schemas/version-register.schema.json
       - bin/mirror.sh
       - bin/build-plan.py
       - bin/kustomize-validate.sh

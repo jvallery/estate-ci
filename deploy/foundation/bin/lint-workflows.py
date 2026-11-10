@@ -39,6 +39,10 @@ allow-expired (past its expiry), allow-too-long (expiry more than ALLOW_MAX_DAYS
 180, days out, so a row cannot waive a finding indefinitely). Warning: allow-unused
 (a row that covers nothing; remove it).
 
+Also runs, from the same directory: R4 image lint (lint-images.py) on every linted
+root, and the STD-OPS-02 version register check (lint-version-register.py,
+estate-ci#121) on each root that holds a version-register.json (opt-in).
+
 Standard library only: it runs on the stock runner image (python3, no pip).
 The YAML reader handles the block/flow subset workflow files use; scalars stay
 strings (like PyYAML's BaseLoader), so `on:` is never read as a boolean.
@@ -628,6 +632,22 @@ def run_image_lint(roots):
     return module.main([tag_mode(), *roots])
 
 
+def run_version_register(roots):
+    """STD-OPS-02 register check (lint-version-register.py, estate-ci#121) for each root that
+    holds a version-register.json: opt-in by adding the file, no workflow pin bump."""
+    import importlib.util
+    with_register = [r for r in roots if (Path(r) / "version-register.json").is_file()]
+    if not with_register:
+        return 0
+    path = Path(__file__).resolve().parent / "lint-version-register.py"
+    if not path.is_file():
+        path = Path(__file__).parent / "lint-version-register.py"
+    spec = importlib.util.spec_from_file_location("estate_ci_lint_version_register", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.main(with_register)
+
+
 def main(argv):
     strict = "--strict" in argv
     notes = "--require-forgejo-notes" in argv
@@ -658,10 +678,13 @@ def main(argv):
     # every caller of lint.yml gets it without a workflow pin bump.
     roots = [str(p) for p in paths if p.is_dir()]
     image_rc = run_image_lint(roots) if roots else 0
+    register_rc = run_version_register(roots)
     errors = [x for x in findings if x.error or strict]
     warns = len(findings) - len([x for x in findings if x.error])
     if image_rc:
         errors = errors or ["R4"]
+    if register_rc:
+        errors = errors or ["VR"]
     if errors:
         print(f"lint-workflows: FAILED: {len(errors)} error(s), {warns} warning(s) in {n} file(s) (estate rules R1-R3; see estate-ci docs/adr/0009)", file=sys.stderr)
         return 1

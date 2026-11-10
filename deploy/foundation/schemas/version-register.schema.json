@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jvallery/estate-ci/blob/main/deploy/foundation/schemas/version-register.schema.json",
+  "title": "estate component version register (STD-OPS-02, estate-ci#121)",
+  "description": "One file per owner repository, version-register.json at the repository root. Lists every operator, runtime and appliance the repository owns, with what is installed, the upstream it tracks and its support date. A locally patched build also records its upstream base, patch set, rebase owner and SLA class. A row may point at another machine-readable register in the same repository (for example proxmox-infrastructure version_targets) instead of copying its values. Validated by deploy/foundation/bin/lint-version-register.py, which also checks what JSON Schema cannot: unique component names, ref targets that exist, and a digest on every patched build.",
+  "type": "object",
+  "required": ["schema_version", "owner", "components"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"enum": [1]},
+    "owner": {
+      "description": "The owner repository, as in the estate ownership record.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/component"}
+    }
+  },
+  "$defs": {
+    "date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "format": "date"},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "text": {"type": "string", "minLength": 1},
+    "component": {
+      "description": "A register row: either a full entry (installed, upstream, support) or a pointer (ref) to another register in this repository.",
+      "anyOf": [
+        {"$ref": "#/$defs/entry"},
+        {"$ref": "#/$defs/pointer"}
+      ]
+    },
+    "kind": {"enum": ["operator", "runtime", "appliance", "host", "service", "chart", "tool"]},
+    "entry": {
+      "description": "full entry: installed + upstream + support",
+      "type": "object",
+      "required": ["component", "kind", "installed", "upstream", "support"],
+      "additionalProperties": false,
+      "properties": {
+        "component": {"$ref": "#/$defs/text"},
+        "kind": {"$ref": "#/$defs/kind"},
+        "notes": {"type": "string"},
+        "installed": {
+          "type": "object",
+          "required": ["source"],
+          "additionalProperties": false,
+          "anyOf": [{"required": ["version"]}, {"required": ["digest"]}],
+          "properties": {
+            "version": {"$ref": "#/$defs/text"},
+            "digest": {"$ref": "#/$defs/digest"},
+            "image": {"$ref": "#/$defs/text"},
+            "source": {"description": "Where the installed reading comes from: a repo path, a command or a live read.", "$ref": "#/$defs/text"},
+            "read_at": {"$ref": "#/$defs/date"}
+          }
+        },
+        "upstream": {
+          "type": "object",
+          "required": ["project", "latest"],
+          "additionalProperties": false,
+          "properties": {
+            "project": {"description": "Upstream project or vendor release page URL.", "type": "string", "pattern": "^https://"},
+            "latest": {"$ref": "#/$defs/text"},
+            "checked": {"$ref": "#/$defs/date"}
+          }
+        },
+        "support": {
+          "type": "object",
+          "required": ["source"],
+          "additionalProperties": false,
+          "anyOf": [{"required": ["until"]}, {"required": ["policy"]}],
+          "properties": {
+            "until": {"description": "End of vendor support or end-of-life date for the installed release.", "$ref": "#/$defs/date"},
+            "policy": {"description": "rolling: only the latest release is supported, so the measure is installed against upstream latest.", "enum": ["rolling"]},
+            "source": {"description": "URL of the published support or EOL policy.", "type": "string", "pattern": "^https://"}
+          }
+        },
+        "patched": {
+          "description": "Present only for a locally patched build (a first-party fork image).",
+          "type": "object",
+          "required": ["upstream_base", "patch_set", "rebase_owner", "sla_class"],
+          "additionalProperties": false,
+          "properties": {
+            "upstream_base": {"description": "Upstream release or tag the patch set applies to.", "$ref": "#/$defs/text"},
+            "patch_set": {"description": "Repo path, PR or issue URL holding the patches.", "$ref": "#/$defs/text"},
+            "rebase_owner": {"description": "Owner repository that rebases the patch set onto new upstream releases.", "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
+            "sla_class": {"description": "STD-OPS-01 patch window: critical 7 days, standard 30 days.", "enum": ["critical-7d", "standard-30d"]}
+          }
+        }
+      }
+    },
+    "pointer": {
+      "description": "pointer: ref to another register in this repository, no copied versions",
+      "type": "object",
+      "required": ["component", "kind", "ref"],
+      "additionalProperties": false,
+      "properties": {
+        "component": {"$ref": "#/$defs/text"},
+        "kind": {"$ref": "#/$defs/kind"},
+        "notes": {"type": "string"},
+        "ref": {
+          "type": "object",
+          "required": ["file", "key"],
+          "additionalProperties": false,
+          "properties": {
+            "file": {"description": "Repo-relative path of the register that holds the values.", "$ref": "#/$defs/text"},
+            "key": {"description": "Dotted key path in that file, for example version_targets or version_targets.k3s.", "type": "string", "pattern": "^[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*$"}
+          }
+        }
+      }
+    }
+  }
+}
