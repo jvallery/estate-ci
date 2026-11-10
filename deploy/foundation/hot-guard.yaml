@@ -22,8 +22,10 @@
 # allocatable stays above 0.92 for 2 min (D-502 (b) trip-threshold half), the guard
 # writes "cap=10 ... reserve:..." under that node (the advertiser offers
 # min(desired, 10)), so no new runner lands
-# there; nothing is evicted. The cap drops once the max over 10 min is below 0.85.
-# A reserve query that fails or is empty writes nothing (no fail-closed on node4-7),
+# there; nothing is evicted. The cap drops once the max over 30 min is below 0.75.
+# An empty reserve result or node CPU sample coverage below 0.95 over 30 min counts
+# as hot (a saturated node stalls its own telemetry, estate-ci#177 follow-up); a reserve
+# query that fails (Prometheus unreachable) writes nothing (no fail-closed on node4-7),
 # and the guard never changes a hold value it did not write as a reserve cap.
 #
 # Least privilege: no node or cluster-scoped permission. The guard may create
