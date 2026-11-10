@@ -1,0 +1,9 @@
+# No kustomization with a digest pin reaches this file.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: orphan
+spec:
+  containers:
+    - name: same-name-not-reached
+      image: ghcr.io/example/app

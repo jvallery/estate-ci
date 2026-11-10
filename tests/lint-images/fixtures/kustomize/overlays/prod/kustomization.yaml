@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - https://github.com/example/remote//deploy?ref=v1
+components:
+  - ../../components/extra
+patches:
+  - path: patch.yaml
+images:
+  - name: ghcr.io/example/app
+    newName: registry.vallery.net/example/app
+    digest: sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+  - name: ghcr.io/example/tagonly
+    newTag: v3

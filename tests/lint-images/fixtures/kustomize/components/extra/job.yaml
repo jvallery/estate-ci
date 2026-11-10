@@ -1,0 +1,10 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: extra
+spec:
+  template:
+    spec:
+      containers:
+        - name: pinned-through-component
+          image: ghcr.io/example/app

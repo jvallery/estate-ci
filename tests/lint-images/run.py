@@ -20,6 +20,11 @@ cases = {
     ("tags", (("tags", True),)): (Counter({"R4-tag-only": 4, "R4-allow-expired": 1}), Counter()),
     ("tags", (("tags", True), ("tags_error", False))): (Counter({"R4-allow-expired": 1}), Counter({"R4-tag-only": 4})),
     ("tags", ()): (Counter({"R4-allow-expired": 1}), Counter()),
+    # A kustomization images: entry with a digest pins that name in every file it
+    # reaches (resources, components, patches); newTag alone, a name with no entry
+    # and a file no pinning kustomization reaches still fail. The allowlist
+    # prefix * covers every image under its glob.
+    ("kustomize", (("tags", True),)): (Counter({"R4-tag-only": 3}), Counter()),
 }
 failed = 0
 for (name, kw), (want, want_warn) in cases.items():

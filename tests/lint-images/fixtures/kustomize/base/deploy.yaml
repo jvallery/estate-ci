@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  template:
+    spec:
+      containers:
+        - name: pinned-by-overlay
+          image: ghcr.io/example/app
+        - name: pinned-by-overlay-tagged
+          image: ghcr.io/example/app:v2
+        - name: new-tag-is-not-a-pin
+          image: ghcr.io/example/tagonly:v1
+        - name: no-images-entry
+          image: ghcr.io/example/other:1
