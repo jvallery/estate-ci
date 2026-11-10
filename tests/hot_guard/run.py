@@ -63,6 +63,23 @@ hard_held = {"reason": "r", "since": NOW - dt.timedelta(minutes=30), "last_trip"
 check("hard clean + soft steps down to cap", g.decide(NOW, [], [], hard_held, 900, ["node_cpu_busy_4m"])["hold"], "soft")
 hard_held["last_trip"] = NOW - dt.timedelta(minutes=5)
 check("hard cooling ignores soft", g.decide(NOW, [], [], hard_held, 900, ["node_cpu_busy_4m"])["hold"], "keep")
+# Per-node reserve (estate-ci#69): cap a hot node4-7 at reserve.cap, never evict, never touch other holds.
+RES = cfg["reserve"]
+check("reserve nodes are node4-7", RES["nodes"], ["vm-k3s-node4", "vm-k3s-node5", "vm-k3s-node6", "vm-k3s-node7"])
+check("reserve cap below the STD-CI-10 20 slots", 0 < RES["cap"] < 20, True)
+check("reserve trips before the 0.95 budget", RES["trip"]["threshold"] < 0.95 and RES["recover"]["threshold"] < RES["trip"]["threshold"], True)
+check("reserve query per node", "$NODE" not in g.reserve_query(RES["trip"]["query"], "vm-k3s-node5")
+      and 'nodename="vm-k3s-node5"' in g.reserve_query(RES["trip"]["query"], "vm-k3s-node5"), True)
+rd = lambda busy, calm, reason=None: g.reserve_decide(busy, calm, reason, RES["trip"], RES["recover"])
+RHELD = "cap=10 2026-11-10T00:00:00Z reserve:busy>0.85"
+check("reserve calm unheld", rd(0.5, 0.5), "keep")
+check("reserve hot sets", rd(0.9, 0.9), "set")
+check("reserve at threshold does not set", rd(0.85, 0.9), "keep")
+check("reserve hot + held keeps", rd(0.9, 0.9, RHELD), "keep")
+check("reserve held, not calm keeps", rd(0.8, 0.8, RHELD), "keep")
+check("reserve held, calm clears", rd(0.5, 0.7, RHELD), "clear")
+check("reserve missing signal keeps", (rd(None, 0.5, RHELD), rd(0.9, None)), ("keep", "keep"))
+check("reserve leaves a foreign hold", (rd(0.5, 0.5, "2026 trip:x"), rd(0.9, 0.9, "cap=4 2026 soft:x")), ("foreign", "foreign"))
 
 
 def pod(name, ts, node="vm-k3s-node8", label=True, phase="Running", deleting=False):
@@ -117,6 +134,11 @@ def fake_kube(path, method="GET", body=None, content_type="application/json", dr
 g.wait_network = lambda base, budget: 0.0
 VALUES = dict(CALM)
 QUERIES = dict({n: s_["query"] for n, s_ in SIG.items()}, soft_recover=cfg["soft_recover"]["query"])
+for _n in cfg["reserve"]["nodes"]:
+    for _k in ("trip", "recover"):
+        QUERIES["reserve_%s:%s" % (_k, _n)] = g.reserve_query(cfg["reserve"][_k]["query"], _n)
+        VALUES["reserve_%s:%s" % (_k, _n)] = 0.5
+CALM = dict(VALUES)
 g.kube = fake_kube
 g.prom_scalar = lambda base, q: VALUES[[n for n, q_ in QUERIES.items() if q_ == q][0]]
 cfgfile = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
@@ -149,6 +171,25 @@ check("soft: still capped while recover fails", state["cm"]["data"]["vm-k3s-node
 VALUES["soft_recover"] = 0.7
 check("soft recover rc", g.main(), 0)
 check("soft: cap dropped", state["cm"]["data"], {})
+VALUES["reserve_trip:vm-k3s-node5"] = VALUES["reserve_recover:vm-k3s-node5"] = 0.9
+state["cm"]["data"]["vm-k3s-node6"] = "2026 trip:operator"
+state["calls"].clear()
+check("reserve hot run rc", g.main(), 0)
+check("reserve: node5 capped at 10, node6 hold kept, no eviction",
+      (state["cm"]["data"]["vm-k3s-node5"].split()[0], state["cm"]["data"]["vm-k3s-node6"], "vm-k3s-node8" in state["cm"]["data"],
+       [c for c in state["calls"] if c[1].endswith("/eviction")]), ("cap=10", "2026 trip:operator", False, []))
+VALUES["reserve_trip:vm-k3s-node5"] = 0.8
+check("reserve cooling rc", g.main(), 0)
+check("reserve: still capped while recover fails", state["cm"]["data"]["vm-k3s-node5"].split()[0], "cap=10")
+VALUES["reserve_trip:vm-k3s-node5"] = VALUES["reserve_recover:vm-k3s-node5"] = 0.5
+check("reserve recover rc", g.main(), 0)
+check("reserve: cap dropped, foreign hold kept", state["cm"]["data"], {"vm-k3s-node6": "2026 trip:operator"})
+state["cm"]["data"] = {}
+_prom = g.prom_scalar
+g.prom_scalar = lambda base, q: None if "vm-k3s-node7" in q else _prom(base, q)
+check("reserve missing signal rc", g.main(), 0)
+check("reserve missing signal: no write", state["cm"]["data"], {})
+g.prom_scalar = _prom
 VALUES.update(CALM)
 g.prom_scalar = lambda base, q: (_ for _ in ()).throw(urllib.error.URLError("down"))
 state["calls"].clear()

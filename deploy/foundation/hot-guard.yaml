@@ -18,6 +18,13 @@
 # A missing signal or an unreachable Prometheus holds node8 at 0 (fail closed)
 # without evicting, and the run exits 1.
 #
+# Per-node reserve (estate-ci#69, D-486): for each of node4-7, when CPU busy /
+# allocatable stays above 0.85 for 2 min, the guard writes "cap=10 ... reserve:..."
+# under that node (the advertiser offers min(desired, 10)), so no new runner lands
+# there; nothing is evicted. The cap drops once the max over 10 min is below 0.75.
+# A reserve query that fails or is empty writes nothing (no fail-closed on node4-7),
+# and the guard never changes a hold value it did not write as a reserve cap.
+#
 # Least privilege: no node or cluster-scoped permission. The guard may create
 # ConfigMaps and get/patch only ci-runner-slot-hold, list Pods, and evict Pods in
 # ci-runners. The reconciler's read access to ci-runner-slot-hold is in hold-reader.yaml.
