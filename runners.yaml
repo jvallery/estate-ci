@@ -644,7 +644,8 @@ sets:
     profiles:
       ci:
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (queue p50 3.5 min, p90 7.5 min).
-        max: 3
+        # Jason first-hand 2026-11-10 ~20:00Z (cortex/RV/OCR health first): 3 -> 8; per-node slot caps still bound node load.
+        max: 8
         job_image: *toolbox
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
@@ -653,8 +654,8 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.12 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
+        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2. 2026-11-10 ~20:00Z cortex release queue (5 images): 2 -> 3.
+        max: 3
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.17 CPU, 2026-11-06T12Z..11-10T00Z (700m -> 250m); limits unchanged.
         kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 12Gi}
       # PR image builds without a push credential (cortex-ai-compute#552, STD-CI-12):
