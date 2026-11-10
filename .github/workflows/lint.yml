@@ -13,6 +13,9 @@
 # and so does an image (or Helm repository/tag pair) with no @sha256 digest (R4-tag-only,
 # STD-K8S-05, estate-ci#104; a warning until lint-workflows.py TAG_ONLY_ENFORCE_FROM).
 # Exceptions in the caller's .estate-ci/image-lint-allow.txt with expiry + issue.
+# STD-OPS-02 (lint-version-register.py, estate-ci#121): when the caller has a
+# version-register.json at its root it must match deploy/foundation/schemas/version-register.schema.json
+# (opt-in by adding the file; no pin bump, the check ships in the $ESTATE_CI ConfigMap).
 #
 # Portability (Forgejo/Gitea Actions): checkout + one script on the runner's
 # python3 (standard library only); it lints .forgejo/ and .gitea/ workflows too.
