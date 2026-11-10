@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-echo "estate-ci#111 forced-red probe (DO NOT MERGE)" >&2; exit 1
 # estate-ci self-test. Runs in the estate-ci-ci job image (python:3.13-slim).
 set -euo pipefail
 export HOME="${HOME:-/tmp}"; [[ -w "$HOME" ]] || export HOME=/tmp
