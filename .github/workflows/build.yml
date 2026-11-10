@@ -7,8 +7,8 @@
 # the rendered sets as vallery-pin-bot (D-52), so its checks run. That job is the
 # only writer of the toolbox digest (STD-CI-13, D-273). workflow_dispatch on main
 # rebuilds and pins the same way.
-# ci-tools: pushed by workflow_dispatch on main (image ci-tools or all); its
-# consumers pin it in their own repositories.
+# ci-tools: pushed by workflow_dispatch on main (image ci-tools or all); the
+# runners.yaml job_image rows that use it are re-pinned by a reviewed PR.
 # Bases come from mirrors.txt: mirror-images runs on push when it changes; land
 # a new base row before the Dockerfile that uses it.
 name: build
