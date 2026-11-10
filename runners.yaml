@@ -482,6 +482,16 @@ sets:
         max: 1
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "2", limit_memory: 1Gi}
+      # Estate version detector (STD-OPS-02, DR-51, estate-ci#110): self-hosted
+      # Renovate, run by .github/workflows/renovate.yml in this job image
+      # (renovate/renovate 44.200.0 linux/amd64, mirrored by mirrors.txt; image
+      # user 12021). No credential is mounted: the workflow mints a one-repo
+      # vallery-pin-bot token per run (D-52) and revokes it at the end.
+      ci-renovate:
+        max: 1
+        job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/renovate/renovate@sha256:c63c97e566f98e976a0726e8cab7150b880b292affbf049db183561234d8f313
+        job_uid: 12021
+        job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "4", limit_memory: 4Gi}
   # MIGRATE-INFRA repos (jvallery/agents#6092). Every ci set runs its checks in a
   # job sidecar running the estate-ci toolbox (*toolbox; it replaced the fleet
   # agents-arc-runner-toolbox the parity runs used). Sizes follow today's validation-standard
