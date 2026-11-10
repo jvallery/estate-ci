@@ -10,6 +10,8 @@ python3 tests/lint_allow/run.py
 python3 tests/hot_guard/run.py >/dev/null
 python3 tests/runner_budget/run.py
 python3 tests/lint-images/run.py
+# estate-ci#114: every image this repo delivers is a registry.vallery.net digest (mirrors.txt first).
+python3 tests/origin_images/run.py
 python3 tests/version_register/run.py
 # estate-ci enforces its own R4-tag-only now (callers from TAG_ONLY_ENFORCE_FROM, estate-ci#104).
 python3 deploy/foundation/bin/lint-images.py --tags .
