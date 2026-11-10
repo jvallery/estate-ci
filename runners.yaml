@@ -654,6 +654,17 @@ sets:
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
+  # crm (moved from VerdifyConsultancy 2026-11-06, REPO-MOVE; jvallery/crm#142):
+  # offline check ci/check.sh (python unittest allowlist, kustomize render with
+  # KSOPS stubbed, gitleaks) as bare run: steps in the toolbox runner, no job
+  # sidecar. Advisory checks (no ruleset yet, D-186). Registers once jvallery/crm
+  # is in runner App installation 179108157.
+  - repo: jvallery/crm
+    profiles:
+      ci:
+        max: 2
+        runner_image: *toolbox
+        runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "4", limit_memory: 4Gi}
   # memoryos image build (J-8, memoryos#39/#40); the repo moved to jvallery on
   # 2026-11-06 (REPO-MOVE, D19). build needs the KSOPS Secret zot-push-memoryos
   # (zot principal ci-memoryos, storage-infra#1387).
