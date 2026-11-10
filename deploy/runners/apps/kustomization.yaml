@@ -51,6 +51,7 @@ resources:
 - sunshine-club-ci.yaml
 - vallery-family-ci.yaml
 - verdify-platform-build.yaml
+- verdify-platform-buildcheck.yaml
 - verdify-platform-ci-dashboard.yaml
 - verdify-platform-ci-esphome.yaml
 - verdify-platform-ci-pg.yaml
