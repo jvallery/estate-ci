@@ -14,7 +14,7 @@ python3 tests/lint-images/run.py
 python3 deploy/foundation/bin/lint-images.py --tags .
 bash tests/sidecar_run/run.sh
 actionlint -color
-shellcheck deploy/foundation/bin/*.sh scripts/*.sh tests/sidecar_run/*.sh
-python3 -m py_compile deploy/foundation/bin/hot-guard.py deploy/foundation/bin/pin-rewrite.py deploy/foundation/bin/lint-workflows.py deploy/foundation/bin/lint-images.py scripts/render_runners.py
+shellcheck deploy/foundation/bin/*.sh scripts/*.sh tests/sidecar_run/*.sh tests/kustomize_validate/*.sh
+python3 -m py_compile deploy/foundation/bin/hot-guard.py deploy/foundation/bin/pin-rewrite.py deploy/foundation/bin/lint-workflows.py deploy/foundation/bin/lint-images.py deploy/foundation/bin/build-plan.py tests/build_plan/run.py scripts/render_runners.py
 python3 scripts/render_runners.py --check
 echo "self-test: OK"
