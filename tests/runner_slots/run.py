@@ -48,6 +48,11 @@ want_values = {"vm-k3s-node1": "0", "vm-k3s-node2": "0", "vm-k3s-node3": "0", "v
 check("git values are STD-CI-10", cm["data"], want_values)
 check("load git values", s.load_desired(desired_dir(cm["data"])),
       {k: int(v) for k, v in want_values.items()})
+# runners.yaml capacity (the render-time CPU budget, estate-ci#69) reads the same per-node slots.
+capacity = yaml.safe_load((ROOT / "runners.yaml").read_text())["capacity"]["nodes"]
+check("runners.yaml capacity slots equal the advertised values",
+      {name: str(node["slots"]) for name, node in capacity.items()},
+      {name: cm["data"].get(name) for name in capacity})
 check("pinned zero refused", raises(lambda: s.load_desired(desired_dir({"vm-k3s-node2": "1"}))), True)
 check("non-integer refused", raises(lambda: s.load_desired(desired_dir({"vm-k3s-node4": "x"}))), True)
 check("bad key refused", raises(lambda: s.load_desired(desired_dir({"Node_4": "1"}))), True)
