@@ -71,15 +71,15 @@ check("reserve trips before the 0.95 budget", RES["trip"]["threshold"] < 0.95 an
 check("reserve query per node", "$NODE" not in g.reserve_query(RES["trip"]["query"], "vm-k3s-node5")
       and 'nodename="vm-k3s-node5"' in g.reserve_query(RES["trip"]["query"], "vm-k3s-node5"), True)
 rd = lambda busy, calm, reason=None: g.reserve_decide(busy, calm, reason, RES["trip"], RES["recover"])
-RHELD = "cap=10 2026-11-10T00:00:00Z reserve:busy>0.85"
+RHELD = "cap=16 2026-11-10T00:00:00Z reserve:busy>0.92"
 check("reserve calm unheld", rd(0.5, 0.5), "keep")
-check("reserve hot sets", rd(0.9, 0.9), "set")
-check("reserve at threshold does not set", rd(0.85, 0.9), "keep")
-check("reserve hot + held keeps", rd(0.9, 0.9, RHELD), "keep")
-check("reserve held, not calm keeps", rd(0.8, 0.8, RHELD), "keep")
-check("reserve held, calm clears", rd(0.5, 0.7, RHELD), "clear")
-check("reserve missing signal keeps", (rd(None, 0.5, RHELD), rd(0.9, None)), ("keep", "keep"))
-check("reserve leaves a foreign hold", (rd(0.5, 0.5, "2026 trip:x"), rd(0.9, 0.9, "cap=4 2026 soft:x")), ("foreign", "foreign"))
+check("reserve hot sets", rd(0.95, 0.95), "set")
+check("reserve at threshold does not set", rd(0.92, 0.95), "keep")
+check("reserve hot + held keeps", rd(0.95, 0.95, RHELD), "keep")
+check("reserve held, not calm keeps", rd(0.88, 0.88, RHELD), "keep")
+check("reserve held, calm clears", rd(0.5, 0.8, RHELD), "clear")
+check("reserve missing signal keeps", (rd(None, 0.5, RHELD), rd(0.95, None)), ("keep", "keep"))
+check("reserve leaves a foreign hold", (rd(0.5, 0.5, "2026 trip:x"), rd(0.95, 0.95, "cap=4 2026 soft:x")), ("foreign", "foreign"))
 
 
 def pod(name, ts, node="vm-k3s-node8", label=True, phase="Running", deleting=False):
@@ -171,16 +171,16 @@ check("soft: still capped while recover fails", state["cm"]["data"]["vm-k3s-node
 VALUES["soft_recover"] = 0.7
 check("soft recover rc", g.main(), 0)
 check("soft: cap dropped", state["cm"]["data"], {})
-VALUES["reserve_trip:vm-k3s-node5"] = VALUES["reserve_recover:vm-k3s-node5"] = 0.9
+VALUES["reserve_trip:vm-k3s-node5"] = VALUES["reserve_recover:vm-k3s-node5"] = 0.95
 state["cm"]["data"]["vm-k3s-node6"] = "2026 trip:operator"
 state["calls"].clear()
 check("reserve hot run rc", g.main(), 0)
-check("reserve: node5 capped at 10, node6 hold kept, no eviction",
+check("reserve: node5 capped at 16, node6 hold kept, no eviction",
       (state["cm"]["data"]["vm-k3s-node5"].split()[0], state["cm"]["data"]["vm-k3s-node6"], "vm-k3s-node8" in state["cm"]["data"],
-       [c for c in state["calls"] if c[1].endswith("/eviction")]), ("cap=10", "2026 trip:operator", False, []))
-VALUES["reserve_trip:vm-k3s-node5"] = 0.8
+       [c for c in state["calls"] if c[1].endswith("/eviction")]), ("cap=16", "2026 trip:operator", False, []))
+VALUES["reserve_trip:vm-k3s-node5"] = 0.88
 check("reserve cooling rc", g.main(), 0)
-check("reserve: still capped while recover fails", state["cm"]["data"]["vm-k3s-node5"].split()[0], "cap=10")
+check("reserve: still capped while recover fails", state["cm"]["data"]["vm-k3s-node5"].split()[0], "cap=16")
 VALUES["reserve_trip:vm-k3s-node5"] = VALUES["reserve_recover:vm-k3s-node5"] = 0.5
 check("reserve recover rc", g.main(), 0)
 check("reserve: cap dropped, foreign hold kept", state["cm"]["data"], {"vm-k3s-node6": "2026 trip:operator"})
