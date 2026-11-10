@@ -10,6 +10,7 @@ Migrating a repo: [`docs/MIGRATION-RUNBOOK.md`](docs/MIGRATION-RUNBOOK.md).
 Tracking: jvallery/agents#6092 (FLEET-DECOM epic), jvallery/agents#6094 (this foundation).
 Decisions and exceptions: [`docs/adr/`](docs/adr/README.md); the one Actions-secret
 exception (D-52, `PIN_BOT_PRIVATE_KEY`) is E-2 in ADR-0011.
+Image tags and registry retention classes: [`docs/image-tags-and-retention.md`](docs/image-tags-and-retention.md).
 
 ## What is here
 
