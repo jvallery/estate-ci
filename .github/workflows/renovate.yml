@@ -59,5 +59,11 @@ jobs:
           # gitAuthor makes Renovate treat its own branch as edited and skip
           # PR creation ("Branch has been edited but found no PR"; estate-ci#110).
           export RENOVATE_GIT_AUTHOR="vallery-pin-bot[bot] <353541463+vallery-pin-bot[bot]@users.noreply.github.com>"
-          ENV_NAMES="RENOVATE_TOKEN RENOVATE_PLATFORM RENOVATE_REPOSITORIES RENOVATE_ONBOARDING RENOVATE_REQUIRE_CONFIG LOG_LEVEL RENOVATE_GIT_AUTHOR" \
+          # The token has no statuses permission: a 403 on POST /statuses (the
+          # renovate/stability-days check) makes Renovate abort with "Repository
+          # has changed during renovation" and open no PR (estate-ci#110, debug
+          # run 43093177637). Skip Renovate's own commit statuses; minimumReleaseAge
+          # still applies through internalChecksFilter.
+          export RENOVATE_STATUS_CHECK_NAMES='{"artifactError":null,"configValidation":null,"mergeConfidence":null,"minimumReleaseAge":null}'
+          ENV_NAMES="RENOVATE_TOKEN RENOVATE_PLATFORM RENOVATE_REPOSITORIES RENOVATE_ONBOARDING RENOVATE_REQUIRE_CONFIG LOG_LEVEL RENOVATE_GIT_AUTHOR RENOVATE_STATUS_CHECK_NAMES" \
             TIMEOUT_MINUTES=25 "$ESTATE_CI/sidecar-run.sh" job <<< 'cd /tmp && /usr/local/sbin/renovate-entrypoint.sh renovate'
