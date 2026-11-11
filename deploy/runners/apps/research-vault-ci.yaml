@@ -64,7 +64,7 @@ spec:
                       - vm-k3s-node8
             initContainers:
             - name: estate-ci-tools
-              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:8b7f3ebd27052b11b57be2e0887649bc1b3e3fb7b7af1cd242e50e7e59efa710
+              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:75bd1355d4e35701d71d81543b0bdbbf49dad8c7063e6271522f1dce16cbe804
               command:
               - /bin/sh
               - -ec
