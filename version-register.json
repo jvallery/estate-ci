@@ -1,0 +1,90 @@
+{
+  "$schema": "https://github.com/jvallery/estate-ci/blob/main/deploy/foundation/schemas/version-register.schema.json",
+  "schema_version": 1,
+  "owner": "jvallery/estate-ci",
+  "components": [
+    {
+      "component": "actions-runner",
+      "kind": "runtime",
+      "notes": "GitHub Actions runner in every estate-ci ARC scale set (runners.yaml defaults.runner_image) and the base of estate-ci-toolbox. The ARC controller chart and image stay in jvallery/agents (arc-controller) until the foundation re-home (estate-ci#76/#107), so they are not listed here.",
+      "installed": {
+        "version": "2.338.2",
+        "digest": "sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232",
+        "image": "registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner",
+        "source": "runners.yaml runner_image; mirrors.txt row ghcr.io/actions/actions-runner:2.338.2",
+        "read_at": "2026-11-11"
+      },
+      "upstream": {
+        "project": "https://github.com/actions/runner/releases",
+        "latest": "v2.338.2",
+        "checked": "2026-11-11"
+      },
+      "support": {
+        "policy": "rolling",
+        "source": "https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/autoscaling-with-self-hosted-runners#controlling-runner-software-updates-on-self-hosted-runners"
+      }
+    },
+    {
+      "component": "estate-ci-toolbox",
+      "kind": "runtime",
+      "notes": "First-party CI toolchain image (ADR-0004): actions-runner 2.338.2 base plus gitleaks 8.30.1 (built with go 1.27.3), kubectl v1.35.10, kustomize v5.8.3, helm v3.22.1, kubeconform v0.8.0, yq v4.54.1, crane v0.22.1 and shellcheck v0.11.0 (images/estate-ci-toolbox/Dockerfile ARGs). Rebuilt by build.yml on push to main; the pin job is its only pin writer (estate-ci#114). Its upstream is the actions-runner row; tool versions follow the Dockerfile ARGs and Renovate (estate-ci#110).",
+      "installed": {
+        "digest": "sha256:8b7f3ebd27052b11b57be2e0887649bc1b3e3fb7b7af1cd242e50e7e59efa710",
+        "image": "registry.vallery.net/jvallery/estate-ci/toolbox",
+        "source": "runners.yaml defaults.toolbox (pin bot PR estate-ci#173)",
+        "read_at": "2026-11-11"
+      },
+      "upstream": {
+        "project": "https://github.com/actions/runner/releases",
+        "latest": "v2.338.2",
+        "checked": "2026-11-11"
+      },
+      "support": {
+        "policy": "rolling",
+        "source": "https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/autoscaling-with-self-hosted-runners#controlling-runner-software-updates-on-self-hosted-runners"
+      }
+    },
+    {
+      "component": "kaniko-executor",
+      "kind": "tool",
+      "notes": "In-cluster image builder for every *-build set (runners.yaml defaults.kaniko_image). The GoogleContainerTools project is archived (last release v1.24.0); the maintained fork is chainguard-dev/kaniko. Moving to the fork is a separate upgrade decision, not part of this register.",
+      "installed": {
+        "version": "v1.23.2-debug",
+        "digest": "sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
+        "image": "registry.vallery.net/jvallery/estate-ci/mirror/gcr.io/kaniko-project/executor",
+        "source": "runners.yaml kaniko_image; mirrors.txt row gcr.io/kaniko-project/executor:v1.23.2-debug",
+        "read_at": "2026-11-11"
+      },
+      "upstream": {
+        "project": "https://github.com/chainguard-dev/kaniko/releases",
+        "latest": "v1.25.22",
+        "checked": "2026-11-11"
+      },
+      "support": {
+        "policy": "rolling",
+        "source": "https://github.com/chainguard-dev/kaniko"
+      }
+    },
+    {
+      "component": "renovate",
+      "kind": "tool",
+      "notes": "Estate version detector (STD-OPS-02, DR-51, estate-ci#110): job image of scale set estate-ci-ci-renovate, run by renovate.yml on weekdays.",
+      "installed": {
+        "version": "44.200.0",
+        "digest": "sha256:c63c97e566f98e976a0726e8cab7150b880b292affbf049db183561234d8f313",
+        "image": "registry.vallery.net/jvallery/estate-ci/mirror/docker.io/renovate/renovate",
+        "source": "runners.yaml estate-ci ci-renovate job_image; mirrors.txt row docker.io/renovate/renovate:44.200.0",
+        "read_at": "2026-11-11"
+      },
+      "upstream": {
+        "project": "https://github.com/renovatebot/renovate/releases",
+        "latest": "44.227.4",
+        "checked": "2026-11-11"
+      },
+      "support": {
+        "policy": "rolling",
+        "source": "https://docs.renovatebot.com/about-us/#versioning"
+      }
+    }
+  ]
+}
