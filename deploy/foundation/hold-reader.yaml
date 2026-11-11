@@ -2,9 +2,9 @@
 # ci-runner-hot-guard CronJob) and advertise 0 (or the "cap=N" value)
 # agentfleet.vallery.net/ci-runner-slot on a held node. They may get only that
 # ConfigMap. A 404 (no hold yet) is "no holds"; a 403 would freeze ci-runner-slot.
-# Subjects: estate-ci's CronJob ci-runner-slots (runner-slots.yaml, estate-ci#76)
-# and, until its ci-runner-slot path is removed in the cutover, the jvallery/agents
-# arc-validation-pool reconciler.
+# Subject: estate-ci's CronJob ci-runner-slots (runner-slots.yaml, estate-ci#76). The
+# jvallery/agents arc-validation-pool reconciler lost its ci-runner-slot path in the
+# #76 cutover (agents#6405, 2026-11-10), so it is no longer a subject (estate-ci#119).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -25,7 +25,4 @@ subjects:
   - kind: ServiceAccount
     name: ci-runner-slots
     namespace: ci-runners
-  - kind: ServiceAccount
-    name: arc-validation-pool-reconciler
-    namespace: github-runner-ops
 roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: ci-runner-slot-hold-reader}
