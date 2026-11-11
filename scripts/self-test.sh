@@ -10,6 +10,8 @@ python3 tests/lint_allow/run.py
 python3 tests/hot_guard/run.py >/dev/null
 python3 tests/runner_budget/run.py
 python3 tests/runner_slots/run.py >/dev/null
+# estate-ci#115: closure check for runner-set Secrets (fails on a missing name).
+python3 tests/runner_secrets/run.py
 python3 tests/lint-images/run.py
 # estate-ci#114: every image this repo delivers is a registry.vallery.net digest (mirrors.txt first).
 python3 tests/origin_images/run.py
@@ -19,6 +21,6 @@ python3 deploy/foundation/bin/lint-images.py --tags .
 bash tests/sidecar_run/run.sh
 actionlint -color
 shellcheck deploy/foundation/bin/*.sh scripts/*.sh tests/sidecar_run/*.sh tests/kustomize_validate/*.sh
-python3 -m py_compile deploy/foundation/bin/hot-guard.py deploy/foundation/bin/runner-slots.py deploy/foundation/bin/pin-rewrite.py deploy/foundation/bin/lint-workflows.py deploy/foundation/bin/lint-images.py deploy/foundation/bin/build-plan.py deploy/foundation/bin/lint-version-register.py tests/build_plan/run.py scripts/render_runners.py
+python3 -m py_compile deploy/foundation/bin/hot-guard.py deploy/foundation/bin/runner-slots.py deploy/foundation/bin/pin-rewrite.py deploy/foundation/bin/lint-workflows.py deploy/foundation/bin/lint-images.py deploy/foundation/bin/build-plan.py deploy/foundation/bin/lint-version-register.py tests/build_plan/run.py scripts/render_runners.py scripts/check-runner-secrets.py
 python3 scripts/render_runners.py --check
 echo "self-test: OK"
