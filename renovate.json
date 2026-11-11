@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "estate-ci#110 pilot: the estate version detector proposes updates; it never merges. Only the pinned pip tools in scripts/self-test.sh for now; more managers join batch by batch.",
+  "description": "estate-ci#110 pilot: the estate version detector proposes updates; it never merges. Only the pinned pip tools in scripts/self-test.sh for now; more managers join batch by batch. statusCheckNames null: the pin-bot installation token has contents and pull_requests write only, and a 403 on POST /statuses makes Renovate abort with 'Repository has changed during renovation' (estate-ci#110). minimumReleaseAge still applies; internalChecksFilter strict holds a branch until it passes.",
   "extends": [],
   "dependencyDashboard": false,
   "enabledManagers": ["custom.regex"],
@@ -15,6 +15,12 @@
   ],
   "minimumReleaseAge": "7 days",
   "internalChecksFilter": "strict",
+  "statusCheckNames": {
+    "artifactError": null,
+    "configValidation": null,
+    "mergeConfidence": null,
+    "minimumReleaseAge": null
+  },
   "prConcurrentLimit": 2,
   "prHourlyLimit": 1,
   "branchPrefix": "renovate/",
