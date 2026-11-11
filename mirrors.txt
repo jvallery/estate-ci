@@ -27,6 +27,7 @@ docker.io/library/python:3.12-slim@sha256:4840d514c583a4d3d8cad3940e68dee6f0f6f3
 docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2  jvallery/estate-ci/mirror/docker.io/library/python
 docker.io/library/python@sha256:cc55e4ded9c95f6ce2133b3d096db43f214d280c2a8af65d83e246c8fa7d168c  jvallery/estate-ci/mirror/docker.io/library/python
 docker.io/library/python:3.13-slim@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc  jvallery/estate-ci/mirror/docker.io/library/python
+# python 3.13.5-alpine3.22: the arc-lifecycle-guardian and arc-validation-pool-reconciler image (estate-ci#107).
 docker.io/library/python:3.13.5-alpine3.22@sha256:37b14db89f587f9eaa890e4a442a3fe55db452b69cca1403cc730bd0fbdc8aaf  jvallery/estate-ci/mirror/docker.io/library/python
 # Renovate 44.200.0 (2026-11-02), linux/amd64 child only: the estate version
 # detector's job image (estate-ci#110, DR-51), runners.yaml estate-ci ci-renovate.
@@ -37,10 +38,6 @@ ghcr.io/kiwix/kiwix-serve@sha256:e478554a9920412eeb5ce1d73f24e4b28445ebed233187c
 # arc-systems container resolved live on 2026-11-10 (pod imageID). The chart
 # values in jvallery/agents github-runners-arc.yaml pin it from the origin next.
 ghcr.io/actions/gha-runner-scale-set-controller:0.14.2@sha256:1b4c7f62e971ab259a4b8798e48e2adaad4af747f45990f474ea5feefa03531d  jvallery/estate-ci/mirror/ghcr.io/actions/gha-runner-scale-set-controller
-# arc-pr-container-egress-proxy (github-runners, estate-ci#107): squid 6.6-24.04_beta,
-# the digest the Deployment pins today. The guardian and reconciler python image is
-# the 3.13.5-alpine3.22 row above.
-docker.io/ubuntu/squid:6.6-24.04_beta@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029  jvallery/estate-ci/mirror/docker.io/ubuntu/squid
 # verdify-www Dockerfile build and runtime stages (verdify-www#64): node 22.23.4 alpine
 # index, the digest node:22-alpine resolved to on 2026-11-09.
 docker.io/library/node:22.23.4-alpine@sha256:0e1754758c2df4cfa3e68d59e2e1b7374bb7fd9ea6328eaaacf15cc934af8202  jvallery/estate-ci/mirror/docker.io/library/node
