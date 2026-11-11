@@ -107,7 +107,7 @@ sets:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
         max: 9
-        job_image: registry.vallery.net/jvallery/weather-ci@sha256:f4fceab3222d3817baf8def870970981eb88a853cf42f2dc36efcec779f46673
+        job_image: registry.vallery.net/jvallery/weather-ci@sha256:6c10ebd4ddb8326727fb0f7d2bf6bcfea9bf1dec4a356f82a74dd8a7537a3baa
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.99 CPU, 2026-11-06T12Z..11-10T00Z (1600m -> 1000m); limits unchanged.
@@ -400,7 +400,7 @@ sets:
       ci-dashboard:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        job_image: registry.vallery.net/jvallery/weather-ci@sha256:f4fceab3222d3817baf8def870970981eb88a853cf42f2dc36efcec779f46673
+        job_image: registry.vallery.net/jvallery/weather-ci@sha256:6c10ebd4ddb8326727fb0f7d2bf6bcfea9bf1dec4a356f82a74dd8a7537a3baa
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 3.72 CPU, 2026-11-06T12Z..11-10T00Z (1050m -> 3750m); limits unchanged.
         job_resources: {cpu: 3750m, memory: 3200Mi, limit_cpu: "8", limit_memory: 8Gi}
