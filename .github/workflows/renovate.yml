@@ -46,6 +46,11 @@ jobs:
           unset APP_PRIVATE_KEY
           export RENOVATE_TOKEN RENOVATE_PLATFORM=github RENOVATE_REPOSITORIES="$GITHUB_REPOSITORY"
           export RENOVATE_ONBOARDING=false RENOVATE_REQUIRE_CONFIG=required LOG_LEVEL=info
-          export RENOVATE_GIT_AUTHOR="estate-ci renovate <estate-ci@users.noreply.github.com>"
+          # gitAuthor must be the App's own bot identity: on GitHub with an App
+          # token Renovate commits through the API (platformCommit), so the
+          # branch commit is authored by vallery-pin-bot[bot]. A different
+          # gitAuthor makes Renovate treat its own branch as edited and skip
+          # PR creation ("Branch has been edited but found no PR"; estate-ci#110).
+          export RENOVATE_GIT_AUTHOR="vallery-pin-bot[bot] <353541463+vallery-pin-bot[bot]@users.noreply.github.com>"
           ENV_NAMES="RENOVATE_TOKEN RENOVATE_PLATFORM RENOVATE_REPOSITORIES RENOVATE_ONBOARDING RENOVATE_REQUIRE_CONFIG LOG_LEVEL RENOVATE_GIT_AUTHOR" \
             TIMEOUT_MINUTES=25 "$ESTATE_CI/sidecar-run.sh" job <<< 'cd /tmp && /usr/local/sbin/renovate-entrypoint.sh renovate'
