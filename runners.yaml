@@ -36,7 +36,7 @@ defaults:
   # job is the only writer of this digest (STD-CI-13, D-273): it opens the pin PR
   # (commit trailer Estate-CI-Source names the built commit). FROM the stock
   # runner (uid 1001), so it serves as runner_image and as job_image.
-  toolbox: &toolbox registry.vallery.net/jvallery/estate-ci/toolbox@sha256:8b7f3ebd27052b11b57be2e0887649bc1b3e3fb7b7af1cd242e50e7e59efa710
+  toolbox: &toolbox registry.vallery.net/jvallery/estate-ci/toolbox@sha256:75bd1355d4e35701d71d81543b0bdbbf49dad8c7063e6271522f1dce16cbe804
   chart_version: 0.14.2
   controller_service_account: {namespace: arc-systems, name: arc-gha-rs-controller}
   # Stock actions-runner 2.338.2, mirrored by mirrors.txt (same index digest as upstream).
