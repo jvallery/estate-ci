@@ -19,6 +19,12 @@ on:
   schedule:
     - cron: "17 9 * * 1-5"
   workflow_dispatch:
+    inputs:
+      log_level:
+        description: Renovate LOG_LEVEL (debug to diagnose a skipped or aborted run)
+        type: choice
+        options: [info, debug]
+        default: info
 
 permissions:
   contents: read
@@ -38,6 +44,7 @@ jobs:
         env:
           APP_CLIENT_ID: ${{ vars.PIN_BOT_CLIENT_ID }}
           APP_PRIVATE_KEY: ${{ secrets.PIN_BOT_PRIVATE_KEY }}
+          RENOVATE_LOG_LEVEL: ${{ inputs.log_level || 'info' }}
         run: |
           set -euo pipefail
           RENOVATE_TOKEN="$(python3 "$ESTATE_CI/app-token.py" "$GITHUB_REPOSITORY")"
@@ -45,7 +52,7 @@ jobs:
           trap 'APP_TOKEN="$RENOVATE_TOKEN" python3 "$ESTATE_CI/app-token.py" --revoke || true' EXIT
           unset APP_PRIVATE_KEY
           export RENOVATE_TOKEN RENOVATE_PLATFORM=github RENOVATE_REPOSITORIES="$GITHUB_REPOSITORY"
-          export RENOVATE_ONBOARDING=false RENOVATE_REQUIRE_CONFIG=required LOG_LEVEL=info
+          export RENOVATE_ONBOARDING=false RENOVATE_REQUIRE_CONFIG=required LOG_LEVEL="$RENOVATE_LOG_LEVEL"
           # gitAuthor must be the App's own bot identity: on GitHub with an App
           # token Renovate commits through the API (platformCommit), so the
           # branch commit is authored by vallery-pin-bot[bot]. A different
