@@ -51,6 +51,23 @@ the same.
    can preempt either; runners never preempt. Pending Pods are ordered by
    priority, so freed CPU goes to infra runners before app runners, however
    many jobs an app repo has queued (fair share, 2026-11-07).
+   **Incident-critical sets (D-528, estate-ci#179, 2026-11-12).** The scale
+   sets named in `runners.yaml` `defaults.incident_sets` use PriorityClass
+   `ci-incident` (-800, `preemptionPolicy: PreemptLowerPriority`). When every
+   `ci-runner-slot` is taken, the scheduler evicts a lower-priority runner Pod
+   (-900 or -1000) to place theirs, so a lane restoring a production service
+   gets a runner within about 2 minutes. The evicted job fails and is re-run
+   (STD-CI-03 treats eviction the same way). Production tiers (-100 and above)
+   still preempt `ci-incident`, it counts against the same runner quota
+   (`estate-ci-runner-pods`), and slot counts and the hot guard are unchanged,
+   so node CPU safety is as before. When that quota itself is exhausted the Pod
+   is refused at admission and preemption cannot help; that case is not covered.
+   The list holds explicit scale-set names and the renderer refuses an unknown
+   one. COORD designates a set (or Jason directly) by a PR to `runners.yaml`,
+   delivered through the `estate-ci-runners` pin, and removes it the same way
+   once the set no longer needs incident priority. The first set is
+   research-vault (`-build`, `-ci`, `-pg`), the sets that waited 7-20 minutes in
+   the 2026-11-10 Research Vault incident.
 4. **Spread all runners together.** Every runner Pod carries
    `estate-ci.vallery.net/runner: "true"`, and one soft hostname
    `topologySpreadConstraint` (maxSkew 1, ScheduleAnyway,
