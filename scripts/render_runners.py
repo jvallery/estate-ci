@@ -388,6 +388,8 @@ def render(cfg: dict) -> dict[str, str]:
     out: dict[str, str] = {}
     pod_cpu: list[float] = []
     ops_policies: list[dict] = []
+    incident = set(d.get("incident_sets") or [])
+    seen: set[str] = set()
     for entry in cfg["sets"]:
         if "repo" in entry:
             owner, repo = entry["repo"].split("/", 1)
@@ -413,6 +415,14 @@ def render(cfg: dict) -> dict[str, str]:
             name = f"{base}-{key if profile != key else SUFFIX[profile]}"
             if not NAME.match(name):
                 raise RenderError(f"scale set name {name!r} is invalid or longer than 45 characters")
+            seen.add(name)
+            if name in incident:
+                # D-528 (estate-ci#179): an incident-critical set preempts routine runners.
+                priority = d["incident_priority_class"]
+            elif expected in d.get("infra_repos", []):
+                priority = d["infra_priority_class"]
+            else:
+                priority = "ci-preemptible"
             values = {
                 "githubConfigUrl": url,
                 "githubConfigSecret": owners[owner],
@@ -420,8 +430,7 @@ def render(cfg: dict) -> dict[str, str]:
                 "minRunners": int(opts.get("min", 0)),
                 "maxRunners": int(opts.get("max", d["max"][profile])),
                 "controllerServiceAccount": d["controller_service_account"],
-                "template": pod_template(d, profile, opts, expected, base, key,
-                                         d["infra_priority_class"] if expected in d.get("infra_repos", []) else "ci-preemptible"),
+                "template": pod_template(d, profile, opts, expected, base, key, priority),
             }
             pod_cpu.append(pod_cpu_request(values["template"]))
             app = {
@@ -450,6 +459,9 @@ def render(cfg: dict) -> dict[str, str]:
             out[f"{name}.yaml"] = HEADER + yaml.dump(app, Dumper=_NoAliasDumper, sort_keys=False, width=200)
             if profile == "ops":
                 ops_policies.append(ops_egress_policy(name, opts))
+    unknown = sorted(incident - seen)
+    if unknown:
+        raise RenderError(f"incident_sets names unknown scale sets: {', '.join(unknown)}")
     cfg["_max_pod_cpu"] = max(pod_cpu) if pod_cpu else 0.0
     names = sorted(out)
     out[OPS_KEY] = HEADER + "".join(

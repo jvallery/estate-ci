@@ -31,7 +31,7 @@ spec:
           spec:
             automountServiceAccountToken: false
             restartPolicy: Never
-            priorityClassName: ci-preemptible-infra
+            priorityClassName: ci-incident
             tolerations:
             - key: dedicated
               operator: Equal

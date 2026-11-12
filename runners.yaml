@@ -53,6 +53,18 @@ defaults:
   # Jason 2026-11-10 (RV2 OCR critical path: "CI is stuck again for cortex/RV2. Help those lanes"):
   # cortex-ai-compute and research-vault join the infra tier.
   infra_repos: [jvallery/agents, jvallery/monitoring-stack, jvallery/storage-infra, jvallery/network-infra, jvallery/proxmox-infrastructure, jvallery/estate-ci, jvallery/sentinel, jvallery/homeassistant, jvallery/cortex-ai-compute, jvallery/research-vault]
+  # D-528 (Jason first-hand 2026-11-12, estate-ci#179; changes D-87 for these sets
+  # only): incident-critical scale sets use ci-incident (-800,
+  # preemptionPolicy PreemptLowerPriority; PriorityClass in jvallery/agents
+  # platform/kubernetes/estate-scheduling). When ci-runner-slot is saturated the
+  # scheduler evicts lower-priority runner Pods (ci-preemptible-infra -900,
+  # ci-preemptible -1000) to place them; production tiers still preempt them.
+  # The list is explicit scale-set names (the renderer refuses an unknown name).
+  # COORD (or Jason) adds or removes a set by PR, delivered by the
+  # estate-ci-runners pin (ADR-0010 point 3). Initial set: research-vault, the
+  # sets that waited 7-20 min during the 2026-11-10 RV production incident.
+  incident_priority_class: ci-incident
+  incident_sets: [research-vault-build, research-vault-ci, research-vault-pg]
   max:
     ci: 3
     pg: 1

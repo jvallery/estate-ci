@@ -177,6 +177,11 @@ spec:
 # now 102.7 only because the largest Pod (verdify-platform-ci-dashboard, 3.9)
 # raises node8's 4-slot ceiling to 15.6; that is not new room, so the quota is
 # not raised with it.
+# D-528 (estate-ci#179): ci-incident runner Pods (the runners.yaml incident_sets)
+# count against this same envelope, so the aggregate runner budget is unchanged
+# and they never fall into estate-ci-ops. Limit: when requests.cpu here is
+# exhausted the Pod create is refused at admission, which preemption cannot
+# help; the observed incident wait (2026-11-10) was on ci-runner-slot.
 apiVersion: v1
 kind: ResourceQuota
 metadata:
@@ -192,7 +197,7 @@ spec:
     matchExpressions:
       - scopeName: PriorityClass
         operator: In
-        values: ["ci-preemptible", "ci-preemptible-infra"]
+        values: ["ci-preemptible", "ci-preemptible-infra", "ci-incident"]
 ---
 # Everything else in ci-runners (the ci-runner-hot-guard CronJob): its own small
 # budget, so runners can never starve it.
@@ -211,7 +216,7 @@ spec:
     matchExpressions:
       - scopeName: PriorityClass
         operator: NotIn
-        values: ["ci-preemptible", "ci-preemptible-infra"]
+        values: ["ci-preemptible", "ci-preemptible-infra", "ci-incident"]
 ---
 apiVersion: v1
 kind: LimitRange
