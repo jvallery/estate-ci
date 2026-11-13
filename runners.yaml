@@ -506,6 +506,18 @@ sets:
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.59 CPU, 2026-11-06T12Z..11-10T00Z (500m -> 600m); limits unchanged.
         runner_resources: {cpu: 600m, memory: 640Mi, limit_cpu: "4", limit_memory: 2Gi}
+      ci-tools:
+        # estate-platform#43 step 2 (W2, 2026-11-13): the direct agents gate
+        # (ci/check.sh via .github/workflows/ci.yml, context 'ci / all') runs on the
+        # shared estate-ci ci-tools image instead of agents-native-ci-source. Built
+        # and proven beside 'all / all'; the ruleset swap waits for estate-platform#19.
+        # Sized like verdify-platform-ci-tools; max 4 until the native ci set shrinks
+        # (estate-platform#43 step 7 removes agents-native-ci-source and resizes).
+        max: 4
+        job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:b6bdf1edf11579d483a6612cd9655dc326258d06fd0191a9d744be298544edfe
+        job_uid: 1001
+        job_resources: {cpu: 350m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
+        runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       # BUILD-AGENTS (D-22): the 12 images native event-ci built on push to main
       # (agents .github/workflows/build.yml, ci/images.tsv). Mounts
       # ci-runners/zot-push-agents (principal ci-agents, exact jvallery/agents-* paths

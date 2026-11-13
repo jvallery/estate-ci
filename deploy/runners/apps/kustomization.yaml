@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
 - agents-build.yaml
 - agents-ci-gate.yaml
+- agents-ci-tools.yaml
 - agents-ci.yaml
 - ai-presentation-ci.yaml
 - arc-controller.yaml
