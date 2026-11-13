@@ -777,10 +777,11 @@ sets:
         runner_image: *toolbox
         runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "4", limit_memory: 4Gi}
   # memoryos moved to jvallery on 2026-11-06 (REPO-MOVE, D19). The build and
-  # buildcheck sets are removed (estate-ci#115; COORD 2026-11-10T17:30Z, D-407/D-451):
-  # no workflow selected them and zot-push-memoryos was never sealed. The draft
-  # image-build move (memoryos#40, J-8) re-adds build/buildcheck here together
-  # with the zot-push-memoryos KSOPS Secret (principal ci-memoryos, storage-infra#1387).
+  # buildcheck sets were removed (estate-ci#115; COORD 2026-11-10T17:30Z, D-407/D-451)
+  # because zot-push-memoryos was never sealed. memoryos#16 step 3 re-adds build
+  # only (buildcheck stays out: PR checks run ci/check.sh on memoryos-ci). Merge only
+  # after the cred-batch item has sealed ci-runners/zot-push-memoryos (principal
+  # ci-memoryos; the storage-infra ACL rule jvallery/memoryos is already on main).
   - repo: jvallery/memoryos
     profiles:
       # estate-ci#5 / D-186: ci.yml "Kubernetes manifest validation" (ruby validators and
@@ -790,6 +791,11 @@ sets:
         max: 2
         runner_image: *toolbox
         runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "4", limit_memory: 4Gi}
+      # Pushes jvallery/memoryos with zot principal ci-memoryos via the KSOPS Secret
+      # ci-runners/zot-push-memoryos (memoryos build.yml, memoryos#16 PR B).
+      build:
+        max: 1
+        kaniko_resources: {cpu: 250m, memory: 1Gi, limit_cpu: "8", limit_memory: 8Gi}
   # verdify-www image build (BUILD-APPS, D-22; COORD 2026-11-06). Registers once
   # jvallery/verdify-www is in runner App installation 179108157 (Jason). build
   # needs the KSOPS Secret zot-push-verdify-www (zot principal ci-verdify-www,
