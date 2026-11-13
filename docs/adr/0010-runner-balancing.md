@@ -114,8 +114,8 @@ the same.
    a worker to 95% of allocatable, D-486) and each worker's non-runner requests; `render_runners.py` fails when
    the runner quota's `requests.cpu` is above the sum over workers of
    min(allocatable - reserve - non-runner, slots x largest runner Pod request).
-   The slot count cannot be that budget: 20 slots x 2.8 CPU is 56 CPU against
-   13-22 CPU of headroom per worker, and STD-CI-10 fixes the slot values.
+   The slot count cannot be that budget: 20 slots x 3.9 CPU is 78 CPU against
+   12-25 CPU of headroom per worker, and STD-CI-10 fixes the slot values.
    **The reserve is aggregate, not per node.** A namespace quota does not stop
    the scheduler from filling one worker's free requests with runners, so a
    single worker can still reach zero reserve while the total stays inside the
@@ -136,10 +136,21 @@ the same.
    A failed reserve query writes nothing, so a Prometheus outage does not
    stop CI on node4-7.
    Lowering the quota below the 48 h peak of runner requests (124.9 CPU) means
-   bursts queue in GitHub; at 98 no period can have every set at its
-   `maxRunners`, so estate-ci#69's 7-day acceptance window needs that clause
-   amended in the same decision. If node5's slots drop to 6, the budget falls
-   to about 88.4 CPU and the quota must go to 88 (render fails above it).
+   bursts queue in GitHub; at the rendered budget no period can have every set
+   at its `maxRunners`.
+   **What the 95% line means at D-502 (b) widths** (D-575 (c), Jason
+   2026-11-12T22:04:02Z; estate-ci#193). At the slot counts and hot-guard
+   thresholds above, a saturating burst takes node4-7 to 1.02-1.06 of
+   allocatable for minutes (2026-11-11), and only fewer concurrent runners per
+   worker would stop that, which D-481 and D-502 (b) rule out. So the per-node
+   0.95 line is not enforced as an instantaneous maximum. What holds instead:
+   the quota equals the re-measured budget, so the D-486 reserve is real in
+   aggregate; `EstateCIWorkerCPUSaturated` (0.95 sustained for 15 minutes)
+   never fires; and non-CI Pods show no harm (no kubelet/cAdvisor scrape gap
+   over 2 minutes, no liveness kill, no registry capacity-signal fail-closed
+   run) under runner load. The quota follows `non_runner_cpu`: re-measure it
+   when platform requests move and re-render; the quota must go down with a
+   lower budget (render fails above it) and may go up to a higher one.
    Tests: `tests/runner_budget/run.py`.
 
 ## Capacity (2026-11-07 sample)
@@ -159,9 +170,7 @@ the same.
   non-runner requests 117.3 measured 2026-11-09T23:5xZ (recorded rounded up:
   node4 24, node5 18, node6 22.5, node7 27, node8 27.5); 110 in the decision
   used a stale 112. Runner budget 98.3 CPU (node8 held to 4 slots x 2.8 =
-  11.2), quota requests.cpu 98. The budget rises when storage-infra#1666 frees
-  Longhorn instance-manager requests (~15-18 CPU); re-measure non_runner_cpu
-  and re-render the quota then.
+  11.2), quota requests.cpu 98.
 - 2026-11-10 D-488 sizing (sample 2026-11-06T12:20Z..11-10T00:35Z, the whole
   `ci-runners` history, about 22,000 runner Pods): weighted mean runner Pod
   request 1.09 -> 0.87 CPU; sum at every set's `maxRunners` 308 -> 235 CPU.
@@ -173,6 +182,14 @@ the same.
   not raised with it. Workers at that time: node CPU use p50 9.5-21 CPU, p95
   36-42 CPU, peak 47-51 of 47 allocatable, runners using more than they
   request at each node's peak (bursting on limits).
+- 2026-11-13 (estate-ci#193, D-575 (c)): non-runner requests re-measured
+  2026-11-13T14:32:51Z (Running Pods outside `ci-runners`, effective request
+  per Pod, 138.0 CPU on node4-8; 117.3 on 11-09): node4 20.5, node5 28.5,
+  node6 32, node7 30.5, node8 27.5 CPU (rounded up to 0.5). Longhorn
+  instance-managers keep 5.64 CPU per worker (storage-infra#1666 closed
+  refuted 2026-11-09, so that relief does not come). Runner budget 82.7 CPU
+  at reserve 2.35 (node8 held to 4 x 3.9 = 15.6), quota requests.cpu
+  98 -> 82. Slots (20 x 4 + 4) and the hot guard are unchanged.
 - Target: workers under about 85% of allocatable CPU in steady state.
 
 ## Re-sizing

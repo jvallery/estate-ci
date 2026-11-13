@@ -4,8 +4,9 @@
 # maxRunners (sum + ~10%), and the COORD P0 of 2026-11-07 set the compute
 # envelope estate-ci-runner-pods to requests.cpu 215 (node4-8 allocatable
 # 5 x 43; node4-8 read 5 x 47 = 235 on 2026-11-09). Since estate-ci#69
-# (2026-11-09, D-486, D-488) its requests.cpu 98 is the per-worker CPU budget
-# again (ADR-0010 point 7; its dated block below); this object keeps the object
+# (2026-11-09, D-486, D-488) its requests.cpu (98, then 82 since D-575 (c),
+# estate-ci#193) is the per-worker CPU budget again (ADR-0010 point 7; the
+# dated blocks below); this object keeps the object
 # and ephemeral caps; estate-ci-ops budgets the hot guard.
 # Raise a value only with live headroom on the runner workers, and add a dated
 # block below. The blocks below are the history, oldest first; their
@@ -158,9 +159,7 @@ spec:
 # at 95% of allocatable; the 110 in the decision used a stale 112 CPU of
 # non-runner requests (117.3 measured 2026-11-09T23:5xZ). Runner requests used,
 # 48 h to 2026-11-09T18Z: p95 76.4, p99 110.1, max 124.9 CPU; workers reached
-# 1.0-1.09 of allocatable CPU in that window. The budget rises when
-# storage-infra#1666 frees Longhorn instance-manager requests (~15-18 CPU);
-# re-measure non_runner_cpu and raise this then. Above 98 the
+# 1.0-1.09 of allocatable CPU in that window. Above 98 the
 # ResourceQuota admission plugin rejects the EphemeralRunner Pod create (403
 # "exceeded quota"), the condition the P0 raise removed. ARC 0.14.2
 # (ephemeralrunner_controller.go) retries that create every 30 s and, once the
@@ -182,6 +181,14 @@ spec:
 # and they never fall into estate-ci-ops. Limit: when requests.cpu here is
 # exhausted the Pod create is refused at admission, which preemption cannot
 # help; the observed incident wait (2026-11-10) was on ci-runner-slot.
+# D-575 (c) (Jason 2026-11-12T22:04:02Z, estate-ci#193): requests.cpu 98 -> 82,
+# the re-rendered budget. Non-runner requests on node4-8 were re-measured
+# 2026-11-13T14:32:51Z at 138.0 CPU (117.3 on 11-09; storage-infra#1666 closed
+# refuted, so Longhorn's ~5.6 CPU per worker stays), which puts the runner
+# budget at 82.7 CPU; at 98 the D-486 reserve was not real even in aggregate.
+# Slots and the hot guard are unchanged (D-481, D-502 (b)); bursts above 82
+# queue in GitHub as described above. Re-measure non_runner_cpu when platform
+# requests move and re-render this value with it.
 apiVersion: v1
 kind: ResourceQuota
 metadata:
@@ -189,7 +196,7 @@ metadata:
 spec:
   hard:
     pods: "262"
-    requests.cpu: "98"
+    requests.cpu: "82"
     requests.memory: 365Gi
     limits.cpu: "4780"
     limits.memory: 2740Gi
