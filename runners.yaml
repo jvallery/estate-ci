@@ -65,10 +65,12 @@ defaults:
   # sets that waited 7-20 min during the 2026-11-10 RV production incident.
   # D-610 a (Jason first-hand 2026-11-13): ci-incident is set only for a declared
   # incident with an end time, added by one PR and removed by another.
-  # research-vault-ci and -pg return to ci-preemptible-infra (their 25 live Pods
-  # preempted agents-ci runners, PreemptionByScheduler, 2026-11-13T01:01Z).
+  # Every research-vault set (-ci, -pg, then -build) returns to
+  # ci-preemptible-infra (their 25 live Pods preempted agents-ci runners,
+  # PreemptionByScheduler, 2026-11-13T01:01Z). No incident is declared, so the
+  # list is empty.
   incident_priority_class: ci-incident
-  incident_sets: [research-vault-build]
+  incident_sets: []
   max:
     ci: 3
     pg: 1

@@ -71,10 +71,11 @@ the same.
    **Incident-only use (D-610 a, 2026-11-13).** A set is named in
    `incident_sets` only for a declared incident with an end time: one PR adds
    it when the incident is declared and one PR removes it at the end time. It
-   is never a standing tier. `research-vault-ci` and `-pg` returned to
-   `ci-preemptible-infra` after their 25 live runner Pods preempted
-   `agents-ci` runners (pod condition `PreemptionByScheduler`,
-   2026-11-13T01:01Z). The `ci-incident` PriorityClass itself stays defined.
+   is never a standing tier. Every research-vault set (`-ci` and `-pg`, then
+   `-build`) returned to `ci-preemptible-infra` after their 25 live runner
+   Pods preempted `agents-ci` runners (pod condition `PreemptionByScheduler`,
+   2026-11-13T01:01Z), so `incident_sets` is empty until the next declared
+   incident. The `ci-incident` PriorityClass itself stays defined.
 4. **Spread all runners together.** Every runner Pod carries
    `estate-ci.vallery.net/runner: "true"`, and one soft hostname
    `topologySpreadConstraint` (maxSkew 1, ScheduleAnyway,
