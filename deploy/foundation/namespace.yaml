@@ -3,6 +3,7 @@ kind: Namespace
 metadata:
   name: ci-runners
   labels:
+    estate.vallery.net/owner: jvallery.estate-ci
     app.kubernetes.io/part-of: estate-ci
     # Runner Pods are admitted at "baseline": no privileged containers, host
     # namespaces, hostPath or added capabilities. Only the Kaniko sidecar runs as
