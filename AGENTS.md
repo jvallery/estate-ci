@@ -61,8 +61,22 @@ per-repo migration runbook. Read `README.md` and `docs/MIGRATION-RUNBOOK.md`.
 
 ## Backlog and standards
 
-The standards register v1 is `docs/estate/STANDARDS.md` in jvallery/agents
-(draft PR jvallery/agents#6373; planned to move to jvallery/estate-platform).
+The standards register v1 (ratified, D-463) is
+[`docs/estate/STANDARDS.md`](https://github.com/jvallery/estate-platform/blob/main/docs/estate/STANDARDS.md)
+in jvallery/estate-platform (moved from jvallery/agents under
+jvallery/estate-platform#68; the old path is a pointer). Clauses this
+repository implements: STD-CI-01 (ADR-0005, ADR-0006, ADR-0008 ruleset
+switch), STD-CI-02 (ADR-0001 R1, `deploy/foundation/bin/lint-workflows.py`),
+STD-CI-03 (ADR-0002, ADR-0010), STD-CI-04 image half for images built through
+estate-ci (ADR-0003, `.github/workflows/image-build.yml`), STD-CI-07 (the
+reusables other repositories may use: `.github/workflows/`, ADR-0001 R2;
+estate-ci is outside its own scope), STD-CI-08 (ADR-0001 end state 5,
+ADR-0008), STD-CI-09 (ADR-0005, ADR-0011,
+`deploy/foundation/bin/job-started-guard.sh`), STD-CI-10 (ADR-0002, ADR-0010,
+`runners.yaml`, `deploy/foundation/runner-slots.yaml`), STD-CI-12 (ADR-0003,
+`deploy/foundation/bin/image-build.sh`), STD-CI-13 (ADR-0006,
+`.github/workflows/pin-bump.yml`, `deploy/foundation/bin/pin-bump.sh`) and
+STD-CI-15 (ADR-0005, ADR-0009 E-2, `lint-workflows.py` `ALLOWED_SECRETS`).
 Issues here cite a `STD-` clause. Waves are milestones (`W1 Convergence
 foundations` to `W5 BCDR`), with matching `sprint:w1-convergence` to
 `sprint:w5-bcdr` labels and one domain label (`conv`, `cicd`, `obs`, `sec`,
