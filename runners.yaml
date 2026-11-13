@@ -63,8 +63,12 @@ defaults:
   # COORD (or Jason) adds or removes a set by PR, delivered by the
   # estate-ci-runners pin (ADR-0010 point 3). Initial set: research-vault, the
   # sets that waited 7-20 min during the 2026-11-10 RV production incident.
+  # D-610 a (Jason first-hand 2026-11-13): ci-incident is set only for a declared
+  # incident with an end time, added by one PR and removed by another.
+  # research-vault-ci and -pg return to ci-preemptible-infra (their 25 live Pods
+  # preempted agents-ci runners, PreemptionByScheduler, 2026-11-13T01:01Z).
   incident_priority_class: ci-incident
-  incident_sets: [research-vault-build, research-vault-ci, research-vault-pg]
+  incident_sets: [research-vault-build]
   max:
     ci: 3
     pg: 1
