@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# estate-ci#111 (STD-IAC-17): build and schema-validate deploy/foundation, the one
+# estate-ci#111 (STD-IAC-17): build and schema-validate deploy/foundation, an
 # Argo-delivered path in this repo (Application estate-ci-foundation auto-syncs main
-# and its estate-ci-scripts ConfigMap reaches every runner). Runs on the
+# and its estate-ci-scripts ConfigMap reaches every runner), and deploy/arc-systems
+# (estate-ci#192: Application estate-ci-arc-systems auto-syncs main). Runs on the
 # estate-ci-ci-toolbox set, whose image ships kustomize and kubeconform.
 # A missing generator file, a broken resource or an invalid object fails here, before merge.
 set -euo pipefail
@@ -30,3 +31,6 @@ done
 # allowed by runner-egress). Every kind here is core Kubernetes, so no CRD schema is needed.
 kubeconform -strict -summary -output text - < "$out"
 echo "foundation-check: OK ($(grep -c '^kind:' "$out") objects)"
+kustomize build deploy/arc-systems > "$out"
+kubeconform -strict -summary -output text - < "$out"
+echo "foundation-check: arc-systems OK ($(grep -c '^kind:' "$out") objects)"

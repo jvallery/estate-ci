@@ -6,6 +6,7 @@ resources:
 - agents-ci-gate.yaml
 - agents-ci.yaml
 - ai-presentation-ci.yaml
+- arc-controller.yaml
 - cortex-ai-compute-build.yaml
 - cortex-ai-compute-buildcheck.yaml
 - cortex-ai-compute-ci.yaml
@@ -13,6 +14,7 @@ resources:
 - docs-build.yaml
 - docs-buildcheck.yaml
 - docs-ci.yaml
+- estate-ci-arc-systems.yaml
 - estate-ci-build.yaml
 - estate-ci-buildcheck.yaml
 - estate-ci-ci-renovate.yaml

@@ -1,0 +1,46 @@
+# agents#5393 (PCR-14, STD-ORG-02): arc-systems runs the ARC controller and one
+# listener per scale set. All 19 pods were BestEffort on 2026-10-24 (working set
+# 11Mi per listener, 107Mi for the controller). The LimitRange gives every
+# container a request so none is BestEffort and a generous memory limit as a
+# safety net; it sets no CPU limit. The defaults apply when ARC next recreates a
+# pod; ResourceQuota and LimitRange never evict running pods.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: arc-systems-container-defaults
+  namespace: arc-systems
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+  labels:
+    app.kubernetes.io/part-of: github-actions-runners
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 10m
+        memory: 64Mi
+      default:
+        memory: 512Mi
+---
+# agents#5393: listener/control demand is non-preemptible, so it counts in full
+# against the worst-host N-1 budget (agents docs/estate/capacity-n1-budget.md). 96 pods
+# at the 64Mi default request is 6Gi. 2026-11-06: estate-ci (ci-runners) adds one
+# listener per set; at 66 listeners + controller the 64-pod / 4Gi / 32Gi quota
+# refused new listeners (homeassistant-build, verdify-www-build). The legacy
+# github-runners listeners go away as their sets retire (estate-ci#195).
+# 2026-11-12T17:42Z: 68 of 96 pods used (2 controller replicas, 66 listeners).
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: arc-systems-budget
+  namespace: arc-systems
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+  labels:
+    app.kubernetes.io/part-of: github-actions-runners
+spec:
+  hard:
+    pods: "96"
+    requests.cpu: "2"
+    requests.memory: 6Gi
+    limits.memory: 48Gi

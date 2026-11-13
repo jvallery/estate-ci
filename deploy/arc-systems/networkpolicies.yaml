@@ -1,0 +1,68 @@
+# monitoring-stack#1417 / estate-ci ADR-0007: the ARC listener and controller-manager
+# metrics (:8080/metrics, enabled in Application arc-controller) are reachable from the
+# observability Prometheus (and its HA replica) only. arc-systems is otherwise
+# default-deny ingress (namespace-ingress-isolation, not owned here).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-listener-metrics-from-prometheus
+  namespace: arc-systems
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: runner-scale-set-listener
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+        # The HA replica scrapes the same arc jobs; without it the replica sees the
+        # targets refused whenever the primary is down (CI-OBS, 2026-11-06).
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus-replica
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-controller-metrics-from-prometheus
+  namespace: arc-systems
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: gha-rs-controller
+      app.kubernetes.io/instance: arc
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus-replica
+      ports:
+        - protocol: TCP
+          port: 8080

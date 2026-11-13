@@ -27,15 +27,19 @@ Image tags and registry retention classes: [`docs/image-tags-and-retention.md`](
 | `.github/workflows/mirror.yml`, `mirrors.txt`, `.github/workflows/mirror-images.yml` | Reusable digest-preserving image mirror (`crane copy`, `deploy/foundation/bin/mirror.sh`); estate-ci's own mirror list, validated on PRs and copied on a push to `main` that changes it (or when `mirror-images` is dispatched on `main`). |
 | `images/estate-ci-toolbox/`, `.github/workflows/build.yml` | The estate-ci-toolbox job image (tools and versions in its README), built in-cluster by Kaniko: no-push on PRs; a push to `main` that changes it builds and pushes it, and the `pin` job then opens the pin PR for `runners.yaml` and the rendered sets (the only writer of that digest). |
 | `runners.yaml` | The runner registry: which repos get which scale sets. |
-| `scripts/render_runners.py` | Renders `runners.yaml` into `deploy/runners/apps/` (one Argo Application per scale set). |
+| `scripts/render_runners.py` | Renders `runners.yaml` into `deploy/runners/apps/` (one Argo Application per scale set, plus the ARC controller Applications `arc-controller` and `estate-ci-arc-systems`, estate-ci#192). |
 | `deploy/foundation/` | Namespace `ci-runners`, ResourceQuota/LimitRange, NetworkPolicies, the runner scripts ConfigMap, the node8 hot guard and the `ci-runner-slot` advertiser (`runner-slots.yaml`, `bin/runner-slots.py`). |
+| `deploy/arc-systems/` | The ARC controller's support objects in `arc-systems`: LimitRange, ResourceQuota `arc-systems-budget`, PDB `arc-controller` and the two Prometheus metrics NetworkPolicies (Application `estate-ci-arc-systems`, estate-ci#192). |
 | `docs/examples/` | Caller workflows to copy. |
 
 ## Design
 
-**Runners.** The existing ARC controller (`arc-systems/arc-gha-rs-controller`,
-gha-runner-scale-set 0.14.2, cluster-wide) serves scale sets in namespace
-`ci-runners`. Each set is an Argo Application of the upstream chart with
+**Runners.** The ARC controller (`arc-systems/arc-gha-rs-controller`,
+gha-runner-scale-set-controller 0.14.2, two replicas with leader election,
+cluster-wide) serves scale sets in namespace `ci-runners`. It is the
+`controller` block of `runners.yaml`, rendered as Application `arc-controller`
+(chart version shared with the scale sets through `defaults.chart_version`),
+with its `arc-systems` support objects in `deploy/arc-systems/` (estate-ci#192). Each set is an Argo Application of the upstream chart with
 values rendered from `runners.yaml`; sets scale from 0. `jvallery` is a user
 account, so its sets are per repository. Only jvallery repositories get sets
 (D19); VerdifyConsultancy repositories move to jvallery before they use CI. The scale-set name is the
@@ -113,7 +117,8 @@ only (D19): there is no VerdifyConsultancy installation or org-level set.
 **Delivery.** Argo CD Applications `estate-ci-foundation` (AppProject
 `estate-ci`), `estate-ci-runners` (app-of-apps over `deploy/runners/apps`,
 AppProject `estate-ci-apps`; the per-set `estate-ci-runner-*` Applications are
-in `estate-ci`) and `estate-ci-secrets` (central KSOPS, AppProject
+in `estate-ci`, and `arc-controller` and `estate-ci-arc-systems` in
+`estate-ci-arc`, destination `arc-systems` only) and `estate-ci-secrets` (central KSOPS, AppProject
 `estate-ci-secrets`) are declared once in jvallery/agents (planned to move to
 jvallery/estate-platform).
 After that, onboarding a repo touches only this repository and the repo itself.
