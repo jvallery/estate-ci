@@ -1,0 +1,13 @@
+# estate-ci#192 (D-542): the arc-systems support objects for the ARC controller,
+# moved value for value from jvallery/agents platform/kubernetes/github-runners/foundation
+# (Application arc-runner-foundation). Delivered by Application estate-ci-arc-systems
+# (rendered into deploy/runners/apps/ by scripts/render_runners.py), auto-sync from main,
+# prune off. NetworkPolicy edits here are confined to arc-systems: sync under
+# NS-arc-systems.lock (estate L11). The controller itself is Application arc-controller.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: arc-systems
+resources:
+  - resource-controls.yaml
+  - pdb.yaml
+  - networkpolicies.yaml

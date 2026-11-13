@@ -78,6 +78,33 @@ defaults:
     buildcheck: 1
     ops: 1
 
+# ARC controller (estate-ci#192, D-542): render_runners.py renders it as Application
+# arc-controller (chart gha-runner-scale-set-controller at defaults.chart_version, so the
+# controller and every scale set stay on one ARC release) and Application
+# estate-ci-arc-systems (deploy/arc-systems: LimitRange, ResourceQuota, PDB and the two
+# metrics NetworkPolicies). Both use AppProject estate-ci-arc (declared in jvallery/agents
+# platform/gitops/projects/estate-ci.yaml) and are delivered by the estate-ci-runners
+# nested root. Values were copied value for value from jvallery/agents
+# platform/gitops/applications/local-staging/github-runners-arc.yaml (agents 03cb6df) so
+# Argo adopts the live release in place with no controller restart:
+#  - replicas 2: chart 0.14.2 turns on leader election when replicaCount > 1 (hot
+#    standby); required anti-affinity on host_topology_key keeps the two replicas on
+#    different Proxmox hosts (agents#5405, B-POWER 2026-11-02).
+#  - metrics on :8080 for the controller-manager and every listener
+#    (monitoring-stack#1417, ADR-0007).
+#  - image: the zot origin by digest (estate-ci#107, D-517a; mirrored by mirrors.txt,
+#    anonymous read granted by storage-infra#1740, so arc-systems needs no pull Secret).
+#    The chart passes it to every listener through CONTROLLER_MANAGER_CONTAINER_IMAGE.
+#    Changing it restarts the controller and every listener: do it only in a planned step.
+controller:
+  project: estate-ci-arc
+  release: arc
+  namespace: arc-systems
+  image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/gha-runner-scale-set-controller:pinned-1b4c7f62e971@sha256:1b4c7f62e971ab259a4b8798e48e2adaad4af747f45990f474ea5feefa03531d
+  replicas: 2
+  host_topology_key: topology.vallery.net/proxmox-host
+  metrics_addr: ":8080"
+
 # Per-worker CPU budget (estate-ci#69, ADR-0010, STD-CI-10, D-87). render_runners.py
 # checks it on every render: per worker, runner ceiling = slots x the largest
 # rendered Pod CPU request (bounded by the runner quota); headroom = allocatable

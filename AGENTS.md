@@ -48,9 +48,14 @@ per-repo migration runbook. Read `README.md` and `docs/MIGRATION-RUNBOOK.md`.
   `EDGE-WRITE.lock` (estate L11).
 - `ci-runner-slot` is advertised from here (CronJob `ci-runner-slots`,
   `deploy/foundation/runner-slots.yaml`; values fixed by STD-CI-10). The ARC
-  controller and the rest of the ARC foundation (`arc-runner-foundation`) are
-  still delivered from jvallery/agents; they are planned to move here
-  (estate-ci#76). The Argo Applications and AppProjects
+  controller is rendered here (`runners.yaml` `controller`, Application
+  `arc-controller`) with its `arc-systems` objects in `deploy/arc-systems/`
+  (estate-ci#192). `arc-controller` owns the ARC CRDs: keep its name, release
+  name and values identical across moves, never delete or prune it, and change
+  its image only in a planned step (it restarts the controller and every
+  listener). The legacy `github-runners` foundation (`arc-runner-foundation`)
+  stays in jvallery/agents until it retires (estate-ci#195). The Argo
+  Applications and AppProjects
   for this repo are declared in jvallery/agents and are planned to move to
   jvallery/estate-platform.
 

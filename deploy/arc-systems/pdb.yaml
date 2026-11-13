@@ -1,0 +1,18 @@
+# agents#5405: two controller replicas with leader election (Application
+# arc-controller, replicaCount 2, required anti-affinity across Proxmox hosts).
+# maxUnavailable 1 allows one disruption with one replica still leading.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: arc-controller
+  namespace: arc-systems
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/part-of: github-actions-runners
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: arc
+      app.kubernetes.io/name: gha-rs-controller
