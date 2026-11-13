@@ -114,7 +114,7 @@ controller:
 # capped runners at 79 CPU against a 48 h runner-request p95 of 76.4).
 # bound: quota. No slot value STD-CI-10 allows fits: 20 slots x 3.9 CPU (largest
 # Pod, verdify-platform-ci-dashboard since D-488; 2.8 monitoring-stack-ci before)
-# = 78 CPU against 17-27 CPU of headroom on node4-7,
+# = 78 CPU against 12-25 CPU of headroom on node4-7,
 # so the slot count cannot be the budget. The budget is the runner ResourceQuota
 # instead: estate-ci-runner-pods requests.cpu must not exceed the sum over
 # workers of min(headroom, ceiling). That bounds total runner requests to what
@@ -123,20 +123,23 @@ controller:
 # requests with runners (up to its slots) and leave it no reserve. Per node,
 # the hot guard's reserve tier (deploy/foundation/hot-guard-config.json
 # `reserve`) caps a node4-7 worker's slots at 10 while its CPU busy/allocatable
-# stays above 0.85 for 2 min (ADR-0010 point 7). non_runner_cpu is a
+# stays above 0.92 for 2 min (ADR-0010 point 7). non_runner_cpu is a
 # recorded snapshot (rounded up to 0.5 CPU) with no drift check; re-measure it
 # when platform requests move. EstateCIWorkerCPUSaturated is the live signal.
-# Measured 2026-11-09T18:20Z (kubectl --context vallery: node allocatable cpu,
-# ci-runner-slot, Running Pods outside ci-runners, effective request per Pod).
+# Measured 2026-11-13T14:32:51Z (kubectl --context vallery: node allocatable cpu,
+# ci-runner-slot, Running Pods outside ci-runners, effective request per Pod;
+# estate-ci#193, D-575 (c): budget 82.7, quota 82). The per-node 0.95 line is
+# not an instantaneous maximum at D-502 (b) widths; the proof is no sustained
+# EstateCIWorkerCPUSaturated and no harm to non-CI Pods (ADR-0010 point 7).
 capacity:
   reserve_cpu: "2.35"
   bound: quota
   quota: estate-ci-runner-pods
   nodes:
-    vm-k3s-node4: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "24"}
-    vm-k3s-node5: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "18"}
-    vm-k3s-node6: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "22.5"}
-    vm-k3s-node7: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "27"}
+    vm-k3s-node4: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "20.5"}
+    vm-k3s-node5: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "28.5"}
+    vm-k3s-node6: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "32"}
+    vm-k3s-node7: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "30.5"}
     vm-k3s-node8: {allocatable_cpu: "47", slots: 4, non_runner_cpu: "27.5"}
 
 # GitHub App registration Secret per owner (Secret in namespace ci-runners).
