@@ -38,7 +38,8 @@ metadata:
 #   amount in the agents PR that disables kepler's catalog row (runbook step 6).
 # - MIGRATE-INFRA repos (jvallery/agents#6092: monitoring-stack, network-infra,
 #   storage-infra, cortex-ai-compute, proxmox-infrastructure, home-dotfiles,
-#   AI_presentation, backups, immich-config, orbit, paige-companion, wordpress):
+#   AI_presentation, backups, immich-config, orbit, paige-companion, wordpress;
+#   the paige-companion-ci set was removed 2026-11-14 with its archive, paige-companion#32):
 #   +20 pods, +16750m CPU / +35328Mi requests, +90 CPU / +145Gi limits,
 #   +208Gi / +736Gi ephemeral storage = the sum of their sets at maxRunners
 #   (12 ci sets, 16 pods; 4 build sets). Their checks run today on the

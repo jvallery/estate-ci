@@ -46,7 +46,6 @@ resources:
 - options-tracker-build.yaml
 - options-tracker-ci.yaml
 - orbit-ci.yaml
-- paige-companion-ci.yaml
 - proxmox-infrastructure-ci.yaml
 - research-vault-build.yaml
 - research-vault-ci.yaml
