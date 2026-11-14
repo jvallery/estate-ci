@@ -513,7 +513,12 @@ sets:
         # and proven beside 'all / all'; the ruleset swap waits for estate-platform#19.
         # Sized like verdify-platform-ci-tools; max 4 until the native ci set shrinks
         # (estate-platform#43 step 7 removes agents-native-ci-source and resizes).
-        max: 4
+        # estate-platform#43 step 3 (2026-11-14): 4 -> 12. ci.yml runs 6 jobs per run
+        # (5 families + the 'ci / all' aggregate) on every agents PR and main push, so
+        # max 4 queued one run behind another (STD-CI-03, PR median < 15 min). +8
+        # runners = +4 CPU / +6Gi requests (job 350m/512Mi + runner 150m/256Mi); live
+        # 2026-11-14T22:5xZ estate-ci-runner-pods requests.cpu 31.1/82, memory 20.3/365Gi.
+        max: 12
         job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:b6bdf1edf11579d483a6612cd9655dc326258d06fd0191a9d744be298544edfe
         job_uid: 1001
         job_resources: {cpu: 350m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
