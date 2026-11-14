@@ -761,14 +761,6 @@ sets:
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (250m -> 350m); limits unchanged.
         job_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
-  - repo: jvallery/paige-companion
-    profiles:
-      ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
-        job_image: *toolbox
-        job_uid: 1001
-        job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/wordpress
     profiles:
       ci:
