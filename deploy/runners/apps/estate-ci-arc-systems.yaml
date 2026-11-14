@@ -11,7 +11,7 @@ metadata:
 spec:
   project: estate-ci-arc
   source:
-    repoURL: https://github.com/jvallery/estate-ci.git
+    repoURL: http://git-mirror.git-mirror.svc.cluster.local/jvallery/estate-ci.git
     targetRevision: main
     path: deploy/arc-systems
   destination:

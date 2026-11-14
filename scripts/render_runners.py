@@ -26,7 +26,7 @@ OUT = ROOT / "deploy" / "runners" / "apps"
 # Per-set egress for ops sets (rendered here, applied by estate-ci-foundation).
 OPS_EGRESS = ROOT / "deploy" / "foundation" / "ops-egress.generated.yaml"
 NAMESPACE = "ci-runners"
-SOURCE = "https://github.com/jvallery/estate-ci.git"
+SOURCE = "http://git-mirror.git-mirror.svc.cluster.local/jvallery/estate-ci.git"
 SUFFIX = {"ci": "ci", "pg": "pg", "build": "build", "buildcheck": "buildcheck", "ops": "ops"}
 CIDR = re.compile(r"^(\d{1,3}\.){3}\d{1,3}/(3[0-2]|[12]?\d)$")
 SECRET_NAME = re.compile(r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
