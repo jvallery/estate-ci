@@ -471,48 +471,16 @@ sets:
         slot: false
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
-      ci:
-        # COORD 2026-11-06 13:5xZ (Jason: max speed): 6 -> 12. Each runner requests 1.25 CPU / 2Gi
-        # (runner 250m/512Mi + job 1/1536Mi, measured job ~1 core / ~0.6Gi). +6 runners = +7.5 CPU /
-        # +12Gi against 17.2 CPU / 18.4Gi free worker requests and 19.5 CPU / 43Gi free ci-runners quota.
-        # N-1 was already short (ClusterN1RequestCapacityInsufficient cpu, about 25 CPU); this deepens it
-        # until the native agents slots move here at the J-6 switch.
-        # COORD GO-FAST 2026-11-06 ~18:2xZ (native drained): 12 -> 16. +4 runners =
-        # +5 CPU / +8Gi requests, +32 CPU / +40Gi limits; live 18:2xZ: quota used
-        # 36.5/60 CPU, 68.25/106Gi, limits 207/260 CPU, 287/400Gi; node4-7 free
-        # memory requests 10.4/12.4/18.9/12.0Gi. Soft preference away from node5
-        # (COORD: 94% memory requested there).
-        # D-29 (Jason, 2026-11-06 ~19:0xZ): 16 -> 24; ARC quota limits.cpu 260 -> 320.
-        # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 24 -> 30 (+6 from weather-build/kepler-ci/verdify-platform-ci-pg; at max 100%, ~90 jobs queued).
-        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 30 -> 37 (+7 on top of the rebalance; at max 100%, 148 jobs queued at 23:50Z).
-        # COORD contingency (2026-11-07 ~02:14Z): 37 -> 20 HOLD. verdify-db-0 CPU-starved on node7 (111%), Verdify planner failing; restore after the #66 slot template is live and node7 < 90% for 15 min.
-        # D-87 item 7 (CI-BALANCE 2026-11-07 ~05:58Z): 20 -> 30. #66 slots live; node7 10-min avg 69%; at max with 16 runs queued; quota 96.5/215. Sized from capacity, not back to 37 (node5 spikes to 104%).
-        # D-87 hold absorb (CI-BALANCE, COORD 2026-11-07): node6 hold +4 vCPU -> 30 -> 32.
-        # D-484 (Jason first-hand 2026-11-09, ARC cap within measured headroom): 32 -> 40 and drop the
-        # node5 avoidance. Measured 24h (estate_ci:node_cpu_usage:ratio_allocatable): median 12-40%,
-        # p95 56-76%, p99 69-90%, 0-19 min/day above 90%; node5 is now the idlest worker (median 12%,
-        # memory 37%), so the extra runners land there rather than on node7 (the 11-07 starvation node).
-        # Live 2026-11-09T23:0xZ: ci-runner-slots 51/84, quota requests.cpu 80/215. +8 runners =
-        # +14.4 CPU requests, +8 slots. Back off to 32 if EstateCIWorkerCPUSaturated fires or a
-        # platform liveness restart coincides with runner load.
-        max: 40
-        job_image: registry.vallery.net/jvallery/agents-native-ci-source@sha256:fec953f17c82ad084299dea666778c629729c4126aa7fa018f4a8be4831779c2
-        job_uid: 1001
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 0.89 CPU, 2026-11-06T12Z..11-10T00Z (1300m -> 900m); limits unchanged.
-        job_resources: {cpu: 900m, memory: 384Mi, limit_cpu: "8", limit_memory: 8Gi}
-        # COORD 2026-11-06: runner CPU limit 2 -> 4 to cut the ~2.4 min full-history checkout.
-        # Limits only; requests stay at the runner default (250m / 512Mi), so no scheduling cost.
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.59 CPU, 2026-11-06T12Z..11-10T00Z (500m -> 600m); limits unchanged.
-        runner_resources: {cpu: 600m, memory: 640Mi, limit_cpu: "4", limit_memory: 2Gi}
+      # estate-platform#43 step 7 (2026-11-15): the agents `ci` set (max 40, job image
+      # agents-native-ci-source@fec953f1) is retired. Every agents workflow runs on
+      # agents-ci-tools since agents#6882 and the step 7 agents PR (build.yml plan job).
       ci-tools:
         # estate-platform#43 step 2 (W2, 2026-11-13): the direct agents gate
         # (ci/check.sh via .github/workflows/ci.yml, context 'ci / all') runs on the
         # shared estate-ci ci-tools image instead of agents-native-ci-source. Built
         # and proven beside 'all / all'; the ruleset swap waits for estate-platform#19.
         # Sized like verdify-platform-ci-tools; max 4 until the native ci set shrinks
-        # (estate-platform#43 step 7 removes agents-native-ci-source and resizes).
+        # (estate-platform#43 step 7 removed agents-native-ci-source and the `ci` set).
         # estate-platform#43 step 3 (2026-11-14): 4 -> 12. ci.yml runs 6 jobs per run
         # (5 families + the 'ci / all' aggregate) on every agents PR and main push, so
         # max 4 queued one run behind another (STD-CI-03, PR median < 15 min). +8
