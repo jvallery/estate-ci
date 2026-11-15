@@ -3,7 +3,7 @@
 set -euo pipefail
 export HOME="${HOME:-/tmp}"; [[ -w "$HOME" ]] || export HOME=/tmp
 export PIP_DISABLE_PIP_VERSION_CHECK=1 PATH="$HOME/.local/bin:$PATH"
-python3 -m pip install --quiet --user pyyaml==6.0.2 actionlint-py==1.7.12.25 shellcheck-py==0.11.0.1
+python3 -m pip install --quiet --user pyyaml==6.0.3 actionlint-py==1.7.12.25 shellcheck-py==0.11.0.1
 python3 deploy/foundation/bin/lint-workflows.py --require-forgejo-notes .
 python3 tests/lint/run.py
 python3 tests/lint_allow/run.py
