@@ -2,10 +2,13 @@
 # Namespace arc-systems. Adoption is a zero diff against live (UID de1e866f, no labels
 # besides the server-set kubernetes.io/metadata.name, 2026-11-15T03:0xZ). Prune=false,Delete=false
 # keeps the live Namespace if this manifest or the Application is removed. AppProject
-# estate-ci-arc admits Namespace/arc-systems by exact name.
+# estate-ci-arc admits Namespace/arc-systems by exact name. Owner label: STD-OBS-01, value =
+# the ownership-record owner jvallery/estate-ci with / written as .
 apiVersion: v1
 kind: Namespace
 metadata:
   name: arc-systems
   annotations:
     argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    estate.vallery.net/owner: jvallery.estate-ci
