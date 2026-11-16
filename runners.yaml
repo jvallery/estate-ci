@@ -400,6 +400,10 @@ sets:
         # ARC-RAISE rebalance 2 (Jason via COORD 2026-11-07 00:35Z, zero-sum): 15 -> 12 (donor: listener busy peak 6 since 21:46Z).
         # COORD P0 fair share 2026-11-07 05:08Z (CI-BALANCE): 12 -> 6 until the infra backlog drains, then back to 12.
         max: 6
+        # verdify-platform#1542 (STD-EXP-13, D-242): the toolbox runner image, as
+        # kepler/sentinel/sunshine_club use, so the bare-run "ci / secret-scan" job has
+        # gitleaks; the python job sidecar is unchanged.
+        runner_image: *toolbox
         # python:3.13-bookworm (3.13.18, 2026-11-05 bookworm updates: perl/brotli/imagemagick/linux-libc-dev criticals),
         # mirrored by mirrors.txt (same index digest as docker.io/library/python).
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:cc55e4ded9c95f6ce2133b3d096db43f214d280c2a8af65d83e246c8fa7d168c
