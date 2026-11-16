@@ -182,6 +182,8 @@ spec:
 # and they never fall into estate-ci-ops. Limit: when requests.cpu here is
 # exhausted the Pod create is refused at admission, which preemption cannot
 # help; the observed incident wait (2026-11-10) was on ci-runner-slot.
+# COORD 2026-11-16T19:11:37Z: ci-runner-priority-high runner Pods (the runners.yaml
+# priority_sets) also count against this envelope and never fall into estate-ci-ops.
 # D-575 (c) (Jason 2026-11-12T22:04:02Z, estate-ci#193): requests.cpu 98 -> 82,
 # the re-rendered budget. Non-runner requests on node4-8 were re-measured
 # 2026-11-13T14:32:51Z at 138.0 CPU (117.3 on 11-09; storage-infra#1666 closed
@@ -205,7 +207,7 @@ spec:
     matchExpressions:
       - scopeName: PriorityClass
         operator: In
-        values: ["ci-preemptible", "ci-preemptible-infra", "ci-incident"]
+        values: ["ci-preemptible", "ci-preemptible-infra", "ci-incident", "ci-runner-priority-high"]
 ---
 # Everything else in ci-runners (the ci-runner-hot-guard CronJob): its own small
 # budget, so runners can never starve it.
@@ -224,7 +226,7 @@ spec:
     matchExpressions:
       - scopeName: PriorityClass
         operator: NotIn
-        values: ["ci-preemptible", "ci-preemptible-infra", "ci-incident"]
+        values: ["ci-preemptible", "ci-preemptible-infra", "ci-incident", "ci-runner-priority-high"]
 ---
 apiVersion: v1
 kind: LimitRange

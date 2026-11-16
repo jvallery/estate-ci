@@ -31,7 +31,7 @@ spec:
           spec:
             automountServiceAccountToken: false
             restartPolicy: Never
-            priorityClassName: ci-preemptible
+            priorityClassName: ci-runner-priority-high
             tolerations:
             - key: dedicated
               operator: Equal
