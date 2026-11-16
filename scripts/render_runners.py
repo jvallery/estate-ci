@@ -485,6 +485,7 @@ def render(cfg: dict) -> dict[str, str]:
     pod_cpu: list[float] = []
     ops_policies: list[dict] = []
     incident = set(d.get("incident_sets") or [])
+    priority_sets = set(d.get("priority_sets") or [])
     seen: set[str] = set()
     for entry in cfg["sets"]:
         if "repo" in entry:
@@ -515,6 +516,10 @@ def render(cfg: dict) -> dict[str, str]:
             if name in incident:
                 # D-528 (estate-ci#179): an incident-critical set preempts routine runners.
                 priority = d["incident_priority_class"]
+            elif name in priority_sets:
+                # COORD 2026-11-16T19:11:37Z: schedule ahead of every other runner set,
+                # preempting nothing (preemptionPolicy Never).
+                priority = d["priority_set_class"]
             elif expected in d.get("infra_repos", []):
                 priority = d["infra_priority_class"]
             else:
@@ -562,6 +567,9 @@ def render(cfg: dict) -> dict[str, str]:
     unknown = sorted(incident - seen)
     if unknown:
         raise RenderError(f"incident_sets names unknown scale sets: {', '.join(unknown)}")
+    unknown = sorted(priority_sets - seen)
+    if unknown:
+        raise RenderError(f"priority_sets names unknown scale sets: {', '.join(unknown)}")
     cfg["_max_pod_cpu"] = max(pod_cpu) if pod_cpu else 0.0
     names = sorted(out)
     out[OPS_KEY] = HEADER + "".join(

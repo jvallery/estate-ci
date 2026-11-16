@@ -71,6 +71,15 @@ defaults:
   # list is empty.
   incident_priority_class: ci-incident
   incident_sets: []
+  # COORD 2026-11-16T19:11:37Z (Jason's greenhouse flash, verdify-platform CI starved
+  # behind infra-tier sets): these sets use PriorityClass ci-runner-priority-high
+  # (value -700, preemptionPolicy Never, agents platform/kubernetes/estate-scheduling),
+  # so their Pending pods schedule ahead of ci-incident (-800), ci-preemptible-infra
+  # (-900) and ci-preemptible (-1000) runners, evict nothing, and stay below every
+  # production tier. They count in the estate-ci-runner-pods quota (deploy/foundation/
+  # quota.yaml). Remove the sets by PR when the window ends.
+  priority_set_class: ci-runner-priority-high
+  priority_sets: [verdify-platform-ci, verdify-platform-ci-tools, verdify-platform-ci-esphome, verdify-platform-build, verdify-platform-buildcheck]
   max:
     ci: 3
     pg: 1
