@@ -1,0 +1,8 @@
+apiVersion: viaduct.ai/v1
+kind: ksops
+metadata:
+  name: looks-like-ksops
+  annotations:
+    config.kubernetes.io/function: |
+      exec:
+        path: /bin/sh
