@@ -757,6 +757,18 @@ sets:
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
+      # wordpress#298 (apache2 CVE-2026-119618): fix-forward rebuild of the official
+      # WordPress core image (images/wordpress-core: FROM the official digest plus an
+      # apt --only-upgrade of apache2). PR builds (push: false, no zot credential).
+      buildcheck:
+        max: 1
+        kaniko_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "4", limit_memory: 8Gi}
+      # Pushes jvallery/wordpress-core with zot principal ci-wordpress (storage-infra ACL
+      # row) via the KSOPS Secret ci-runners/zot-push-wordpress, which does not exist yet:
+      # the repo's push jobs (main/dispatch) stay unused until that Secret is sealed.
+      build:
+        max: 1
+        kaniko_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "4", limit_memory: 8Gi}
   # crm (moved from VerdifyConsultancy 2026-11-06, REPO-MOVE; jvallery/crm#142):
   # offline check ci/check.sh (python unittest allowlist, kustomize render with
   # KSOPS stubbed, gitleaks) as bare run: steps in the toolbox runner, no job
