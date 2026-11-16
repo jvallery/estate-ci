@@ -1,0 +1,5 @@
+apiVersion: builtin
+kind: ConfigMapGenerator
+metadata:
+  name: plain
+literals: [a=b]

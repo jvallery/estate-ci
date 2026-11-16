@@ -1,0 +1,53 @@
+# Reusable: refuse any Kustomize exec plugin other than KSOPS in the caller
+# repository (estate-platform#91 stage 1, STD-K8S-11). Argo CD renders every
+# Kustomize Application with --enable-alpha-plugins --enable-exec and the
+# repo-server holds the age identity, so an exec generator, transformer or
+# validator in a delivered repo could read it. This is the interim control
+# until KSOPS moves to a ConfigManagementPlugin sidecar (stage 2, D-682).
+#
+#   jobs:
+#     kustomize-exec-guard:
+#       uses: jvallery/estate-ci/.github/workflows/kustomize-exec-guard.yml@<sha>
+#
+# The scan is deploy/foundation/bin/kustomize-exec-guard.py ($ESTATE_CI). It
+# reads every YAML file in the checkout and needs python3 with PyYAML: the
+# runner container when it has them (the toolbox image), else the runner Pod's
+# "job" sidecar. A set with neither passes `runner:` naming a toolbox set.
+#
+# Check context: "<caller job id> / exec-guard". Make it a required check on
+# repos that Argo CD renders with Kustomize.
+#
+# Forgejo/Gitea Actions portability: checkout + one `run:` step; vendor it as
+# `python3 kustomize-exec-guard.py .` with the script copied next to the workflow.
+name: estate-ci kustomize exec guard
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: Scale set label. Default "<repo>-ci"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  exec-guard:
+    name: exec-guard
+    runs-on: ${{ inputs.runner != '' && inputs.runner || format('{0}-ci', github.event.repository.name) }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: kustomize exec guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          if python3 -c 'import yaml' 2>/dev/null; then
+            python3 "$ESTATE_CI/kustomize-exec-guard.py" .
+          else
+            # Runner container lacks PyYAML: run in the toolbox job sidecar (POSIX sh).
+            TIMEOUT_MINUTES=8 "$ESTATE_CI/sidecar-run.sh" job <<< "python3 $ESTATE_CI/kustomize-exec-guard.py ."
+          fi
