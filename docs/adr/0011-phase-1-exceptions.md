@@ -48,6 +48,17 @@ the E-2 secret name.
   only Actions secret the estate-ci path permits (D-296 removes the others
   after value-blind consumer checks).
   Custody: storage-infra `inventory/recovery-key-custody/pin-pr-app-20261106/`.
+  Non-owner-writer rule (2026-11-16, proposed under options-tracker#176,
+  pending a coordinator decision that amends D-52): a repository with any
+  write, maintain or admin collaborator besides the owner does not receive
+  the secret or the variable. Any writer can add a workflow that reads the
+  secret, and the installation token it mints is not limited to the calling
+  repository unless the workflow scopes it. Such a repository opens pin PRs
+  through `pin-bump.yml` with the per-job token, recorded as its STD-CI-13
+  exception row. Adding a non-owner writer to a repository that holds the key
+  means removing the secret and variable first. On 2026-11-16, 29 of 31
+  non-archived jvallery repositories held the key, and options-tracker was
+  the only one with non-owner writers.
   Phase 2: if the forge starts workflows for job-token PRs, drop the key and
   E-2. Otherwise give a forge bot account token the same scope.
 
