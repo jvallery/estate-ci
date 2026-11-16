@@ -31,6 +31,15 @@ ORIGIN="${ESTATE_CI_REGISTRY_ORIGIN:-registry-origin.registry-origin.svc.cluster
 PUBLIC="${ESTATE_CI_REGISTRY_PUBLIC:-registry.vallery.net}"
 CRANE_VERSION=v0.22.1
 CRANE_SHA256=0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0
+# estate-ci#127 (SA-9): Trivy scans every pushed digest; cve-gate.sh decides (warn, then enforce from its
+# ENFORCE_AFTER). Same Trivy release and DB sources as the estate image scan (agents estate-security).
+TRIVY_VERSION=0.76.1
+TRIVY_SHA256=c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0
+TRIVY_DB_REPOSITORIES="${ESTATE_CI_TRIVY_DB:-mirror.gcr.io/aquasec/trivy-db:2,ghcr.io/aquasecurity/trivy-db:2}"
+TRIVY_JAVA_DB_REPOSITORIES="${ESTATE_CI_TRIVY_JAVA_DB:-mirror.gcr.io/aquasec/trivy-java-db:1,ghcr.io/aquasecurity/trivy-java-db:1}"
+# R26 findings exceptions, read anonymously from the in-cluster git mirror (no credential, STD-CI-15).
+EXCEPTIONS_GIT="${ESTATE_CI_EXCEPTIONS_GIT:-http://git-mirror.git-mirror.svc.cluster.local/jvallery/agents.git}"
+EXCEPTIONS_PATH="${ESTATE_CI_EXCEPTIONS_PATH:-platform/kubernetes/ci/estate-security-report/findings-exceptions.json}"
 
 [[ "$image" =~ ^[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)+$ ]] || { echo "invalid --image" >&2; exit 2; }
 [[ "$target" =~ ^[A-Za-z0-9_.-]{0,128}$ ]] || { echo "invalid --target" >&2; exit 2; }
@@ -98,6 +107,43 @@ readback="$("$bin/crane" digest --insecure "${ORIGIN}/${image}:${tag}")"
 [[ "$readback" == "$digest" ]] || { echo "digest readback mismatch" >&2; exit 1; }
 rm -f "$K_TAR"
 ref="${PUBLIC}/${image}@${digest}"
+
+# --- critical-CVE gate (estate-ci#127). The digest stays in zot when blocked, so an owner can add an
+# exact-digest R26 row and re-run. Any scanner or fetch failure leaves no report, which the gate treats
+# as report-missing (pass in warn mode, block in enforce mode).
+gate_dir="${RUNNER_TEMP:-/tmp}/cve-gate-${short}"
+rm -rf "$gate_dir"; mkdir -p "$gate_dir"
+if [[ ! -x "$bin/trivy" ]]; then
+  curl -fsSL --retry 3 -o "$bin/trivy.tgz" \
+    "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+    && echo "${TRIVY_SHA256}  $bin/trivy.tgz" | sha256sum -c - >/dev/null \
+    && tar -xzf "$bin/trivy.tgz" -C "$bin" trivy || echo "cve-gate: trivy download failed" >&2
+  rm -f "$bin/trivy.tgz"
+fi
+db_updated=""
+if [[ -x "$bin/trivy" ]]; then
+  t=("$bin/trivy" --cache-dir "$gate_dir/cache" --quiet)
+  if "${t[@]}" image --download-db-only --db-repository "$TRIVY_DB_REPOSITORIES" >&2 \
+     && "${t[@]}" image --download-java-db-only --java-db-repository "$TRIVY_JAVA_DB_REPOSITORIES" >&2; then
+    db_updated="$("${t[@]}" version --format json | jq -r '.VulnerabilityDB.UpdatedAt // empty')"
+    DOCKER_CONFIG=/run/secrets/zot-push "${t[@]}" image --skip-db-update --skip-java-db-update --insecure \
+      --scanners vuln --timeout 15m --format json --output "$gate_dir/report.json" \
+      "${ORIGIN}/${image}@${digest}" >&2 || { echo "cve-gate: trivy scan failed" >&2; rm -f "$gate_dir/report.json"; }
+  else
+    echo "cve-gate: trivy DB download failed" >&2
+  fi
+fi
+if ! git clone -q --depth 1 --filter=blob:none --no-checkout "$EXCEPTIONS_GIT" "$gate_dir/exc" 2>/dev/null \
+   || ! git -C "$gate_dir/exc" show "HEAD:${EXCEPTIONS_PATH}" > "$gate_dir/exceptions.json" 2>/dev/null; then
+  echo "cve-gate: findings exceptions unavailable; evaluating with no rows" >&2; : > "$gate_dir/exceptions.json"
+fi
+echo "cve-gate: scanner trivy ${TRIVY_VERSION}, db ${db_updated:-unknown}, report sha256 $(sha256sum "$gate_dir/report.json" 2>/dev/null | cut -c1-64)"
+owner="${GITHUB_REPOSITORY:-$(sed -E 's#^https?://[^/]+/##' <<<"$source_url")}"
+gate_rc=0
+bash "$(dirname "$0")/cve-gate.sh" --report "$gate_dir/report.json" --digest "$digest" --owner "$owner" \
+  --exceptions "$gate_dir/exceptions.json" --db-updated-at "$db_updated" || gate_rc=$?
+rm -rf "$gate_dir"
+((gate_rc == 0)) || { echo "cve-gate blocked ${ref}: no digest output, so no pin PR" >&2; exit 1; }
 echo "digest=${digest}"
 echo "image-ref=${ref}"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
