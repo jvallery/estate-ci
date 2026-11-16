@@ -26,6 +26,7 @@ import os
 import re
 import ssl
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -39,6 +40,12 @@ TOKEN_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 CA_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 NODE_NAME = re.compile(r"^[a-z0-9]([-a-z0-9.]{0,251}[a-z0-9])?$")
 TIMEOUT = 15
+# estate-ci 2026-11-16: four natural failures in 12 h (KubeCronJobRepeatedFailures), all on
+# Pods that landed on vm-k3s-node5, where every API call in the run failed with URLError
+# within seconds (network not yet usable for the new Pod). Retry connection-level
+# failures briefly; an HTTP error (the API answered) is never retried.
+RETRIES = 4
+RETRY_WAIT = 3
 
 
 def api_base():
@@ -52,6 +59,21 @@ def api_base():
 
 
 def request(path, method="GET", body=None, content_type="application/json"):
+    for attempt in range(RETRIES):
+        try:
+            return request_once(path, method, body, content_type)
+        except urllib.error.HTTPError:
+            raise
+        except (urllib.error.URLError, OSError) as error:
+            if attempt == RETRIES - 1:
+                raise
+            print(f"api retry {attempt + 1}/{RETRIES - 1} type={type(error).__name__} "
+                  f"reason={getattr(error, 'reason', error)}", flush=True)
+            time.sleep(RETRY_WAIT)
+    raise AssertionError("unreachable")
+
+
+def request_once(path, method="GET", body=None, content_type="application/json"):
     with open(TOKEN_PATH, encoding="utf-8") as stream:
         token = stream.read().strip()
     req = urllib.request.Request(

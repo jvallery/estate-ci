@@ -12,6 +12,7 @@ spec = importlib.util.spec_from_file_location("slots", ROOT / "deploy/foundation
 s = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(s)
 RES = s.RESOURCE
+REAL_REQUEST = s.request
 failures = 0
 
 
@@ -121,6 +122,35 @@ check("node8 hold applies 0 to node8 only", (rc, [(p[1].split("?")[0], p[2]["sta
       (0, [("/api/v1/nodes/vm-k3s-node8/status", "0", "application/apply-patch+yaml")]))
 check("apply is forced under the estate-ci field manager",
       "fieldManager=estate-ci-runner-slots&force=true" in patches[0][1], True)
+
+# Connection-level failures are retried; an HTTP answer is not.
+def retry_case(errors):
+    seq = list(errors)
+    calls = []
+    def once(path, method="GET", body=None, content_type="application/json"):
+        calls.append(path)
+        if seq:
+            raise seq.pop(0)
+        return {"ok": True}
+    real_once, real_sleep, real_request = s.request_once, s.time.sleep, s.request
+    s.request_once, s.time.sleep = once, lambda _: None
+    out, sys.stdout = sys.stdout, io.StringIO()
+    try:
+        s.request = REAL_REQUEST
+        try:
+            return s.request("/x"), len(calls)
+        except urllib.error.URLError as error:
+            return type(error).__name__, len(calls)
+    finally:
+        sys.stdout = out
+        s.request_once, s.time.sleep, s.request = real_once, real_sleep, real_request
+
+
+check("URLError twice then success is retried", retry_case([urllib.error.URLError("x")] * 2), ({"ok": True}, 3))
+check("URLError on every attempt raises after RETRIES",
+      retry_case([urllib.error.URLError("x")] * s.RETRIES), ("URLError", s.RETRIES))
+check("HTTPError is not retried",
+      retry_case([urllib.error.HTTPError("/x", 500, "err", {}, None)]), ("HTTPError", 1))
 
 if failures:
     print(f"{failures} failure(s)")
