@@ -810,7 +810,10 @@ sets:
   - repo: jvallery/estate-platform
     profiles:
       ci:
-        max: 2
+        # COORD-W2 2026-11-16T17:39:49Z (11 runs queued; the estate-platform train's bottleneck): 2 -> 4.
+        # +2 pods x (runner 100m/256Mi + job 100m/256Mi; init tools/nss 50m) = +0.4 CPU / +1Gi requests,
+        # +2 ci-runner-slots. Quota estate-ci-runner-pods read 63.25/82 CPU at 17:3xZ.
+        max: 4
         job_image: *toolbox
         job_uid: 1001
         job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "4", limit_memory: 2Gi}
