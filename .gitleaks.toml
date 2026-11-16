@@ -1,0 +1,16 @@
+# gitleaks configuration for jvallery/estate-ci (estate-ci#126, STD-EXP-13).
+# .github/workflows/secret-scan.yml uses it with the default rules extended.
+# Exceptions must stay exact: one value, never a path or a file class.
+
+title = "jvallery/estate-ci secret scan"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Exact known-safe values"
+regexes = [
+  # "ownership/admission" in the estate Operating contract prose that AGENTS.md
+  # carries byte-identical from the root contract; generic-api-key misreads it.
+  '''^ownership/admission$''',
+]
