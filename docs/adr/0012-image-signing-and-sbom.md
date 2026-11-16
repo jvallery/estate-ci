@@ -31,6 +31,9 @@ it generates the SBOM: `trivy image --format cyclonedx` against
 scanner and no extra pull. The SBOM is attached to the digest in zot as an OCI
 referrer (artifact type `application/vnd.cyclonedx+json`), so it is
 retrievable by digest and is retained and garbage-collected with the image.
+The attach uses `oras attach` (pinned by version and checksum), followed by an
+`oras discover` readback; this is implemented in `deploy/foundation/bin/sbom-attach.sh`
+(step 3, warn mode).
 
 **Signature and provenance.** `cosign sign --key` signs the pushed digest. A
 `cosign attest --type cyclonedx` attestation carries the SBOM, and a minimal

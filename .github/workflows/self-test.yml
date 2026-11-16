@@ -46,6 +46,6 @@ jobs:
     uses: ./.github/workflows/checks.yml
     with:
       name: planner
-      run: python3 tests/build_plan/run.py && bash tests/kustomize_validate/run.sh && bash tests/cve_gate/run.sh && bash tests/kustomize_exec_guard/run.sh
+      run: python3 tests/build_plan/run.py && bash tests/kustomize_validate/run.sh && bash tests/cve_gate/run.sh && bash tests/sbom_attach/run.sh && bash tests/kustomize_exec_guard/run.sh
       runner: estate-ci-ci-toolbox
       timeout-minutes: 10

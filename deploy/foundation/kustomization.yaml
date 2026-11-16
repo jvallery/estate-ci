@@ -22,6 +22,7 @@ configMapGenerator:
       - bin/sidecar-run.sh
       - bin/job-started-guard.sh
       - bin/image-build.sh
+      - bin/sbom-attach.sh
       - bin/cve-gate.sh
       - bin/pin-bump.sh
       - bin/pin-rewrite.py

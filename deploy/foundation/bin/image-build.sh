@@ -35,6 +35,9 @@ CRANE_SHA256=0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0
 # ENFORCE_AFTER). Same Trivy release and DB sources as the estate image scan (agents estate-security).
 TRIVY_VERSION=0.76.1
 TRIVY_SHA256=c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0
+# estate-ci#125 (ADR-0012 step 3): oras attaches the CycloneDX SBOM to the pushed digest as an OCI referrer.
+ORAS_VERSION=1.3.6
+ORAS_SHA256=66fb0ad7206f3f6fa77ed5b552049d364ccf4b50b1684554f731f76302b52ca0
 TRIVY_DB_REPOSITORIES="${ESTATE_CI_TRIVY_DB:-mirror.gcr.io/aquasec/trivy-db:2,ghcr.io/aquasecurity/trivy-db:2}"
 TRIVY_JAVA_DB_REPOSITORIES="${ESTATE_CI_TRIVY_JAVA_DB:-mirror.gcr.io/aquasec/trivy-java-db:1,ghcr.io/aquasecurity/trivy-java-db:1}"
 # R26 findings exceptions, read anonymously from the in-cluster git mirror (no credential, STD-CI-15).
@@ -142,6 +145,18 @@ owner="${GITHUB_REPOSITORY:-$(sed -E 's#^https?://[^/]+/##' <<<"$source_url")}"
 gate_rc=0
 bash "$(dirname "$0")/cve-gate.sh" --report "$gate_dir/report.json" --digest "$digest" --owner "$owner" \
   --exceptions "$gate_dir/exceptions.json" --db-updated-at "$db_updated" || gate_rc=$?
+if ((gate_rc == 0)); then
+  # SBOM after the gate passes, so a blocked digest gets none; warn mode, never fails the build.
+  if [[ ! -x "$bin/oras" ]]; then
+    curl -fsSL --retry 3 -o "$bin/oras.tgz" \
+      "https://github.com/oras-project/oras/releases/download/v${ORAS_VERSION}/oras_${ORAS_VERSION}_linux_amd64.tar.gz" \
+      && echo "${ORAS_SHA256}  $bin/oras.tgz" | sha256sum -c - >/dev/null \
+      && tar -xzf "$bin/oras.tgz" -C "$bin" oras || echo "sbom: oras download failed" >&2
+    rm -f "$bin/oras.tgz"
+  fi
+  bash "$(dirname "$0")/sbom-attach.sh" --trivy "$bin/trivy" --oras "$bin/oras" --cache "$gate_dir/cache" \
+    --registry-config /run/secrets/zot-push/config.json --ref "${ORIGIN}/${image}@${digest}" || true
+fi
 rm -rf "$gate_dir"
 ((gate_rc == 0)) || { echo "cve-gate blocked ${ref}: no digest output, so no pin PR" >&2; exit 1; }
 echo "digest=${digest}"
