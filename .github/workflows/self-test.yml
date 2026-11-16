@@ -22,6 +22,12 @@ jobs:
       run: bash scripts/self-test.sh
       in-job-image: true
       timeout-minutes: 15
+  # estate-ci#126 (STD-EXP-13): gitleaks over this repository with the shared
+  # reusable, on the toolbox set. Context "secret-scan / gitleaks".
+  secret-scan:
+    uses: ./.github/workflows/secret-scan.yml
+    with:
+      runner: estate-ci-ci-toolbox
   # estate-ci#111 (STD-IAC-17): kustomize build + kubeconform of deploy/foundation,
   # the Argo-delivered path. Context "foundation / foundation". Runs bare on the
   # toolbox-image set, not in the estate-ci-ci job sidecar (which also has both
