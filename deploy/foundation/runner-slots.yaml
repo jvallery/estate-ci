@@ -161,7 +161,7 @@ spec:
             - name: advertiser
               # Same small stdlib python as the hot guard (layers cached on the workers):
               # docker.io/library/python:3.13.5-alpine3.22 from the origin (mirrors.txt).
-              image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:37b14db89f587f9eaa890e4a442a3fe55db452b69cca1403cc730bd0fbdc8aaf
+              image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:bf88c40985006a79ca25458159a4da1dffc457f9ae234e948b2d6df56ca5ebd2
               imagePullPolicy: IfNotPresent
               command: [python3, /opt/runner-slots/runner-slots.py]
               env:
