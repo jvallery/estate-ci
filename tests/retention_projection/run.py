@@ -15,6 +15,7 @@ CASES = [
     ("reduction, one-line form", "reduction.diff", "body-reduction.md", 0),
     ("reduction, no projection", "reduction.diff", "body-none.md", 1),
     ("non-retention diff (ttl, comment, prose)", "other.diff", "body-none.md", 0),
+    ("caller workflow of this check itself", "caller.diff", "body-none.md", 0),
 ]
 failed = 0
 for name, diff, body, want in CASES:
