@@ -146,11 +146,12 @@ spec:
     requests.ephemeral-storage: 1080Gi
     limits.ephemeral-storage: 9400Gi
     # estate-ci#101: runner scratch on generic ephemeral volumes (scratch: pvc in runners.yaml),
-    # only on the disposable Longhorn class. Canary envelope: one max-1 set uses 2 claims and
-    # 40Gi; this bound admits a second canary pod during a rollover and nothing more. Raise it
-    # with the L13 projection when more sets flip.
-    persistentvolumeclaims: "6"
-    longhorn-v1-disposable-cache-rwo.storageclass.storage.k8s.io/requests.storage: 160Gi
+    # only on the disposable Longhorn class. Each scratch: pvc pod holds 2 claims and 40Gi (work
+    # 16Gi + exchange 24Gi). Envelope = the sum of max over scratch: pvc sets plus one rollover pod
+    # per set: tictactoe-ci (max 1) + options-tracker-ci (max 2) = 3 pods, +2 rollover = 5 pods,
+    # 10 claims, 200Gi. Raise it with the L13 projection (estate-ci#101) as each set flips.
+    persistentvolumeclaims: "10"
+    longhorn-v1-disposable-cache-rwo.storageclass.storage.k8s.io/requests.storage: 200Gi
     services.loadbalancers: "0"
     services.nodeports: "0"
 ---
