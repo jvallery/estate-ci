@@ -73,6 +73,17 @@ defaults:
   # list is empty.
   incident_priority_class: ci-incident
   incident_sets: []
+  # estate-ci#249 (option a): a NON-preempting gate tier between infra and incident.
+  # ci-gate (-850, preemptionPolicy Never; PriorityClass in jvallery/agents
+  # platform/kubernetes/estate-scheduling) never evicts a running runner, but when a
+  # ci-runner-slot frees, its Pending runners schedule ahead of ci-preemptible-infra
+  # (-900) and ci-preemptible (-1000) runners. Use it for sets that gate the merge
+  # train during CI saturation (2026-11-17: estate-platform-ci waited ~74 min behind
+  # 28 infra-tier runners). Explicit scale-set names; the renderer refuses an unknown
+  # name and a set listed in both gate_sets and incident_sets. COORD adds or removes
+  # a set by PR, delivered by the estate-ci-runners pin.
+  gate_priority_class: ci-gate
+  gate_sets: []
   max:
     ci: 3
     pg: 1

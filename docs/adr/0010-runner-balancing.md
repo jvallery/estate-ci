@@ -76,6 +76,16 @@ the same.
    Pods preempted `agents-ci` runners (pod condition `PreemptionByScheduler`,
    2026-11-13T01:01Z), so `incident_sets` is empty until the next declared
    incident. The `ci-incident` PriorityClass itself stays defined.
+   **Gate tier (estate-ci#249, 2026-11-17).** The sets named in
+   `defaults.gate_sets` use PriorityClass `ci-gate` (-850,
+   `preemptionPolicy: Never`). It sits between the infra tier and
+   `ci-incident`. It evicts nothing, but when a `ci-runner-slot` frees, its
+   Pending runners schedule before every -900 and -1000 runner. That is the lever
+   for sets that gate the merge train during saturation; on 2026-11-17
+   `estate-platform-ci` waited about 74 minutes behind infra-tier runners. A set
+   may not be in both `gate_sets` and `incident_sets`, and the renderer refuses
+   an unknown name. It is changed by a `runners.yaml` PR plus the
+   `estate-ci-runners` pin, like `incident_sets`.
 4. **Spread all runners together.** Every runner Pod carries
    `estate-ci.vallery.net/runner: "true"`, and one soft hostname
    `topologySpreadConstraint` (maxSkew 1, ScheduleAnyway,
