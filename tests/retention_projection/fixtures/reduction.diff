@@ -1,0 +1,6 @@
+diff --git a/pihole/secondary.toml b/pihole/secondary.toml
+--- a/pihole/secondary.toml
++++ b/pihole/secondary.toml
+@@ -4 +4 @@
+-  maxDBdays = 91
++  maxDBdays = 30

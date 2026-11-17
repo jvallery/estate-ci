@@ -1,0 +1,6 @@
+diff --git a/deploy/loki/values.yaml b/deploy/loki/values.yaml
+--- a/deploy/loki/values.yaml
++++ b/deploy/loki/values.yaml
+@@ -10,2 +10,2 @@ limits_config:
+-  retention_period: 720h
++  retention_period: 2160h
