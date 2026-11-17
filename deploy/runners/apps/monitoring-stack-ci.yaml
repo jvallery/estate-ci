@@ -19,7 +19,7 @@ spec:
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: monitoring-stack-ci
         minRunners: 0
-        maxRunners: 10
+        maxRunners: 16
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller
@@ -174,7 +174,7 @@ spec:
                 value: /exchange
               resources:
                 requests:
-                  cpu: 1550m
+                  cpu: '3'
                   memory: 640Mi
                   ephemeral-storage: 2Gi
                 limits:
