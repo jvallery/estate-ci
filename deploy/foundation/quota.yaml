@@ -148,13 +148,15 @@ spec:
     # estate-ci#101: runner scratch on generic ephemeral volumes (scratch: pvc in runners.yaml),
     # only on the disposable Longhorn class. Each scratch: pvc pod holds 2 claims and 40Gi (work
     # 16Gi + exchange 24Gi). Envelope = the sum of max over scratch: pvc sets plus one rollover pod
-    # per set over the 22 scratch: pvc sets (sets 1-4: tictactoe, options-tracker ci, estate-ci
-    # ci/build/buildcheck/ci-toolbox/ci-renovate and 15 low-traffic repo ci sets) = 36 pods,
-    # +22 rollover = 58 pods, 116 claims, 2320Gi. Real concurrency is capped lower by the
+    # per set over the 48 scratch: pvc sets (sets 1-4: tictactoe, options-tracker ci, estate-ci
+    # ci/build/buildcheck/ci-toolbox/ci-renovate and 15 low-traffic repo ci sets; set 5, 26
+    # medium-traffic sets: weather, kepler, docs, sentinel, homeassistant (not ops), storage-infra,
+    # cortex-ai-compute, and the options-tracker/memoryos/verdify-www builds) = 120 pods,
+    # +48 rollover = 168 pods, 336 claims, 6720Gi. Real concurrency is capped lower by the
     # ci-runner-slot extended resource (66 slots on node4-8), so the full-rollout worst case is
     # about 66 pods x 50Gi = 3300Gi. Raise it with the L13 projection (estate-ci#101) as sets flip.
-    persistentvolumeclaims: "116"
-    longhorn-v1-disposable-cache-rwo.storageclass.storage.k8s.io/requests.storage: 2320Gi
+    persistentvolumeclaims: "336"
+    longhorn-v1-disposable-cache-rwo.storageclass.storage.k8s.io/requests.storage: 6720Gi
     services.loadbalancers: "0"
     services.nodeports: "0"
 ---
