@@ -150,6 +150,8 @@ for _n in cfg["reserve"]["nodes"]:
     for _k in ("trip", "recover", "coverage"):
         QUERIES["reserve_%s:%s" % (_k, _n)] = g.reserve_query(cfg["reserve"][_k]["query"], _n)
         VALUES["reserve_%s:%s" % (_k, _n)] = 1.0 if _k == "coverage" else 0.5
+    QUERIES["reserve_memfree:%s" % _n] = g.reserve_query(cfg["reserve"]["memory"]["free_query"], _n)
+    VALUES["reserve_memfree:%s" % _n] = 60.0 * 2 ** 30
 CALM = dict(VALUES)
 g.kube = fake_kube
 g.prom_scalar = lambda base, q: VALUES[[n for n, q_ in QUERIES.items() if q_ == q][0]]
@@ -228,6 +230,32 @@ g.prom_scalar = lambda base, q: (_ for _ in ()).throw(urllib.error.URLError("dow
 state["calls"].clear()
 check("prom down rc", g.main(), 1)
 check("prom down: fail closed, no eviction", ("vm-k3s-node8" in state["cm"]["data"], [c for c in state["calls"] if c[1].endswith("/eviction")]), (True, []))
+# estate-ci#248 end to end: node4 (1 runner) at 86/88 GiB requested.
+state["cm"]["data"] = {}
+g.prom_scalar = lambda base, q: VALUES[[n for n, q_ in QUERIES.items() if q_ == q][0]]
+VALUES["reserve_memfree:vm-k3s-node4"] = 2.0 * 2 ** 30
+check("memory dry-run rc", g.main(), 0)
+check("memory dry-run: nothing written", state["cm"]["data"], {})
+_mcfg = json.loads(json.dumps(cfg)); _mcfg["reserve"]["memory"]["mode"] = "enforce"
+with open(cfgfile.name, "w") as _f:
+    json.dump(_mcfg, _f)
+check("memory enforce rc", g.main(), 0)
+check("memory enforce: node4 capped at its 1 runner, tagged", state["cm"]["data"].get("vm-k3s-node4", "").split()[0::2][:2],
+      ["cap=1", "reserve:mem<6GiB"])
+state["cm"]["data"]["vm-k3s-node6"] = "cap=8 operator: COORD-W2 06:09:54Z"
+VALUES["reserve_memfree:vm-k3s-node6"] = 1.0 * 2 ** 30
+check("memory enforce operator rc", g.main(), 0)
+check("memory enforce: operator hold untouched", state["cm"]["data"]["vm-k3s-node6"], "cap=8 operator: COORD-W2 06:09:54Z")
+VALUES["reserve_memfree:vm-k3s-node4"] = 38.0 * 2 ** 30
+check("memory raise rc", g.main(), 0)
+check("memory enforce: node4 raised to 1 + (38-10)//2 at 50/88", state["cm"]["data"]["vm-k3s-node4"].split()[0], "cap=15")
+VALUES["reserve_memfree:vm-k3s-node4"] = 60.0 * 2 ** 30
+check("memory lift rc", g.main(), 0)
+check("memory enforce: node4 hold lifted once 20 slots fit above the margin", "vm-k3s-node4" in state["cm"]["data"], False)
+with open(cfgfile.name, "w") as _f:
+    json.dump(cfg, _f)
+VALUES.update(CALM)
+
 os.environ["GUARD_MODE"] = "dry-run"
 state["cm"]["data"] = {}
 g.prom_scalar = lambda base, q: VALUES[[n for n, q_ in QUERIES.items() if q_ == q][0]]
@@ -266,6 +294,29 @@ def _flaky(url, timeout):
 _ur.urlopen = _flaky
 check("prom_scalar retries a refused backend", g2.prom_scalar("http://p", "up", sleep=lambda d: None), 0.5)
 _ur.urlopen = _orig
+
+# estate-ci#248: memory-headroom cap (pure logic; fake node allocatable 88 GiB, 20 slots)
+MEM = cfg["reserve"]["memory"]
+check("memory config ships dry-run", MEM["mode"], "dry-run")
+check("memory cap formula", g.memory_cap(10.0, 4, 20, 6, 2), 6)
+check("memory cap floor at runners", g.memory_cap(2.0, 7, 20, 6, 2), 7)
+a, c = g.memory_decide(88 - 86, 7, None, MEM, 20)
+check("86/88 requested caps at or below running", (a, c is not None and c <= 7), ("set", True))
+held = "cap=7 2026-11-17T06:09:00Z reserve:mem<6GiB free=2.0GiB"
+check("50/88 lifts once margin holds", g.memory_decide(88 - 50, 7, held, MEM, 20), ("clear", None))
+check("hysteresis: just above reserve does not lift", g.memory_decide(12.5, 7, held, MEM, 20)[0], "set")
+check("hysteresis re-cap uses recover margin", g.memory_decide(12.5, 7, held, MEM, 20)[1], 8)
+check("unheld with room: keep", g.memory_decide(60, 3, None, MEM, 20), ("keep", None))
+check("operator hold never rewritten", g.memory_decide(1.0, 9, "cap=8 operator: COORD 06:09Z", MEM, 20), ("foreign", None))
+check("hard hold (no tag) never rewritten", g.memory_decide(1.0, 9, "2026-11-17T00:00:00Z trip:frigate", MEM, 20), ("foreign", None))
+check("failed read changes nothing", g.memory_decide(1.0, 9, None, MEM, 20, failed=True), ("keep", None))
+check("empty read changes nothing", g.memory_decide(None, 9, held, MEM, 20), ("keep", None))
+cpu = "cap=10 2026-11-17T06:00:00Z reserve:busy>0.92"
+check("memory lowers a CPU cap", g.memory_decide(4.0, 3, cpu, MEM, 20), ("set", 3))
+check("memory never raises a CPU cap", g.memory_decide(60, 3, cpu, MEM, 20), ("keep", None))
+check("CPU hot bounds a memory raise", g.memory_decide(60, 3, held, MEM, 20, ceiling=10), ("set", 10))
+check("CPU hot blocks a memory lift", g.memory_decide(60, 10, "cap=10 x reserve:mem<6GiB", MEM, 20, ceiling=10), ("keep", None))
+check("recap skips memory holds", g.reserve_recap(held, 10) is not None and g.MEM_TAG not in held, False)
 
 if failures:
     sys.exit(f"hot-guard tests: {failures} failure(s)")
