@@ -209,7 +209,10 @@ sets:
         # D-39 (Jason 2026-11-06 ~21:15Z): 4 -> 12.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 12 -> 16 (queue p90 7.5 min, busy hit 12).
         # D-87 hold absorb (CI-BALANCE, COORD 2026-11-07): node6 hold +4 vCPU -> 16 -> 18.
-        max: 18
+        # TEMPORARY (COORD-W2 2026-11-17T17:13:32Z GO, zero-sum within the 82-CPU quota): 18 -> 8
+        # (5 in use at 17:15Z) so freed quota goes to monitoring-stack-ci and estate-platform-ci.
+        # Revert to 18 at 2026-11-17T19:20Z.
+        max: 8
         job_image: registry.vallery.net/jvallery/vault-ci@sha256:5aa9ce134834104c594e2dd0883c3a8443534eee9659b3cb59022a153be14412
         job_uid: 1001
         # COORD 2026-11-06 ~20:0xZ (Jason: accelerate RV2 CI): 'unit' took 30-36 min
@@ -223,7 +226,8 @@ sets:
         # COORD 2026-11-06 ~18:4xZ (D5 critical path, Jason GO): 1 -> 3.
         # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 9 -> 12 (running+pending hit 9; queue p90 7.5 min).
-        max: 12
+        # TEMPORARY (COORD-W2 2026-11-17T17:13:32Z GO): 12 -> 4 (2 in use at 17:15Z). Revert to 12 at 2026-11-17T19:20Z.
+        max: 4
         job_image: registry.vallery.net/jvallery/vault-ci@sha256:5aa9ce134834104c594e2dd0883c3a8443534eee9659b3cb59022a153be14412
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
@@ -964,7 +968,9 @@ sets:
         # COORD-W2 2026-11-16T17:39:49Z (11 runs queued; the estate-platform train's bottleneck): 2 -> 4.
         # +2 pods x (runner 100m/256Mi + job 100m/256Mi; init tools/nss 50m) = +0.4 CPU / +1Gi requests,
         # +2 ci-runner-slots. Quota estate-ci-runner-pods read 63.25/82 CPU at 17:3xZ.
-        max: 4
+        # TEMPORARY (COORD-W2 2026-11-17T17:13:32Z GO; 4/4 busy, 1 pending): 4 -> 6 (+0.4 CPU).
+        # Revert to 4 at 2026-11-17T19:20Z.
+        max: 6
         job_image: *toolbox
         job_uid: 1001
         job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "4", limit_memory: 2Gi}
