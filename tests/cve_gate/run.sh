@@ -32,6 +32,9 @@ report "$tmp/nofix.json" "$D" "[$NOFIX, $HIGH]"
 report "$tmp/mismatch.json" "$OTHER" "[$HIGH]"
 echo '{"Results": "nope"' > "$tmp/invalid.json"
 
+# estate-ci: an exceptions list larger than ARG_MAX must not crash the gate (jq "Argument list too long").
+jq -n --arg o "$OWNER" '{exceptions: [range(0; 40000) | {id: "bulk", register: "R26", owner: $o, manifest_digest: "sha256:0", cves: ["CVE-2026-9\(.)"], expires_at: "2099-01-01T00:00:00Z"}]}' > "$tmp/huge.json"
+
 fails=0
 expect() { # name want-rc want-reason args...
   local name="$1" want="$2" reason="$3"; shift 3
@@ -48,6 +51,7 @@ expect clean                   0 clean             "${E[@]}" --report "$tmp/clea
 expect fixable-blocked         1 fixable           "${E[@]}" --report "$tmp/fix.json"
 expect nofix-allowed           0 no-fix-only       "${E[@]}" --report "$tmp/nofix.json"
 expect excepted-allowed        0 excepted          "${E[@]}" --report "$tmp/fix.json" --exceptions "$tmp/active.json"
+expect huge-exceptions-no-crash 1 fixable           "${E[@]}" --report "$tmp/fix.json" --exceptions "$tmp/huge.json"
 expect expired-blocked         1 expired-exception "${E[@]}" --report "$tmp/fix.json" --exceptions "$tmp/expired.json"
 expect row-other-digest        1 fixable           "${E[@]}" --report "$tmp/fix.json" --exceptions "$tmp/otherdigest.json"
 expect unreadable-exceptions   1 fixable           "${E[@]}" --report "$tmp/fix.json" --exceptions "$tmp/invalid.json"
