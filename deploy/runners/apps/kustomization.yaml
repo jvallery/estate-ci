@@ -66,6 +66,7 @@ resources:
 - verdify-platform-buildcheck.yaml
 - verdify-platform-ci-dashboard.yaml
 - verdify-platform-ci-esphome.yaml
+- verdify-platform-ci-gate.yaml
 - verdify-platform-ci-tools.yaml
 - verdify-platform-ci.yaml
 - verdify-www-build.yaml

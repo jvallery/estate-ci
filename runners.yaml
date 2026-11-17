@@ -395,6 +395,20 @@ sets:
   # Quota moves in when native verdify slots are lowered.
   - repo: jvallery/verdify-platform
     profiles:
+      ci-gate:
+        # estate-ci#229 C3 (D-709, Jason 2026-11-16 "make CI reliable and fast"; COORD
+        # 19:16:54Z): warm, tiny, slot-free runners for verdify-platform's gate and
+        # aggregate jobs (require-success, buildcheck-result, trusted-precheck,
+        # path-impact: bash, git, python3 stdlib), which waited 12-22 min p90 behind
+        # 8-minute ci-tools shards. Same shape as the agents/monitoring-stack/
+        # network-infra ci-gate sets; VERDIFY asked ~50m/64Mi, sized like the proven
+        # agents gate pods (the runner listener needs more than 64Mi). max 4, not the
+        # asked ~10: the renderer caps slot-free gate sets at 4; the jobs run ~12 s each.
+        max: 4
+        min: 1
+        slot: false
+        runner_image: *toolbox
+        runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
       ci:
         # COORD 2026-11-06 ~18:1xZ (verdify#1402 waiting on capacity): 2 -> 3.
         # COORD 2026-11-06 ~19:1xZ (9 runs queued; #1437 migration 303 critical path): 3 -> 5.
