@@ -97,6 +97,16 @@ removes the heaviest builds (vLLM and GPUStack mirrors) from the build budget.
 5. **Ephemeral storage, no PVCs.** Work directories and build contexts use
    emptyDir with ephemeral-storage requests and limits; `persistentvolumeclaims:
    0` in the quota. That removes native CI's 1,300-PVC Longhorn churn.
+   **Superseded in part by D-372 (COORD 2026-11-09, estate-ci#101), in canary only.** emptyDir
+   lands on each worker's boot disk (/var/lib/kubelet on /dev/sda1), so runner scratch tracks the
+   root filesystem. `scratch: pvc` in `runners.yaml` renders work, exchange and pg as generic
+   ephemeral volumes on `longhorn-v1-disposable-cache-rwo` (strict-local, one replica, deleted
+   with the Pod). It is enabled on one canary set (tictactoe-ci) with a quota of 6 claims and
+   160Gi; the churn concern above is measured there (attach latency, volumes created and
+   deleted per hour, orphans) before any further set flips. Live churn at 2026-11-17: about
+   15,200 runner Pods a day, peak 96 concurrent, so a full flip means tens of thousands of
+   short-lived Longhorn volumes a day; the alternative in estate-ci#101 (a kubelet root-dir or
+   scratch disk off the boot device, proxmox-infrastructure) stays open until the canary reads.
 6. **Concurrency caps.** `maxRunners` per set plus the quota. A queued job waits
    in GitHub, not in the cluster. Heavy suites shard (each shard under 15
    minutes) and share the estate-wide `pg` cap.

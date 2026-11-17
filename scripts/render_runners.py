@@ -112,6 +112,27 @@ NSS_SCRIPT = (
 )
 
 
+SCRATCH_CLASS = "longhorn-v1-disposable-cache-rwo"
+
+
+def scratch_volume(name: str, size: str, opts: dict, base: str) -> dict:
+    """estate-ci#101 (D-372): runner scratch off the worker boot disk.
+
+    scratch: emptyDir (default) keeps the kubelet emptyDir on /var/lib/kubelet (the boot disk);
+    scratch: pvc renders a generic ephemeral volume on the disposable strict-local Longhorn class,
+    created with the Pod and deleted with it, so no claim outlives its runner.
+    """
+    mode = opts.get("scratch", "emptyDir")
+    if mode == "emptyDir":
+        return {"name": name, "emptyDir": {"sizeLimit": size}}
+    if mode != "pvc":
+        raise RenderError(f"{base}: scratch must be emptyDir or pvc, not {mode!r}")
+    return {"name": name, "ephemeral": {"volumeClaimTemplate": {
+        "metadata": {"labels": {"app.kubernetes.io/part-of": "estate-ci", "estate-ci.vallery.net/scratch": name}},
+        "spec": {"accessModes": ["ReadWriteOnce"], "storageClassName": SCRATCH_CLASS,
+                 "resources": {"requests": {"storage": size}}}}}}
+
+
 def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, label: str | None = None,
                  priority_class: str = "ci-preemptible") -> dict:
     label = label or profile
@@ -170,8 +191,8 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
         raise RenderError(f"{base}: slot: false is only for job-image-free ci gate sets with max <= 4")
     containers = [runner]
     volumes = [
-        {"name": "work", "emptyDir": {"sizeLimit": "16Gi"}},
-        {"name": "exchange", "emptyDir": {"sizeLimit": "24Gi"}},
+        scratch_volume("work", "16Gi", opts, base),
+        scratch_volume("exchange", "24Gi", opts, base),
         {"name": "estate-ci-scripts", "configMap": {"name": "estate-ci-scripts", "defaultMode": 0o555}},
     ]
     if profile == "ops":
@@ -247,7 +268,7 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
             "readinessProbe": {"tcpSocket": {"port": 5432}, "periodSeconds": 2},
             "volumeMounts": [{"name": "pg", "mountPath": "/pg"}],
         })
-        volumes.append({"name": "pg", "emptyDir": {"sizeLimit": "10Gi"}})
+        volumes.append(scratch_volume("pg", "10Gi", opts, base))
     if profile in ("build", "buildcheck"):
         kr = opts.get("kaniko_resources", {})
         containers.append({

@@ -719,6 +719,10 @@ sets:
         # D-648 a (Jason first-hand 2026-11-15): static site checks (kustomize render, kubeconform,
         # node --check, gitleaks) as bare run: steps in the toolbox runner; no job sidecar.
         max: 1
+        # estate-ci#101 canary (D-372): work and exchange on ephemeral PVCs on
+        # longhorn-v1-disposable-cache-rwo instead of boot-disk emptyDirs. Measure attach latency,
+        # volume churn and orphan cleanup here before any other set flips.
+        scratch: pvc
         runner_image: *toolbox
         runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
   - repo: jvallery/AI_presentation
