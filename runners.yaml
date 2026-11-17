@@ -742,6 +742,42 @@ sets:
         max: 1
         runner_image: *toolbox
         runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "4", limit_memory: 4Gi}
+  - repo: jvallery/ImagineProposals
+    profiles:
+      ci:
+        # estate-ci#126 (COORD-W2 decision B, 2026-11-17T06:40:30Z): minimal set for the
+        # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
+        # scales to zero. Registered on the existing jvallery App installation.
+        max: 1
+        runner_image: *toolbox
+        runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
+  - repo: jvallery/radio
+    profiles:
+      ci:
+        # estate-ci#126 (COORD-W2 decision B, 2026-11-17T06:40:30Z): minimal set for the
+        # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
+        # scales to zero. Registered on the existing jvallery App installation.
+        max: 1
+        runner_image: *toolbox
+        runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
+  - repo: jvallery/sunshine-research
+    profiles:
+      ci:
+        # estate-ci#126 (COORD-W2 decision B, 2026-11-17T06:40:30Z): minimal set for the
+        # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
+        # scales to zero. Registered on the existing jvallery App installation.
+        max: 1
+        runner_image: *toolbox
+        runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
+  - repo: jvallery/vault-personal
+    profiles:
+      ci:
+        # estate-ci#126 (COORD-W2 decision B, 2026-11-17T06:40:30Z): minimal set for the
+        # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
+        # scales to zero. Registered on the existing jvallery App installation.
+        max: 1
+        runner_image: *toolbox
+        runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
   - repo: jvallery/immich-config
     profiles:
       ci:
