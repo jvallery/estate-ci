@@ -171,6 +171,9 @@ sets:
   - repo: jvallery/weather
     profiles:
       ci:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
         max: 9
         job_image: registry.vallery.net/jvallery/weather-ci@sha256:6c10ebd4ddb8326727fb0f7d2bf6bcfea9bf1dec4a356f82a74dd8a7537a3baa
@@ -181,12 +184,18 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.10 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 6 -> 4 (donor: 24 h peak 1 runner).
         max: 4
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.90 CPU, 2026-11-06T12Z..11-10T00Z (2000m -> 900m); limits unchanged.
         kaniko_resources: {cpu: 900m, memory: 512Mi, limit_cpu: "8", limit_memory: 12Gi}
       buildcheck:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "8", limit_memory: 12Gi}
@@ -254,6 +263,9 @@ sets:
   - repo: jvallery/kepler
     profiles:
       ci:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 6 -> 5 (donor: 24 h peak busy 1, peak pods 2-3).
         max: 5
@@ -263,12 +275,18 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 250m); limits unchanged.
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       buildcheck:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       # Pushes jvallery/kepler-estate-mcp with zot principal ci-kepler
       # (storage-infra si#1395) via the KSOPS Secret ci-runners/zot-push-kepler.
       build:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         kaniko_resources: {cpu: 250m, memory: 1Gi, limit_cpu: "8", limit_memory: 8Gi}
@@ -278,6 +296,9 @@ sets:
   - repo: jvallery/docs
     profiles:
       ci:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         max: 3
         job_image: *toolbox
         job_uid: 1001
@@ -288,6 +309,9 @@ sets:
       # BUILD-APPS (D-22): docs-portal, docs-ingest, docs-kiwix with zot principal
       # ci-docs (ACL storage-infra#1387) via KSOPS Secret ci-runners/zot-push-docs.
       build:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (250m -> 350m); limits unchanged.
@@ -295,6 +319,9 @@ sets:
       # docs#114: PR image builds (push: false, no zot credential) for docs-portal,
       # docs-kiwix and docs-kolibri; same Kaniko size as docs-build, default max 1.
       buildcheck:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         kaniko_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/options-tracker
     profiles:
@@ -310,12 +337,18 @@ sets:
       # BUILD-APPS (D-22): jvallery/options-tracker with zot principal
       # ci-options-tracker (ACL storage-infra#1387) via Secret ci-runners/zot-push-options-tracker.
       build:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         kaniko_resources: {cpu: 450m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/sentinel
     profiles:
       ci:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         max: 6
         job_image: *toolbox
@@ -329,6 +362,9 @@ sets:
       # prepare-promotion). Label swap: their bare run: steps execute in the
       # toolbox (python3, ruby, jq, git, gh for ADR-0009 E-1) as the runner image.
       ci-tools:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         runner_image: *toolbox
@@ -361,6 +397,9 @@ sets:
         egress:
           - {cidr: 192.168.30.107/32, tcp: [22]}
       ci:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         max: 6
         job_image: *toolbox
@@ -370,6 +409,9 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.17 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
         runner_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-ha:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (at max 65%; queue p50 28 min / 24h).
         max: 3
@@ -381,6 +423,9 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.17 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
         runner_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-esphome:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         # homeassistant#1137: the FROM-only ESPHome base is a mirror (mirrors.txt),
@@ -394,6 +439,9 @@ sets:
       # mosquitto) with zot principal ci-homeassistant (ACL storage-infra#1387)
       # via Secret ci-runners/zot-push-homeassistant.
       build:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.11 CPU, 2026-11-06T12Z..11-10T00Z (350m -> 250m); limits unchanged.
@@ -401,6 +449,9 @@ sets:
       # homeassistant#1137: PR build check for changed images (image-build.yml
       # push: false), credential-free (pull-only zot-pull). Kaniko sized like -build.
       buildcheck:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "8", limit_memory: 12Gi}
   # verdify-platform (DASH, verdify-platform#1397/#1402). It transfers to jvallery
   # first (D19), hence the jvallery URL. Sets follow #1402's job map, all uid 1001
@@ -724,6 +775,9 @@ sets:
   - repo: jvallery/storage-infra
     profiles:
       ci:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 6 -> 8 (at max 100%; queue p50 28 min).
         # D-87 hold absorb (CI-BALANCE, COORD 2026-11-07): node6 hold +4 vCPU -> 8 -> 10.
@@ -739,6 +793,9 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.11 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 3.
         max: 3
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.30 CPU, 2026-11-06T12Z..11-10T00Z (2650m -> 350m); limits unchanged.
@@ -747,10 +804,16 @@ sets:
       # build.yml builds only the images a PR changes, push false. Same Kaniko
       # size as build; max 1 (default) so PR builds never crowd the build set.
       buildcheck:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         kaniko_resources: {cpu: 2650m, memory: 5Gi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/cortex-ai-compute
     profiles:
       ci:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (queue p50 3.5 min, p90 7.5 min).
         # Jason first-hand 2026-11-10 ~20:00Z (cortex/RV/OCR health first): 3 -> 8; per-node slot caps still bound node load.
         max: 8
@@ -762,6 +825,9 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.12 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2. 2026-11-10 ~20:00Z cortex release queue (5 images): 2 -> 3.
         max: 3
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.17 CPU, 2026-11-06T12Z..11-10T00Z (700m -> 250m); limits unchanged.
@@ -770,6 +836,9 @@ sets:
       # build.yml builds only the first-party contexts a PR changes, push false.
       # Same Kaniko size as build; max 1 (default) so PR builds never crowd the build set.
       buildcheck:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 12Gi}
   - repo: jvallery/proxmox-infrastructure
     profiles:
@@ -949,7 +1018,10 @@ sets:
       # memoryos#16 / memoryos#40 build.yml (estate-ci image-build): pushes
       # jvallery/memoryos:gha-<sha12> with principal ci-memoryos via
       # ci-runners/zot-push-memoryos. Default Kaniko size, max 1.
-      build: {}
+      build:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
   # verdify-www image build (BUILD-APPS, D-22; COORD 2026-11-06). Registers once
   # jvallery/verdify-www is in runner App installation 179108157 (Jason). build
   # needs the KSOPS Secret zot-push-verdify-www (zot principal ci-verdify-www,
@@ -969,12 +1041,18 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.59 CPU, 2026-11-06T12Z..11-10T00Z (750m -> 600m); limits unchanged.
         job_resources: {cpu: 600m, memory: 640Mi, limit_cpu: "8", limit_memory: 8Gi}
       build:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
       # PR image build check without a push credential (verdify-www#65, STD-CI-12,
       # STD-CI-09): ci.yml builds only when a PR changes Dockerfile or package
       # files, push false. Default size and max 1.
-      buildcheck: {}
+      buildcheck:
+        # estate-ci#101 set 5 (medium-traffic sets, after the busy-hour fill readout): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
   # estate-platform gates (SPRINT-X E0, D-78 Jason 2026-11-07; home-dotfiles#77).
   # Registers once jvallery/estate-platform is in runner App installation
   # 179108157 (Jason). Offline gates only: gitleaks, YAML/SOPS, kustomize build.
