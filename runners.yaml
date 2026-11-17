@@ -470,7 +470,9 @@ sets:
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
+        # COORD-W2 2026-11-17T11:59:42Z (estate-ci#229): 2 -> 3. Release 6 (ce2a6e51) fans out 3 Kaniko
+        # builds; with 2 slots one waited 18 min. Not 4.
+        max: 3
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         kaniko_resources: {cpu: 450m, memory: 640Mi, limit_cpu: "8", limit_memory: 12Gi}
       # PR image builds without a push credential (verdify-platform#1534, STD-CI-12):
