@@ -69,10 +69,11 @@ RUN apt-get update \
     && ruby -ryaml -e 'abort "psych" unless YAML.safe_load("a: 1") == {"a" => 1}' \
     && git --version && jq --version && yamllint --version && g++ --version | head -n 1
 
-# kubectl (and its embedded `kubectl kustomize`): the repo's existing qualified pin — the same
-# version and official dl.k8s.io linux/amd64 checksum as runtime/arc-runner-toolbox.
-ARG KUBECTL_VERSION=v1.33.0
-ARG KUBECTL_SHA256=9efe8d3facb23e1618cba36fb1c4e15ac9dc3ed5a2c2e18109e4a66b2bac12dc
+# kubectl (and its embedded `kubectl kustomize`): official dl.k8s.io linux/amd64 binary and checksum.
+# estate-ci#80 (2026-11-16): v1.33.0 (go1.24.2, fixable Critical CVE-2025-68121 in Go stdlib) ->
+# v1.35.10 (go1.26.10), the cluster's minor (server v1.35.9+k3s1).
+ARG KUBECTL_VERSION=v1.35.10
+ARG KUBECTL_SHA256=c49a28f1f4efc4d475ed05f47f2ce8e563bf7bef69ed77fe1b924ea6d83b6327
 RUN curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" \
       -o /usr/local/bin/kubectl \
     && echo "${KUBECTL_SHA256}  /usr/local/bin/kubectl" | sha256sum -c - \
