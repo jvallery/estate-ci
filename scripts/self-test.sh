@@ -9,6 +9,8 @@ python3 tests/lint/run.py
 python3 tests/lint_allow/run.py
 python3 tests/hot_guard/run.py >/dev/null
 python3 tests/runner_budget/run.py
+# estate-ci#101: scratch: pvc sets render ephemeral Longhorn scratch, never an emptyDir.
+python3 tests/runner_scratch/run.py
 python3 tests/runner_slots/run.py >/dev/null
 # estate-ci#115: closure check for runner-set Secrets (fails on a missing name).
 python3 tests/runner_secrets/run.py
