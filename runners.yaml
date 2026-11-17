@@ -445,7 +445,7 @@ sets:
         # COORD-W2 2026-11-16T17:26:30Z (Verdify CI capacity): 6 -> 12. +6 pods x (job 350m/512Mi + runner
         # 150m/256Mi) = +3.0 CPU / +4.5Gi requests, +6 ci-runner-slots (both sets: +9.3 CPU, quota 72.6/82).
         max: 12
-        job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:b6bdf1edf11579d483a6612cd9655dc326258d06fd0191a9d744be298544edfe
+        job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:678da404b6d73239d341bf0c6bd72c7c09c661587cdb2367a3edccabc5d5a66d
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (500m -> 350m); limits unchanged.
@@ -520,7 +520,7 @@ sets:
         # runners = +4 CPU / +6Gi requests (job 350m/512Mi + runner 150m/256Mi); live
         # 2026-11-14T22:5xZ estate-ci-runner-pods requests.cpu 31.1/82, memory 20.3/365Gi.
         max: 12
-        job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:b6bdf1edf11579d483a6612cd9655dc326258d06fd0191a9d744be298544edfe
+        job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:678da404b6d73239d341bf0c6bd72c7c09c661587cdb2367a3edccabc5d5a66d
         job_uid: 1001
         # proxmox-infrastructure#868: job 7-day max working set 0.161 GiB across 12 runners; request 512Mi -> 256Mi, limit unchanged.
         job_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}

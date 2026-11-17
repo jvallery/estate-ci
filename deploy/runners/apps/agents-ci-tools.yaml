@@ -90,7 +90,7 @@ spec:
               - name: estate-ci-tools
                 mountPath: /tools
             - name: estate-ci-nss
-              image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:b6bdf1edf11579d483a6612cd9655dc326258d06fd0191a9d744be298544edfe
+              image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:678da404b6d73239d341bf0c6bd72c7c09c661587cdb2367a3edccabc5d5a66d
               command:
               - /bin/sh
               - -ec
@@ -163,7 +163,7 @@ spec:
                 mountPath: /opt/estate-ci
                 readOnly: true
             - name: job
-              image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:b6bdf1edf11579d483a6612cd9655dc326258d06fd0191a9d744be298544edfe
+              image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:678da404b6d73239d341bf0c6bd72c7c09c661587cdb2367a3edccabc5d5a66d
               command:
               - /bin/sh
               - /opt/estate-ci/sidecar-agent.sh
