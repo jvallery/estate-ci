@@ -1,0 +1,47 @@
+# Reusable: fail a pull request that changes a retention-shaped setting unless its body carries a
+# capacity projection (estate-ci#263, STD-OPS-05, root AGENTS.md L13). Read-only: it reads the PR
+# diff and body and changes nothing.
+#
+#   on:
+#     pull_request:
+#       types: [opened, edited, synchronize, reopened]   # "edited" re-runs it when the body changes
+#   jobs:
+#     retention-projection:
+#       uses: jvallery/estate-ci/.github/workflows/retention-projection.yml@<sha>
+#
+# The check is deploy/foundation/bin/retention-projection.py ($ESTATE_CI) with the rule list
+# retention-keys.txt next to it (one place for every repo; extend it by PR here). Standard library
+# only, on the caller's "<repo>-ci" set. The diff is the pull_request merge commit against its first
+# parent (fetch-depth 2), so only this PR's lines count. Check context:
+# "<caller job id> / retention-projection". Not a required check until it has run a week on real PRs.
+#
+# Forgejo/Gitea Actions portability: checkout + one `run:` step reading $GITHUB_EVENT_PATH; vendor it
+# as `python3 retention-projection.py` with the script and retention-keys.txt copied next to it.
+name: estate-ci retention projection
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: Scale set label. Default "<repo>-ci"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  retention-projection:
+    name: retention-projection
+    runs-on: ${{ inputs.runner != '' && inputs.runner || format('{0}-ci', github.event.repository.name) }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: retention projection
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 "$ESTATE_CI/retention-projection.py"

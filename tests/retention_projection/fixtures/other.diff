@@ -1,0 +1,14 @@
+diff --git a/deploy/job.yaml b/deploy/job.yaml
+--- a/deploy/job.yaml
++++ b/deploy/job.yaml
+@@ -7 +7 @@ spec:
+-  ttlSecondsAfterFinished: 3600
++  ttlSecondsAfterFinished: 600
+@@ -20,0 +21 @@ spec:
++  # retention is unchanged by this PR
+diff --git a/docs/retention.md b/docs/retention.md
+--- a/docs/retention.md
++++ b/docs/retention.md
+@@ -1 +1 @@
+-Loki retention is 30 days.
++Loki retention is 30 days (see STD-OPS-05).

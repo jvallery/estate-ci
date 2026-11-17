@@ -39,6 +39,9 @@ configMapGenerator:
       - bin/build-plan.py
       - bin/kustomize-validate.sh
       - bin/kustomize-exec-guard.py
+      # estate-ci#263 (STD-OPS-05): retention PRs need a capacity projection; rules next to it.
+      - bin/retention-projection.py
+      - bin/retention-keys.txt
   # node8 hot guard (D-67): script and thresholds (hot-guard.yaml).
   - name: ci-runner-hot-guard
     files:
