@@ -85,7 +85,10 @@ defaults:
   gate_priority_class: ci-gate
   # COORD 2026-11-17T08:50:48Z: monitoring-stack-ci runs the 7 jobs of the required
   # 'static' check (about 2.5 h queue on 11-17); gate tier until the slot budget grows.
-  gate_sets: [monitoring-stack-ci]
+  # COORD-W2 2026-11-17T21:20:43Z tier 0 (Jason Verdify priority): verdify-platform-ci and
+  # verdify-platform-ci-dashboard were preempted mid-job (exit 130) by estate-production Pods;
+  # at ci-gate the scheduler picks ci-preemptible and ci-preemptible-infra victims first.
+  gate_sets: [monitoring-stack-ci, verdify-platform-ci, verdify-platform-ci-dashboard]
   max:
     ci: 3
     pg: 1
