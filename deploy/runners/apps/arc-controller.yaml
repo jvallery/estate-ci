@@ -33,6 +33,8 @@ spec:
                   matchLabels:
                     app.kubernetes.io/name: gha-rs-controller
                     app.kubernetes.io/instance: arc
+        podSecurityContext:
+          runAsNonRoot: true
   destination:
     server: https://kubernetes.default.svc
     namespace: arc-systems
