@@ -29,6 +29,7 @@ resources:
 - homeassistant-ci-ha.yaml
 - homeassistant-ci.yaml
 - homeassistant-ops.yaml
+- imagineproposals-ci.yaml
 - immich-config-ci.yaml
 - kepler-build.yaml
 - kepler-buildcheck.yaml
@@ -47,6 +48,7 @@ resources:
 - options-tracker-ci.yaml
 - orbit-ci.yaml
 - proxmox-infrastructure-ci.yaml
+- radio-ci.yaml
 - research-vault-build.yaml
 - research-vault-ci.yaml
 - research-vault-pg.yaml
@@ -56,8 +58,10 @@ resources:
 - storage-infra-buildcheck.yaml
 - storage-infra-ci.yaml
 - sunshine-club-ci.yaml
+- sunshine-research-ci.yaml
 - tictactoe-ci.yaml
 - vallery-family-ci.yaml
+- vault-personal-ci.yaml
 - verdify-platform-build.yaml
 - verdify-platform-buildcheck.yaml
 - verdify-platform-ci-dashboard.yaml
