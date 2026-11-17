@@ -621,7 +621,10 @@ sets:
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 6 -> 8 (at max 96%; queue p50 8 min, 136/197 jobs > 5 min).
         # D-488 (Jason 2026-11-09): 8 -> 10. 48 h to 2026-11-10T00:35Z: GitHub assigned more jobs than
         # max for 36 min (up to +2; 166 min / 72 h), the most of any set. +2 runners x 0.40 CPU.
-        max: 10
+        # COORD-W2 2026-11-16T23:49:11Z (evening CI throughput): 10 -> 14. The only set at max (10/10,
+        # 1 pending) at 23:5xZ; quota estate-ci-runner-pods read 30.15/82 CPU. +4 runners x 0.40 CPU.
+        # Revert: 14 -> 10.
+        max: 14
         job_image: *toolbox
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
