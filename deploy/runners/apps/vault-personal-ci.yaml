@@ -107,11 +107,33 @@ spec:
                 readOnly: true
             volumes:
             - name: work
-              emptyDir:
-                sizeLimit: 16Gi
+              ephemeral:
+                volumeClaimTemplate:
+                  metadata:
+                    labels:
+                      app.kubernetes.io/part-of: estate-ci
+                      estate-ci.vallery.net/scratch: work
+                  spec:
+                    accessModes:
+                    - ReadWriteOnce
+                    storageClassName: longhorn-v1-disposable-cache-rwo
+                    resources:
+                      requests:
+                        storage: 16Gi
             - name: exchange
-              emptyDir:
-                sizeLimit: 24Gi
+              ephemeral:
+                volumeClaimTemplate:
+                  metadata:
+                    labels:
+                      app.kubernetes.io/part-of: estate-ci
+                      estate-ci.vallery.net/scratch: exchange
+                  spec:
+                    accessModes:
+                    - ReadWriteOnce
+                    storageClassName: longhorn-v1-disposable-cache-rwo
+                    resources:
+                      requests:
+                        storage: 24Gi
             - name: estate-ci-scripts
               configMap:
                 name: estate-ci-scripts

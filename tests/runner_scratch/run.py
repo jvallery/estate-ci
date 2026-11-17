@@ -11,6 +11,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import re
 import yaml
 
 root = Path(__file__).resolve().parents[2]
@@ -44,7 +45,8 @@ except rr.RenderError:
 cfg = yaml.safe_load((root / "runners.yaml").read_text())
 flipped = {}
 for entry in cfg["sets"]:
-    base = entry["repo"].split("/")[1]
+    # Same normalisation as render_runners.py (AI_presentation -> ai-presentation).
+    base = re.sub(r"[^a-z0-9-]", "-", entry["repo"].split("/")[1].lower())
     for profile, opts in (entry.get("profiles") or {}).items():
         if isinstance(opts, dict) and opts.get("scratch") == "pvc":
             flipped[f"{base}-{rr.SUFFIX.get(profile, profile)}"] = profile
