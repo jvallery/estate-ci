@@ -33,6 +33,7 @@ resources:
 - kepler-build.yaml
 - kepler-buildcheck.yaml
 - kepler-ci.yaml
+- memoryos-build.yaml
 - memoryos-ci.yaml
 - monitoring-stack-build.yaml
 - monitoring-stack-buildcheck.yaml
