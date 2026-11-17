@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Self-test for runner priority tiers in scripts/render_runners.py (estate-ci#249).
 
-1. runners.yaml renders; with gate_sets empty no set uses ci-gate.
+1. runners.yaml renders and exactly its gate_sets use ci-gate; with gate_sets
+   cleared no set uses ci-gate.
 2. A set named in gate_sets renders with ci-gate; other sets keep their tier.
 3. gate_sets naming an unknown set is refused.
 4. A set in both gate_sets and incident_sets is refused.
@@ -49,8 +50,16 @@ def render(cfg):
         return None, str(exc)
 
 
+real_gate = list((base.get("defaults") or {}).get("gate_sets") or [])
 out, err = render(copy.deepcopy(base))
 check("runners.yaml renders", out is not None)
+real = classes(out) if out else {}
+check("designated gate sets use ci-gate", all(real.get(n) == "ci-gate" for n in real_gate))
+check("only designated gate sets use ci-gate", all(n in real_gate for n, c in real.items() if c == "ci-gate"))
+
+base["defaults"]["gate_sets"] = []
+out, err = render(copy.deepcopy(base))
+check("renders with gate_sets empty", out is not None)
 plain = classes(out)
 check("rendered sets found", len(plain) > 10)
 check("no ci-gate while gate_sets is empty", "ci-gate" not in plain.values())
