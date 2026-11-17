@@ -217,7 +217,9 @@ sets:
         # pinned at ~1 core under limit 2 / 4Gi. Was 500m / 768Mi req, 2 / 4Gi lim.
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 1.01 CPU, 2026-11-06T12Z..11-10T00Z (2100m -> 1050m); limits unchanged.
-        job_resources: {cpu: 1050m, memory: 5760Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # EXEC-W2-CI-CAP (COORD-W2 2026-11-17T20:31:17Z, TRIAGE 20:31:05Z): CPU request -> 3 cores, the observed
+        # per-job use (node7 at 104% CPU with 1-1.5 CPU requests under limit 8, so the scheduler stacked them); limit unchanged.
+        job_resources: {cpu: "3", memory: 5760Mi, limit_cpu: "8", limit_memory: 8Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.11 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       pg:
@@ -653,12 +655,17 @@ sets:
         # 127 jobs queued at max 20 with 1 pending; quota estate-ci-runner-pods 66/82 CPU, +4 x 1.75 = 7 CPU
         # fits node7 (80% CPU / 57% memory requests, 4 free slots).
         # TEMPORARY (COORD 2026-11-17T19:36:11Z): 24 -> 10, same reason; revert restores 24 (then the 14 revert at 2026-11-18T00:00Z still applies).
-        max: 10
+        # EXEC-W2-CI-CAP (COORD-W2 2026-11-17T20:31:17Z): 10 -> 16 with the job request 1550m -> 3 (Pod 1.75 -> 3.2 CPU):
+        # 16 x 3.2 = 51.2 CPU requests at max. About 55 runs queued at max 10. The 19:36Z revert to 24 and the
+        # 00:00Z revert to 14 are superseded: at 3.2 CPU per Pod, 24 would be 76.8 of the 82-CPU runner quota. Revert: 16 -> 10.
+        max: 16
         job_image: *toolbox
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 1.51 CPU, 2026-11-06T12Z..11-10T00Z (2700m -> 1550m); limits unchanged.
-        job_resources: {cpu: 1550m, memory: 640Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # EXEC-W2-CI-CAP (COORD-W2 2026-11-17T20:31:17Z, TRIAGE 20:31:05Z): CPU request -> 3 cores, the observed
+        # per-job use (node7 at 104% CPU with 1-1.5 CPU requests under limit 8, so the scheduler stacked them); limit unchanged.
+        job_resources: {cpu: "3", memory: 640Mi, limit_cpu: "8", limit_memory: 8Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.18 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
         runner_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
@@ -723,7 +730,9 @@ sets:
         # D-103 B: request = 6 h sample p95 where it exceeds p90 materially, else p90 (04:10Z); limit unchanged.
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 1.08 CPU, 2026-11-06T12Z..11-10T00Z (2250m -> 1100m); limits unchanged.
-        job_resources: {cpu: 1100m, memory: 1280Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # EXEC-W2-CI-CAP (COORD-W2 2026-11-17T20:31:17Z, TRIAGE 20:31:05Z): CPU request -> 3 cores, the observed
+        # per-job use (node7 at 104% CPU with 1-1.5 CPU requests under limit 8, so the scheduler stacked them); limit unchanged.
+        job_resources: {cpu: "3", memory: 1280Mi, limit_cpu: "8", limit_memory: 8Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.11 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
@@ -768,7 +777,9 @@ sets:
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
         runner_image: *toolbox
-        runner_resources: {cpu: "1", memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # EXEC-W2-CI-CAP (COORD-W2 2026-11-17T20:31:17Z, TRIAGE 20:31:05Z): CPU request -> 3 cores, the observed
+        # per-job use of this runner-as-job container (node7 at 104% CPU with 1-1.5 CPU requests under limit 8, so the scheduler stacked them); limit unchanged.
+        runner_resources: {cpu: "3", memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/home-dotfiles
     profiles:
       ci:
