@@ -52,7 +52,9 @@ defaults:
   infra_priority_class: ci-preemptible-infra
   # Jason 2026-11-10 (RV2 OCR critical path: "CI is stuck again for cortex/RV2. Help those lanes"):
   # cortex-ai-compute and research-vault join the infra tier.
-  infra_repos: [jvallery/agents, jvallery/monitoring-stack, jvallery/storage-infra, jvallery/network-infra, jvallery/proxmox-infrastructure, jvallery/estate-ci, jvallery/sentinel, jvallery/homeassistant, jvallery/cortex-ai-compute, jvallery/research-vault]
+  # estate-ci#249 (COORD 2026-11-17T08:42Z): estate-platform joins the infra tier; its
+  # gitops/ catalog gates the merge train and its runners waited ~74 min at -1000.
+  infra_repos: [jvallery/agents, jvallery/estate-platform, jvallery/monitoring-stack, jvallery/storage-infra, jvallery/network-infra, jvallery/proxmox-infrastructure, jvallery/estate-ci, jvallery/sentinel, jvallery/homeassistant, jvallery/cortex-ai-compute, jvallery/research-vault]
   # D-528 (Jason first-hand 2026-11-12, estate-ci#179; changes D-87 for these sets
   # only): incident-critical scale sets use ci-incident (-800,
   # preemptionPolicy PreemptLowerPriority; PriorityClass in jvallery/agents
