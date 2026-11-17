@@ -28,6 +28,7 @@ Per-node reserve (estate-ci#69, D-486: runners may fill a worker to 95% of
 allocatable). The quota bounds runner requests only in aggregate, so for each
 node in config `reserve.nodes` (node4-7) the guard also reads that node's CPU
 busy ratio. Above `reserve.trip` it writes "cap=<reserve.cap> ... reserve:..."
+(`reserve.node_caps` overrides the cap per node; a held node is re-capped when it changes)
 under the node, so the slot advertiser offers min(desired, cap) there and no
 new runner lands until the node calms; nothing is evicted, and in-flight jobs
 finish. The cap drops once `reserve.recover` holds (max over 30 min below
@@ -49,6 +50,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 import os
 import ssl
 import sys
@@ -164,6 +166,20 @@ def reserve_decide(busy: float | None, calm: float | None, reason: str | None, t
     if held and evaluate({"r": recover}, {"r": calm})[0]:
         return "clear"
     return "keep"
+
+
+def reserve_cap(res: dict, node: str) -> int:
+    """The node's reserve cap: reserve.node_caps[node] when set, else reserve.cap (estate-ci, pi#868 CI slots)."""
+    return int((res.get("node_caps") or {}).get(node, res["cap"]))
+
+
+def reserve_recap(reason: str | None, cap: int) -> str | None:
+    """A held reserve value rewritten to cap, keeping its timestamp and tag; None when it already
+    carries cap or is not a reserve hold. Lets a config cap change reach a node that is already held."""
+    text = (reason or "").strip()
+    if RESERVE_TAG not in " " + text or hold_cap(text) in (None, cap):
+        return None
+    return re.sub(r"^cap=\d+", "cap=%d" % cap, text)
 
 
 def reserve_query(template: str, node: str) -> str:
@@ -412,10 +428,17 @@ def main() -> int:
                                     got["coverage"], res.get("coverage"), failed)
             reserve_log[rnode] = {"busy": got["trip"], "calm": got["recover"], "coverage": got["coverage"],
                                   "action": action}
-            if action not in ("set", "clear"):
+            recap = reserve_recap(reason, reserve_cap(res, rnode)) if action == "keep" and not failed else None
+            # Raising a held cap waits until the node is below the trip line; lowering applies at once.
+            if recap is not None and hold_cap(recap) > (hold_cap(reason) or 0) and (
+                    got["trip"] is None or evaluate({"t": res["trip"]}, {"t": got["trip"]})[0]):
+                recap = None
+            if recap is not None:
+                action = reserve_log[rnode]["action"] = "recap"
+            if action not in ("set", "clear", "recap"):
                 continue
-            value = ("cap=%d %s%sbusy>%g" % (int(res["cap"]), iso(now), RESERVE_TAG, res["trip"]["threshold"])
-                     if action == "set" else None)
+            value = ("cap=%d %s%sbusy>%g" % (reserve_cap(res, rnode), iso(now), RESERVE_TAG, res["trip"]["threshold"])
+                     if action == "set" else recap)
             try:
                 if cm is None:
                     cm = {"metadata": {"annotations": {}}, "data": {}}
