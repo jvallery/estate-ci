@@ -81,8 +81,8 @@ check("reserve recover below 0.75 over 30 min", (RES["recover"]["threshold"], "[
 check("reserve held, 0.8 is not calm", rd(0.5, 0.8, RHELD), "keep")
 check("reserve held, calm clears", rd(0.5, 0.7, RHELD), "clear")
 check("reserve empty signal is hot", (rd(None, 0.5, RHELD), rd(0.5, None), rd(None, 0.5)), ("keep", "set", "set"))
-# Per-node reserve caps (pi#868 CI slots): node5/node7 cap 16, node4/node6 the default 10.
-check("reserve per-node caps", [g.reserve_cap(RES, n) for n in RES["nodes"]], [10, 16, 10, 16])
+# Per-node reserve caps (COORD-W2 2026-11-17T20:36:50Z): node4-7 all cap 13 (52 slots, evenly spread).
+check("reserve per-node caps", [g.reserve_cap(RES, n) for n in RES["nodes"]], [13, 13, 13, 13])
 check("reserve per-node caps stay below 20", all(0 < g.reserve_cap(RES, n) < 20 for n in RES["nodes"]), True)
 check("reserve recap a held node to its cap", g.reserve_recap(RHELD, 16), "cap=16 2026-11-10T00:00:00Z reserve:busy>0.92")
 check("reserve recap no-op at the same cap", g.reserve_recap(RHELD, 10), None)
@@ -189,24 +189,24 @@ VALUES["reserve_trip:vm-k3s-node5"] = VALUES["reserve_recover:vm-k3s-node5"] = 0
 state["cm"]["data"]["vm-k3s-node6"] = "2026 trip:operator"
 state["calls"].clear()
 check("reserve hot run rc", g.main(), 0)
-check("reserve: node5 capped at its 16, node6 hold kept, no eviction",
+check("reserve: node5 capped at its 13, node6 hold kept, no eviction",
       (state["cm"]["data"]["vm-k3s-node5"].split()[0], state["cm"]["data"]["vm-k3s-node6"], "vm-k3s-node8" in state["cm"]["data"],
-       [c for c in state["calls"] if c[1].endswith("/eviction")]), ("cap=16", "2026 trip:operator", False, []))
+       [c for c in state["calls"] if c[1].endswith("/eviction")]), ("cap=13", "2026 trip:operator", False, []))
 VALUES["reserve_trip:vm-k3s-node5"] = 0.88
 check("reserve cooling rc", g.main(), 0)
-check("reserve: still capped while recover fails", state["cm"]["data"]["vm-k3s-node5"].split()[0], "cap=16")
+check("reserve: still capped while recover fails", state["cm"]["data"]["vm-k3s-node5"].split()[0], "cap=13")
 VALUES["reserve_trip:vm-k3s-node5"] = 0.5
 VALUES["reserve_recover:vm-k3s-node5"] = 0.8
 check("reserve not calm under 0.75 rc", g.main(), 0)
-check("reserve: still capped at recover 0.8", state["cm"]["data"]["vm-k3s-node5"].split()[0], "cap=16")
-# A node held at the old cap (10) is re-capped to its configured 16 only when below the trip line.
+check("reserve: still capped at recover 0.8", state["cm"]["data"]["vm-k3s-node5"].split()[0], "cap=13")
+# A node held at the old cap (10) is re-capped to its configured 13 only when below the trip line.
 state["cm"]["data"]["vm-k3s-node5"] = "cap=10 2026-11-17T05:18:04Z reserve:busy>0.92"
 VALUES["reserve_trip:vm-k3s-node5"] = 0.95
 check("reserve recap hot rc", g.main(), 0)
 check("reserve recap: hot node keeps 10", state["cm"]["data"]["vm-k3s-node5"], "cap=10 2026-11-17T05:18:04Z reserve:busy>0.92")
 VALUES["reserve_trip:vm-k3s-node5"] = 0.5
 check("reserve recap calm rc", g.main(), 0)
-check("reserve recap: calm node re-capped to 16, timestamp kept", state["cm"]["data"]["vm-k3s-node5"], "cap=16 2026-11-17T05:18:04Z reserve:busy>0.92")
+check("reserve recap: calm node re-capped to 13, timestamp kept", state["cm"]["data"]["vm-k3s-node5"], "cap=13 2026-11-17T05:18:04Z reserve:busy>0.92")
 VALUES["reserve_recover:vm-k3s-node5"] = 0.5
 check("reserve recover rc", g.main(), 0)
 check("reserve: cap dropped, foreign hold kept", state["cm"]["data"], {"vm-k3s-node6": "2026 trip:operator"})
@@ -214,14 +214,14 @@ state["cm"]["data"] = {}
 _prom = g.prom_scalar
 g.prom_scalar = lambda base, q: None if "vm-k3s-node7" in q else _prom(base, q)
 check("reserve missing signal rc", g.main(), 0)
-check("reserve missing signal: node7 capped as hot", (list(state["cm"]["data"]), state["cm"]["data"]["vm-k3s-node7"].split()[0]), (["vm-k3s-node7"], "cap=16"))
+check("reserve missing signal: node7 capped as hot", (list(state["cm"]["data"]), state["cm"]["data"]["vm-k3s-node7"].split()[0]), (["vm-k3s-node7"], "cap=13"))
 state["cm"]["data"] = {}
 g.prom_scalar = lambda base, q: (_ for _ in ()).throw(urllib.error.URLError("x")) if "vm-k3s-node7" in q else _prom(base, q)
 check("reserve failed query rc", g.main(), 1)
 check("reserve failed query: no write", state["cm"]["data"], {})
 VALUES["reserve_coverage:vm-k3s-node6"] = 0.85
 check("reserve partial coverage rc", g.main() in (0, 1), True)
-check("reserve partial coverage: node6 capped", state["cm"]["data"].get("vm-k3s-node6", "").split()[:1], ["cap=10"])
+check("reserve partial coverage: node6 capped", state["cm"]["data"].get("vm-k3s-node6", "").split()[:1], ["cap=13"])
 VALUES["reserve_coverage:vm-k3s-node6"] = 1.0
 state["cm"]["data"] = {}
 g.prom_scalar = _prom
