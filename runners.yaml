@@ -399,7 +399,10 @@ sets:
         # D-39 (Jason 2026-11-06 ~21:15Z): 5 -> 15.
         # ARC-RAISE rebalance 2 (Jason via COORD 2026-11-07 00:35Z, zero-sum): 15 -> 12 (donor: listener busy peak 6 since 21:46Z).
         # COORD P0 fair share 2026-11-07 05:08Z (CI-BALANCE): 12 -> 6 until the infra backlog drains, then back to 12.
-        max: 6
+        # COORD-W2 2026-11-16T17:26:30Z (Verdify CI capacity): 6 -> 12. +6 pods x (job 800m/768Mi + runner
+        # 150m/256Mi + tools/nss 100m) = +6.3 CPU / +6.1Gi requests, +6 ci-runner-slots. Quota
+        # estate-ci-runner-pods read 63.25/82 CPU at 17:3xZ. Goes live after the opal window (drain reserve).
+        max: 12
         # verdify-platform#1542 (STD-EXP-13, D-242): the toolbox runner image, as
         # kepler/sentinel/sunshine_club use, so the bare-run "ci / secret-scan" job has
         # gitleaks; the python job sidecar is unchanged.
@@ -417,7 +420,9 @@ sets:
         # COORD/DASH 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 2 -> 6.
         # D-39 (Jason 2026-11-06 ~21:15Z): 6 -> 18.
         # COORD P0 fair share 2026-11-07 05:08Z (CI-BALANCE): 18 -> 6 until the infra backlog drains, then back to 18.
-        max: 6
+        # COORD-W2 2026-11-16T17:26:30Z (Verdify CI capacity): 6 -> 12. +6 pods x (job 350m/512Mi + runner
+        # 150m/256Mi) = +3.0 CPU / +4.5Gi requests, +6 ci-runner-slots (both sets: +9.3 CPU, quota 72.6/82).
+        max: 12
         job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:b6bdf1edf11579d483a6612cd9655dc326258d06fd0191a9d744be298544edfe
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
