@@ -111,6 +111,8 @@ defaults:
 #    anonymous read granted by storage-infra#1740, so arc-systems needs no pull Secret).
 #    The chart passes it to every listener through CONTROLLER_MANAGER_CONTAINER_IMAGE.
 #    Changing it restarts the controller and every listener: do it only in a planned step.
+#  - pod securityContext runAsNonRoot: true (STD-K8S-03, proxmox-infrastructure#739): the
+#    image runs as numeric USER 65532:65532 (census pi#898); rolls the controller Pods only.
 controller:
   project: estate-ci-arc
   release: arc

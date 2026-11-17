@@ -407,6 +407,8 @@ affinity:
           matchLabels:
             app.kubernetes.io/name: gha-rs-controller
             app.kubernetes.io/instance: {release}
+podSecurityContext:
+  runAsNonRoot: true
 """
 
 
