@@ -631,7 +631,10 @@ sets:
         # D-87 hold absorb (CI-BALANCE, COORD 2026-11-07): node6 hold +4 vCPU -> 11 -> 13.
         # D-488 (Jason 2026-11-09): 13 -> 14. 48 h to 2026-11-10T00:35Z: assigned jobs above max
         # for 8 min (up to +1; 30 min / 72 h). +1 runner x 1.75 CPU.
-        max: 14
+        # TEMPORARY (COORD 2026-11-17T15:38:43Z, W4-D): 14 -> 20 while the merge train drains
+        # (200 ms-ci jobs queued, p50 wait 32 min over 60 min). Revert to 14 at 2026-11-18T00:00Z
+        # or when the queue drains, whichever is first. Runners are -900 preemptible.
+        max: 20
         job_image: *toolbox
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
