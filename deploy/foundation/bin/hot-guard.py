@@ -39,6 +39,16 @@ not stop because Prometheus is down; a Prometheus error still makes the run
 exit 1. The guard never
 touches a hold value it did not write as a reserve cap.
 
+Memory headroom (estate-ci#248). With config `reserve.memory`, the guard also reads each
+reserve node's free memory requests from Prometheus (allocatable minus the requests of
+Pending/Running Pods, kube-state-metrics; no pod RBAC) and computes
+cap = runners on the node + floor((free - reserve_gib) / per_runner_gib), bounded by the
+node's slots. Below the slots it writes "cap=<cap> ... reserve:mem<..." (the same reserve
+tag, so the slot advertiser and foreign-hold rules are unchanged); a lower CPU or memory cap
+wins. A memory hold lifts only once free >= reserve_gib + recover_gib. A failed or empty
+memory query changes nothing (fail safe). `reserve.memory.mode: dry-run` logs the decision
+under "memory" and writes nothing for it.
+
 The guard has no node permission. It writes only its own ConfigMap and
 evicts only Pods that carry the estate-ci.vallery.net/profile label in
 ci-runners. GUARD_MODE=dry-run does every API write with dryRun=All.
@@ -182,8 +192,75 @@ def reserve_recap(reason: str | None, cap: int) -> str | None:
     return re.sub(r"^cap=\d+", "cap=%d" % cap, text)
 
 
+MEM_TAG = "reserve:mem<"
+
+
+def memory_cap(free_gib: float, runners: int, slots: int, reserve_gib: float, per_runner_gib: float) -> int:
+    """Slots a worker may offer given its free memory requests: the runners it already has plus
+    as many more as fit above reserve_gib, bounded by slots (estate-ci#248)."""
+    extra = int((free_gib - reserve_gib) // per_runner_gib) if free_gib > reserve_gib else 0
+    return max(0, min(slots, runners + extra))
+
+
+def memory_decide(free_gib: float | None, runners: int, reason: str | None, mem: dict, slots: int,
+                  failed: bool = False, ceiling: int | None = None) -> tuple[str, int | None]:
+    """("set", cap) to write a memory cap, ("clear", None) to lift this tier's hold, ("keep", None)
+    or ("foreign", None). A failed or empty read keeps everything (fail safe). A lower existing
+    cap (CPU reserve) is never raised here; a memory hold re-caps up or down with the recover
+    margin, and lifts once the margin clears the full slots. ceiling (the CPU reserve cap while
+    the node's CPU is hot) bounds the cap and blocks a lift."""
+    text = (reason or "").strip()
+    if text and RESERVE_TAG not in " " + text:
+        return "foreign", None
+    if failed or free_gib is None:
+        return "keep", None
+    mem_held = MEM_TAG in text
+    reserve = float(mem["reserve_gib"]) + (float(mem.get("recover_gib", 0)) if mem_held else 0.0)
+    cap = memory_cap(free_gib, runners, slots, reserve, float(mem["per_runner_gib"]))
+    current = hold_cap(text)
+    if cap >= slots and ceiling is None:
+        return ("clear", None) if mem_held else ("keep", None)
+    if ceiling is not None:
+        cap = min(cap, ceiling)
+        if not mem_held and current is not None and cap >= current:
+            return "keep", None
+    if current is None or cap < current or (mem_held and cap != current):
+        return "set", cap
+    return "keep", None
+
+
 def reserve_query(template: str, node: str) -> str:
     return template.replace("$NODE", node)
+
+
+def memory_step(cfg: dict, res: dict, mem: dict, rnode: str, reason: str | None, now: dt.datetime,
+                reserve_log: dict, log: dict, ceiling: int | None = None):
+    """Run the memory tier for one node. Returns the new hold value (str, or None to clear) when
+    the memory tier wants a write, else False. Logs under reserve_log[rnode]["memory"]."""
+    failed, free, runners = False, None, 0
+    try:
+        raw = prom_scalar(cfg["prometheus_url"], reserve_query(mem["free_query"], rnode))
+        free = None if raw is None else raw / 2 ** 30
+    except (urllib.error.URLError, OSError, ValueError, KeyError, GuardError) as err:
+        failed = True
+        log["errors"].append("prometheus:reserve:%s:memory:%s" % (rnode, type(err).__name__))
+    try:
+        pods = kube("/api/v1/namespaces/%s/pods?%s" % (NAMESPACE, urllib.parse.urlencode(
+            {"labelSelector": PROFILE_LABEL, "fieldSelector": "spec.nodeName=" + rnode})))
+        runners = len(newest_first(pods.get("items", []), rnode))
+    except (urllib.error.URLError, OSError, ValueError, KeyError) as err:
+        failed = True
+        log["errors"].append("kube:reserve:%s:memory:%s" % (rnode, type(err).__name__))
+    slots = int((mem.get("slots") or {}).get(rnode, mem.get("default_slots", 20)))
+    action, cap = memory_decide(free, runners, reason, mem, slots, failed, ceiling)
+    reserve_log[rnode]["memory"] = {"free_gib": None if free is None else round(free, 2), "runners": runners,
+                                    "slots": slots, "action": action, "cap": cap,
+                                    "mode": mem.get("mode", "dry-run")}
+    if action == "set":
+        return "cap=%d %s%smem<%gGiB free=%.1fGiB" % (cap, iso(now), RESERVE_TAG, float(mem["reserve_gib"]), free)
+    if action == "clear":
+        return None
+    return False
 
 
 def newest_first(pods: list[dict], node: str) -> list[dict]:
@@ -428,13 +505,27 @@ def main() -> int:
                                     got["coverage"], res.get("coverage"), failed)
             reserve_log[rnode] = {"busy": got["trip"], "calm": got["recover"], "coverage": got["coverage"],
                                   "action": action}
-            recap = reserve_recap(reason, reserve_cap(res, rnode)) if action == "keep" and not failed else None
+            recap = (reserve_recap(reason, reserve_cap(res, rnode))
+                     if action == "keep" and not failed and MEM_TAG not in (reason or "") else None)
             # Raising a held cap waits until the node is below the trip line; lowering applies at once.
             if recap is not None and hold_cap(recap) > (hold_cap(reason) or 0) and (
                     got["trip"] is None or evaluate({"t": res["trip"]}, {"t": got["trip"]})[0]):
                 recap = None
             if recap is not None:
                 action = reserve_log[rnode]["action"] = "recap"
+            if action == "clear" and MEM_TAG in (reason or ""):
+                # A memory hold is lifted by the memory tier only (estate-ci#248).
+                action = reserve_log[rnode]["action"] = "keep"
+            mem = res.get("memory")
+            if mem and action == "keep":
+                hot = got["trip"] is None or bool(evaluate({"t": res["trip"]}, {"t": got["trip"]})[0])
+                mem_value = memory_step(cfg, res, mem, rnode, reason, now, reserve_log, log,
+                                        reserve_cap(res, rnode) if hot else None)
+                if mem_value is not False:
+                    action, recap = "recap", mem_value
+                    if mem.get("mode", "dry-run") != "enforce":
+                        continue
+                    reserve_log[rnode]["action"] = "memory"
             if action not in ("set", "clear", "recap"):
                 continue
             value = ("cap=%d %s%sbusy>%g" % (reserve_cap(res, rnode), iso(now), RESERVE_TAG, res["trip"]["threshold"])
