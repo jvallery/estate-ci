@@ -148,10 +148,11 @@ spec:
     # estate-ci#101: runner scratch on generic ephemeral volumes (scratch: pvc in runners.yaml),
     # only on the disposable Longhorn class. Each scratch: pvc pod holds 2 claims and 40Gi (work
     # 16Gi + exchange 24Gi). Envelope = the sum of max over scratch: pvc sets plus one rollover pod
-    # per set: tictactoe-ci (max 1) + options-tracker-ci (max 2) = 3 pods, +2 rollover = 5 pods,
-    # 10 claims, 200Gi. Raise it with the L13 projection (estate-ci#101) as each set flips.
-    persistentvolumeclaims: "10"
-    longhorn-v1-disposable-cache-rwo.storageclass.storage.k8s.io/requests.storage: 200Gi
+    # per set: tictactoe-ci (max 1) + options-tracker-ci (max 2) + estate-ci-ci, estate-ci-build,
+    # estate-ci-buildcheck (max 2 each) = 9 pods, +5 rollover = 14 pods, 28 claims, 560Gi.
+    # Raise it with the L13 projection (estate-ci#101) as each set flips.
+    persistentvolumeclaims: "28"
+    longhorn-v1-disposable-cache-rwo.storageclass.storage.k8s.io/requests.storage: 560Gi
     services.loadbalancers: "0"
     services.nodeports: "0"
 ---

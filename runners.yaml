@@ -540,6 +540,9 @@ sets:
     profiles:
       ci:
         max: 2
+        # estate-ci#101 set 3 (COORD 2026-11-17T13:10:56Z, after set 2): work and exchange on
+        # ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.14 CPU, 2026-11-06T12Z..11-10T00Z (150m -> 250m); limits unchanged.
@@ -549,11 +552,17 @@ sets:
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
+        # estate-ci#101 set 3 (COORD 2026-11-17T13:10:56Z, after set 2): work and exchange on
+        # ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.89 CPU, 2026-11-06T12Z..11-10T00Z (1300m -> 900m); limits unchanged.
         kaniko_resources: {cpu: 900m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
       buildcheck:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
+        # estate-ci#101 set 3 (COORD 2026-11-17T13:10:56Z, after set 2): work and exchange on
+        # ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.74 CPU, 2026-11-06T12Z..11-10T00Z (1200m -> 750m); limits unchanged.
         kaniko_resources: {cpu: 750m, memory: 1Gi, limit_cpu: "8", limit_memory: 8Gi}
       ci-toolbox:
