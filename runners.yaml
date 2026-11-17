@@ -321,6 +321,9 @@ sets:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         runner_image: *toolbox
         runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/homeassistant
@@ -575,6 +578,9 @@ sets:
         # stop the check on the PR that fixes it. Quota: +1 pod,
         # +100m / +256Mi requests (live ci-runners pods 41/272 on 2026-11-09).
         max: 1
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "2", limit_memory: 1Gi}
       # Estate version detector (STD-OPS-02, DR-51, estate-ci#110): self-hosted
@@ -584,6 +590,9 @@ sets:
       # vallery-pin-bot token per run (D-52) and revokes it at the end.
       ci-renovate:
         max: 1
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/renovate/renovate@sha256:c63c97e566f98e976a0726e8cab7150b880b292affbf049db183561234d8f313
         job_uid: 12021
         job_resources: {cpu: 500m, memory: 1Gi, limit_cpu: "4", limit_memory: 4Gi}
@@ -733,6 +742,9 @@ sets:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         runner_image: *toolbox
         runner_resources: {cpu: "1", memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/home-dotfiles
@@ -740,6 +752,9 @@ sets:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         runner_image: *toolbox
         # D-488 (Jason 2026-11-09): CPU request = runner (runs the job steps) active p50 0.43 CPU, 2026-11-06T12Z..11-10T00Z (150m -> 450m); limits unchanged.
         runner_resources: {cpu: 450m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
@@ -760,6 +775,9 @@ sets:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         runner_image: *toolbox
         runner_resources: {cpu: 250m, memory: 384Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/vallery-family
@@ -770,6 +788,9 @@ sets:
         # download) re-homed from the retiring agents registry row. Bare run:
         # step in the toolbox runner (Node is in the toolbox); no job sidecar.
         max: 1
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         runner_image: *toolbox
         runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "4", limit_memory: 4Gi}
   - repo: jvallery/ImagineProposals
@@ -779,6 +800,9 @@ sets:
         # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
         # scales to zero. Registered on the existing jvallery App installation.
         max: 1
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         runner_image: *toolbox
         runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
   - repo: jvallery/radio
@@ -788,6 +812,9 @@ sets:
         # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
         # scales to zero. Registered on the existing jvallery App installation.
         max: 1
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         runner_image: *toolbox
         runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
   - repo: jvallery/sunshine-research
@@ -797,6 +824,9 @@ sets:
         # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
         # scales to zero. Registered on the existing jvallery App installation.
         max: 1
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         runner_image: *toolbox
         runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
   - repo: jvallery/vault-personal
@@ -806,6 +836,9 @@ sets:
         # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
         # scales to zero. Registered on the existing jvallery App installation.
         max: 1
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         runner_image: *toolbox
         runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
   - repo: jvallery/immich-config
@@ -813,6 +846,9 @@ sets:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         job_image: *toolbox
         job_uid: 1001
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
@@ -821,6 +857,9 @@ sets:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         job_image: *toolbox
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (250m -> 350m); limits unchanged.
@@ -830,6 +869,9 @@ sets:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         job_image: *toolbox
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.24 CPU, 2026-11-06T12Z..11-10T00Z (350m -> 250m); limits unchanged.
@@ -845,6 +887,9 @@ sets:
     profiles:
       ci:
         max: 2
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         runner_image: *toolbox
         runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "4", limit_memory: 4Gi}
   # memoryos moved to jvallery on 2026-11-06 (REPO-MOVE, D19). The build and
@@ -860,6 +905,9 @@ sets:
       # in the toolbox runner, no job sidecar. Required by ruleset 26894408 (estate-ci#112).
       ci:
         max: 2
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         runner_image: *toolbox
         runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "4", limit_memory: 4Gi}
       # memoryos#16 / memoryos#40 build.yml (estate-ci image-build): pushes
@@ -877,6 +925,9 @@ sets:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
+        # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
+        # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
+        scratch: pvc
         job_image: *toolbox
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.59 CPU, 2026-11-06T12Z..11-10T00Z (750m -> 600m); limits unchanged.
