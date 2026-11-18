@@ -1,0 +1,68 @@
+# Reusable: find GitHub Actions jobs that an ARC listener restart orphaned, and re-dispatch them
+# (estate-ci#296). Every runner-set change re-creates that set's listener, and jobs already queued
+# then never get a runner. The check is deploy/foundation/bin/orphan-redispatch.py ($ESTATE_CI):
+# a queued job with no runner counts as orphaned when a job on the same label that was created
+# later already has a runner. In enforce mode it cancels the run and re-runs only its failed and
+# cancelled jobs, once per attempt, never while a job of that run is in progress.
+#
+#   on:
+#     schedule:
+#       - cron: "*/10 * * * *"
+#     workflow_dispatch:
+#   jobs:
+#     orphan-redispatch:
+#       uses: jvallery/estate-ci/.github/workflows/orphan-redispatch.yml@<sha>
+#       with:
+#         runner: <repo>-ci-gate   # a warm set, so this job is not stuck behind the queue it fixes
+#         mode: dry-run            # enforce after a dry-run review (COORD GO)
+#       permissions:
+#         actions: write
+#
+# Forgejo/Gitea Actions portability: one `run:` step calling a standard-library script against the
+# GitHub REST API. On Forgejo, point GITHUB_API_URL at the forge API; the cancel and rerun endpoints
+# differ there, so run it in dry-run mode until a forge adapter exists.
+name: estate-ci orphan redispatch
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: Scale set label. Default "<repo>-ci"
+        type: string
+        default: ""
+      mode:
+        description: dry-run (report only) or enforce (cancel + rerun-failed-jobs)
+        type: string
+        default: dry-run
+      min-age:
+        description: Minutes a job must be queued before it can count as orphaned
+        type: string
+        default: "15"
+      max-runs:
+        description: Most runs re-dispatched per cycle
+        type: string
+        default: "10"
+
+permissions:
+  actions: write
+
+concurrency:
+  group: estate-ci-orphan-redispatch-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  orphan-redispatch:
+    name: orphan-redispatch
+    runs-on: ${{ inputs.runner != '' && inputs.runner || format('{0}-ci', github.event.repository.name) }}
+    timeout-minutes: 15
+    steps:
+      - name: orphan redispatch
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MODE: ${{ inputs.mode }}
+          MIN_AGE: ${{ inputs.min-age }}
+          MAX_RUNS: ${{ inputs.max-runs }}
+        run: |
+          set -euo pipefail
+          python3 "$ESTATE_CI/orphan-redispatch.py" --mode "$MODE" --min-age "$MIN_AGE" --max-runs "$MAX_RUNS"

@@ -42,6 +42,8 @@ configMapGenerator:
       # estate-ci#263 (STD-OPS-05): retention PRs need a capacity projection; rules next to it.
       - bin/retention-projection.py
       - bin/retention-keys.txt
+      # estate-ci#296: re-dispatch jobs orphaned by an ARC listener restart.
+      - bin/orphan-redispatch.py
   # node8 hot guard (D-67): script and thresholds (hot-guard.yaml).
   - name: ci-runner-hot-guard
     files:
