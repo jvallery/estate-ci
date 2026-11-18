@@ -47,22 +47,22 @@
     {
       "component": "kaniko-executor",
       "kind": "tool",
-      "notes": "In-cluster image builder for every *-build set (runners.yaml defaults.kaniko_image). The GoogleContainerTools project is archived (last release v1.24.0); the maintained fork is chainguard-dev/kaniko. Moving to the fork is a separate upgrade decision, not part of this register.",
+      "notes": "In-cluster image builder for every *-build set (runners.yaml defaults.kaniko_image). The GoogleContainerTools project is archived; estate-ci#236 (D-825) moved to the maintained fork osscontainertools/kaniko after a 2026-11-18 pilot (0 fixable Critical, equivalent builds).",
       "installed": {
-        "version": "v1.23.2-debug",
-        "digest": "sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e",
-        "image": "registry.vallery.net/jvallery/estate-ci/mirror/gcr.io/kaniko-project/executor",
-        "source": "runners.yaml kaniko_image; mirrors.txt row gcr.io/kaniko-project/executor:v1.23.2-debug",
-        "read_at": "2026-11-11"
+        "version": "v1.29.1-debug",
+        "digest": "sha256:9585e0a789d698ae5755e190fb8f75e04ee793ec542929bf706d862144f44a97",
+        "image": "registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/osscontainertools/kaniko",
+        "source": "runners.yaml kaniko_image; mirrors.txt row ghcr.io/osscontainertools/kaniko:v1.29.1-debug",
+        "read_at": "2026-11-18"
       },
       "upstream": {
-        "project": "https://github.com/chainguard-dev/kaniko/releases",
-        "latest": "v1.25.22",
-        "checked": "2026-11-11"
+        "project": "https://github.com/osscontainertools/kaniko/releases",
+        "latest": "v1.29.1",
+        "checked": "2026-11-18"
       },
       "support": {
         "policy": "rolling",
-        "source": "https://github.com/chainguard-dev/kaniko"
+        "source": "https://github.com/osscontainertools/kaniko"
       }
     },
     {
