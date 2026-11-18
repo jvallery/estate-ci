@@ -54,6 +54,13 @@ spec:
                   estate-ci.vallery.net/runner: 'true'
             affinity:
               nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                  - matchExpressions:
+                    - key: kubernetes.io/hostname
+                      operator: NotIn
+                      values:
+                      - vm-k3s-node4
                 preferredDuringSchedulingIgnoredDuringExecution:
                 - weight: 100
                   preference:

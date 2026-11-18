@@ -133,6 +133,22 @@ def scratch_volume(name: str, size: str, opts: dict, base: str) -> dict:
                  "resources": {"requests": {"storage": size}}}}}}
 
 
+def scratch_pvc_exclusion(d: dict, opts: dict) -> dict:
+    """Hard node exclusion for scratch: pvc sets (defaults.scratch_pvc_exclude_nodes).
+
+    The disposable class is strict-local with one replica, so the scratch volume must sit on the
+    node the Pod is scheduled to. The kube scheduler cannot see Longhorn disk schedulability: when
+    every plane-longhorn disk on a worker is unschedulable, a scratch: pvc Pod scheduled there hangs
+    in ContainerCreating (FailedAttachVolume) with its job still queued in GitHub. The listed nodes
+    are excluded with a required term. emptyDir sets are not affected.
+    """
+    nodes = sorted(d.get("scratch_pvc_exclude_nodes") or [])
+    if opts.get("scratch", "emptyDir") != "pvc" or not nodes:
+        return {}
+    return {"requiredDuringSchedulingIgnoredDuringExecution": {"nodeSelectorTerms": [{"matchExpressions": [{
+        "key": "kubernetes.io/hostname", "operator": "NotIn", "values": nodes}]}]}}
+
+
 def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, label: str | None = None,
                  priority_class: str = "ci-preemptible") -> dict:
     label = label or profile
@@ -323,7 +339,9 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
             # Soft preference only (weight 100): node8 (the overflow node) plus
             # any per-set avoid_nodes. Runners still land there when nothing
             # else fits.
-            "affinity": {"nodeAffinity": {"preferredDuringSchedulingIgnoredDuringExecution": [{
+            "affinity": {"nodeAffinity": {
+                **scratch_pvc_exclusion(d, opts),
+                "preferredDuringSchedulingIgnoredDuringExecution": [{
                 "weight": 100, "preference": {"matchExpressions": [{
                     "key": "kubernetes.io/hostname", "operator": "NotIn",
                     "values": sorted({OVERFLOW_NODE, *opts.get("avoid_nodes", [])})}]}}]}},

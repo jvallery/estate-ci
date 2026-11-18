@@ -38,6 +38,14 @@ defaults:
   # runner (uid 1001), so it serves as runner_image and as job_image.
   toolbox: &toolbox registry.vallery.net/jvallery/estate-ci/toolbox@sha256:75bd1355d4e35701d71d81543b0bdbbf49dad8c7063e6271522f1dce16cbe804
   chart_version: 0.14.2
+  # scratch: pvc sets never schedule to these workers (required nodeAffinity; render_runners.py
+  # scratch_pvc_exclusion). vm-k3s-node4 (COORD-W2 GO 2026-11-18T05:32:04Z): its plane-longhorn disks
+  # are both unschedulable. Disk 01267A is allowScheduling=false (the garage guard for the garage
+  # ha-0 volumes, pi#983/pi#993, EXEC-W4-B 04:42:21Z) and disk 16865A is under DiskPressure (below
+  # the 25% minimal-available floor). Five scratch-pvc runners hung in ContainerCreating on node4 at
+  # 05:30Z. REMOVE node4 from this list when the garage guard lifts (01267A allowScheduling=true)
+  # or 16865A is Schedulable=True again; read the Longhorn Node CR first.
+  scratch_pvc_exclude_nodes: [vm-k3s-node4]
   controller_service_account: {namespace: arc-systems, name: arc-gha-rs-controller}
   # Stock actions-runner 2.338.2, mirrored by mirrors.txt (same index digest as upstream).
   runner_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232

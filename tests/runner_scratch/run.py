@@ -6,6 +6,8 @@
 2. An unknown scratch mode is refused.
 3. Every rendered set whose runners.yaml entry says scratch: pvc carries no emptyDir work,
    exchange or pg volume, so an emptyDir scratch volume cannot come back for a flipped set.
+4. defaults.scratch_pvc_exclude_nodes renders a required hostname NotIn term on scratch: pvc sets
+   only; emptyDir sets and an empty list get none.
 """
 import importlib.util
 import sys
@@ -41,6 +43,14 @@ try:
     check("unknown mode refused", "accepted", "refused")
 except rr.RenderError:
     pass
+
+# 4. defaults.scratch_pvc_exclude_nodes: a required NotIn term for scratch: pvc sets only.
+d_ex = {"scratch_pvc_exclude_nodes": ["vm-k3s-node4"]}
+want_ex = {"requiredDuringSchedulingIgnoredDuringExecution": {"nodeSelectorTerms": [{"matchExpressions": [{
+    "key": "kubernetes.io/hostname", "operator": "NotIn", "values": ["vm-k3s-node4"]}]}]}}
+check("exclusion on pvc set", rr.scratch_pvc_exclusion(d_ex, {"scratch": "pvc"}), want_ex)
+check("no exclusion on emptyDir set", rr.scratch_pvc_exclusion(d_ex, {}), {})
+check("no exclusion when list empty", rr.scratch_pvc_exclusion({"scratch_pvc_exclude_nodes": []}, {"scratch": "pvc"}), {})
 
 cfg = yaml.safe_load((root / "runners.yaml").read_text())
 flipped = {}
