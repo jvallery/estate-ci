@@ -19,7 +19,7 @@ spec:
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: monitoring-stack-ci
         minRunners: 0
-        maxRunners: 18
+        maxRunners: 9
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller
@@ -28,6 +28,7 @@ spec:
             labels:
               estate-ci.vallery.net/profile: ci
               estate-ci.vallery.net/runner: 'true'
+              estate-ci.vallery.net/set: monitoring-stack-ci
           spec:
             automountServiceAccountToken: false
             restartPolicy: Never
@@ -52,6 +53,13 @@ spec:
               labelSelector:
                 matchLabels:
                   estate-ci.vallery.net/runner: 'true'
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+              nodeTaintsPolicy: Honor
+              labelSelector:
+                matchLabels:
+                  estate-ci.vallery.net/set: monitoring-stack-ci
             affinity:
               nodeAffinity:
                 preferredDuringSchedulingIgnoredDuringExecution:
@@ -174,7 +182,7 @@ spec:
                 value: /exchange
               resources:
                 requests:
-                  cpu: '3'
+                  cpu: '6'
                   memory: 640Mi
                   ephemeral-storage: 2Gi
                 limits:

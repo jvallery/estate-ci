@@ -86,6 +86,19 @@ for name in sorted(flipped):
             check(f"{name} {v['name']} is ephemeral", "ephemeral" in v and "emptyDir" not in v, True)
     check(f"{name} renders scratch volumes", sum(v["name"] in SCRATCH for v in vols) >= 2, True)
 
+# 5. set_spread (pi#1036): a per-set soft hostname spread on top of the all-runner one, keyed on
+#    the set label; sets without it keep the single D-87 spread and no set label.
+D = yaml.safe_load((root / "runners.yaml").read_text())["defaults"]
+sp = rr.pod_template(D, "ci", {"set_spread": True}, "o/x", "x", "ci", set_name="x-ci")
+tsc = sp["spec"]["topologySpreadConstraints"]
+check("set_spread constraints", len(tsc), 2)
+check("set_spread selector", tsc[1]["labelSelector"], {"matchLabels": {"estate-ci.vallery.net/set": "x-ci"}})
+check("set_spread soft", tsc[1]["whenUnsatisfiable"], "ScheduleAnyway")
+check("set_spread label", sp["metadata"]["labels"].get("estate-ci.vallery.net/set"), "x-ci")
+plain = rr.pod_template(D, "ci", {}, "o/x", "x", "ci", set_name="x-ci")
+check("no set_spread constraints", len(plain["spec"]["topologySpreadConstraints"]), 1)
+check("no set_spread label", "estate-ci.vallery.net/set" in plain["metadata"]["labels"], False)
+
 if failed:
     print(f"runner_scratch: {failed} failure(s)")
     sys.exit(1)
