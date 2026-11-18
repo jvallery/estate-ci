@@ -106,7 +106,24 @@ tag="gha-${short}"
 pushed="$("$bin/crane" push --insecure "$K_TAR" "${ORIGIN}/${image}:${tag}")"
 digest="${pushed##*@}"
 [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "unexpected push output" >&2; exit 1; }
-readback="$("$bin/crane" digest --insecure "${ORIGIN}/${image}:${tag}")"
+# Post-push digest read, retried only on an origin outage (storage-infra#1959: a 45 s writer
+# readiness flap failed a complete push on "connection refused"). Up to 6 tries 15 s apart, only
+# for connection refused/reset or a 5xx; a 4xx or any other error fails at once. Every retry is logged.
+readback="" rb_err="$(mktemp)"
+for attempt in 1 2 3 4 5 6; do
+  if readback="$("$bin/crane" digest --insecure "${ORIGIN}/${image}:${tag}" 2>"$rb_err")"; then
+    break
+  fi
+  if ((attempt < 6)) && ! grep -qE 'status code 4[0-9]{2}' "$rb_err" \
+     && grep -qE 'connection refused|connection reset|status code 5[0-9]{2}' "$rb_err"; then
+    echo "digest readback retry ${attempt}/5 in 15 s: $(tail -n 1 "$rb_err")" >&2
+    sleep 15
+    continue
+  fi
+  cat "$rb_err" >&2; rm -f "$rb_err"
+  echo "digest readback failed after ${attempt} attempt(s)" >&2; exit 1
+done
+rm -f "$rb_err"
 [[ "$readback" == "$digest" ]] || { echo "digest readback mismatch" >&2; exit 1; }
 rm -f "$K_TAR"
 ref="${PUBLIC}/${image}@${digest}"
