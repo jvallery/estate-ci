@@ -18,7 +18,8 @@ Constraints that shape the design:
   has one such identity, the GitHub App `vallery-pin-bot` (D-52). Its key is the
   Actions secret `PIN_BOT_PRIVATE_KEY` (variable `PIN_BOT_CLIENT_ID`) in this
   repository. `app-token.py` mints installation tokens limited to one repository
-  with contents and pull_requests write, valid for 1 h. No new credential, App
+  with contents and pull_requests write (Renovate passes add issues read, which
+  its repository init needs), valid for 1 h. No new credential, App
   or install is created by this design.
 - **Installation scope.** D-52 installed the App on selected repositories, not
   All, and deliberately kept agents, home-dotfiles and vault-personal out of its

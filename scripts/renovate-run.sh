@@ -67,7 +67,9 @@ for repo in "${repos[@]}"; do
     echo "::warning title=renovate::$repo $result"
     uncovered=$((uncovered + 1))
   else
-    RENOVATE_TOKEN="$(python3 "$ESTATE_CI/app-token.py" "$repo")"
+    # Renovate's initRepo GraphQL reads repository.issues: without issues:read every
+    # repository except estate-ci failed 'platform-unknown-error' (2026-11-18 09:22Z run).
+    RENOVATE_TOKEN="$(APP_TOKEN_EXTRA_PERMISSIONS=issues=read python3 "$ESTATE_CI/app-token.py" "$repo")"
     echo "::add-mask::$RENOVATE_TOKEN"
     export RENOVATE_TOKEN RENOVATE_REPOSITORIES="$repo"
     rc=0
