@@ -90,7 +90,7 @@ spec:
               - name: estate-ci-tools
                 mountPath: /tools
             - name: estate-ci-nss
-              image: registry.vallery.net/jvallery/weather-ci@sha256:6c10ebd4ddb8326727fb0f7d2bf6bcfea9bf1dec4a356f82a74dd8a7537a3baa
+              image: registry.vallery.net/jvallery/weather-ci@sha256:128f86e1a25b2cb3a8ea4a1a0f4341dc0bc469c6f2e0e88fd9b9cf798390ea32
               command:
               - /bin/sh
               - -ec
@@ -163,7 +163,7 @@ spec:
                 mountPath: /opt/estate-ci
                 readOnly: true
             - name: job
-              image: registry.vallery.net/jvallery/weather-ci@sha256:6c10ebd4ddb8326727fb0f7d2bf6bcfea9bf1dec4a356f82a74dd8a7537a3baa
+              image: registry.vallery.net/jvallery/weather-ci@sha256:128f86e1a25b2cb3a8ea4a1a0f4341dc0bc469c6f2e0e88fd9b9cf798390ea32
               command:
               - /bin/sh
               - /opt/estate-ci/sidecar-agent.sh
