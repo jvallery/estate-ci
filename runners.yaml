@@ -686,14 +686,22 @@ sets:
         # 6 jobs were queued while the runner quota was 62.5/82, so +4 x 3.2 = 12.8 CPU fits. Guard: if
         # estate-ci-runner-pods requests.cpu stays above 78/82 for 10 min after delivery, revert to 18.
         # EXEC-W2-CS (COORD-W2 2026-11-18T07:11:04Z pre-GO): guard tripped, 20 -> 18.
-        max: 18
+        # EXEC-W2-CS (COORD-W2 2026-11-18T09:00Z, pi#1036): 18 -> 9 with the job request 3 -> 6 (Pod 3.2 -> 6.2 CPU):
+        # 9 x 6.2 = 55.8 CPU at max, inside the 57.6 CPU envelope that max 18 x 3.2 held. At 18 x 6.2 = 111.6
+        # the set alone would exceed the 82-CPU quota, and quota-pending runners starve other repos (ep#966).
+        # Revert: max 18, job cpu 3, drop set_spread.
+        max: 9
+        # pi#1036: per-set soft hostname spread, so the set's 8-CPU bursts do not stack on one worker.
+        set_spread: true
         job_image: *toolbox
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 1.51 CPU, 2026-11-06T12Z..11-10T00Z (2700m -> 1550m); limits unchanged.
         # EXEC-W2-CI-CAP (COORD-W2 2026-11-17T20:31:17Z, TRIAGE 20:31:05Z): CPU request -> 3 cores, the observed
         # per-job use (node7 at 104% CPU with 1-1.5 CPU requests under limit 8, so the scheduler stacked them); limit unchanged.
-        job_resources: {cpu: "3", memory: 640Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # EXEC-W2-CS (COORD-W2 2026-11-18T09:00Z, pi#1036): 3 -> 6. HOSTEDGE traced the node5 D-state stall to
+        # ms-ci Pods bursting to the 8-CPU limit with up to 4 on one node at 3 CPU requested each.
+        job_resources: {cpu: "6", memory: 640Mi, limit_cpu: "8", limit_memory: 8Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.18 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
         runner_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:

@@ -150,7 +150,7 @@ def scratch_pvc_exclusion(d: dict, opts: dict) -> dict:
 
 
 def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, label: str | None = None,
-                 priority_class: str = "ci-preemptible") -> dict:
+                 priority_class: str = "ci-preemptible", set_name: str | None = None) -> dict:
     label = label or profile
     exchange = {"name": "exchange", "mountPath": "/exchange"}
     work = {"name": "work", "mountPath": "/home/runner/_work"}
@@ -312,6 +312,21 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
     labels = {"estate-ci.vallery.net/profile": label, RUNNER_LABEL: "true"}
     if profile == "ops":
         labels["estate-ci.vallery.net/set"] = f"{base}-ops"
+    spread = [{
+        "maxSkew": 1, "topologyKey": "kubernetes.io/hostname", "whenUnsatisfiable": "ScheduleAnyway",
+        "nodeTaintsPolicy": "Honor",
+        "labelSelector": {"matchLabels": {RUNNER_LABEL: "true"}}}]
+    if opts.get("set_spread"):
+        # pi#1036 (node5 stall, COORD-W2 2026-11-18T09:00Z): a per-set soft spread on top of
+        # the all-runner one, so a heavy set's Pods (which burst far past their request)
+        # do not stack on one worker. Soft (ScheduleAnyway) like the D-87 spread.
+        if not set_name:
+            raise RenderError(f"{base}: set_spread needs the scale set name")
+        labels["estate-ci.vallery.net/set"] = set_name
+        spread.append({
+            "maxSkew": 1, "topologyKey": "kubernetes.io/hostname", "whenUnsatisfiable": "ScheduleAnyway",
+            "nodeTaintsPolicy": "Honor",
+            "labelSelector": {"matchLabels": {"estate-ci.vallery.net/set": set_name}}})
     return {
         "metadata": {"labels": labels},
         "spec": {
@@ -332,10 +347,7 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
             # and the per-node ci-runner-slot; a hard hostname spread strands
             # runners (agents#5560). nodeTaintsPolicy Honor leaves the cordoned,
             # tainted control-plane nodes out of the skew.
-            "topologySpreadConstraints": [{
-                "maxSkew": 1, "topologyKey": "kubernetes.io/hostname", "whenUnsatisfiable": "ScheduleAnyway",
-                "nodeTaintsPolicy": "Honor",
-                "labelSelector": {"matchLabels": {RUNNER_LABEL: "true"}}}],
+            "topologySpreadConstraints": spread,
             # Soft preference only (weight 100): node8 (the overflow node) plus
             # any per-set avoid_nodes. Runners still land there when nothing
             # else fits.
@@ -585,7 +597,7 @@ def render(cfg: dict) -> dict[str, str]:
                 "minRunners": int(opts.get("min", 0)),
                 "maxRunners": int(opts.get("max", d["max"][profile])),
                 "controllerServiceAccount": d["controller_service_account"],
-                "template": pod_template(d, profile, opts, expected, base, key, priority),
+                "template": pod_template(d, profile, opts, expected, base, key, priority, name),
             }
             pod_cpu.append(pod_cpu_request(values["template"]))
             app = {
