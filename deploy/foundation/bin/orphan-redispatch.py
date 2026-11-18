@@ -12,6 +12,14 @@ with no runner is orphaned when a job on the same runs-on label that was created
 A plain backlog does not match, because there the oldest jobs start first. Only open (queued
 and in-progress) runs are read.
 
+Saturation guard (2026-11-18, estate-platform-ci). GitHub does not hand a saturated set its jobs
+in creation order, so with every runner busy an older job can wait while newer ones start. That
+is starvation, not an orphan, and a cancel + re-run would only send it to the back of the queue.
+--max-runners LABEL=N[,LABEL=N] names each set's maxRunners. A label whose in-progress job count
+is at or above N is saturated and none of its jobs is flagged. A genuine orphan stays queued
+while its set has idle capacity. In enforce mode a label with no --max-runners entry is only
+reported (action "report"), never re-dispatched.
+
 Action (--mode enforce): for each run holding orphaned jobs, oldest first, up to --max-runs:
   * skip the run if any of its jobs is in progress (try again next cycle, so running work is
     never cancelled), if run_attempt >= --max-attempt (no re-run loops), or if it is this
@@ -22,6 +30,7 @@ Action (--mode enforce): for each run holding orphaned jobs, oldest first, up to
 
     orphan-redispatch.py [--repo OWNER/NAME] [--mode dry-run|enforce] [--min-age 15] [--grace 5]
                          [--max-runs 10] [--max-attempt 3] [--pace 5] [--label-re REGEX]
+                         [--max-runners LABEL=N[,LABEL=N]]
 
 Token: $GITHUB_TOKEN (the caller's, with actions: write for enforce). Repo: $GITHUB_REPOSITORY.
 It prints one JSON summary line and appends a table to $GITHUB_STEP_SUMMARY when that is set.
@@ -44,7 +53,27 @@ def parse_ts(s: str) -> dt.datetime:
     return dt.datetime.fromisoformat(s.replace("Z", "+00:00"))
 
 
-def detect(runs: list, now: dt.datetime, min_age_min: float, grace_min: float, label_re=None):
+def parse_max_runners(s: str) -> dict:
+    out = {}
+    for part in filter(None, (x.strip() for x in (s or "").split(","))):
+        lab, _, n = part.partition("=")
+        if not lab or not n.isdigit() or int(n) < 1:
+            raise ValueError("bad --max-runners entry %r (want LABEL=N)" % part)
+        out[lab.strip()] = int(n)
+    return out
+
+
+def in_progress_by_label(runs: list) -> dict:
+    out: dict = {}
+    for run in runs:
+        for j in run["jobs"]:
+            if j.get("status") == "in_progress" and j.get("labels"):
+                out[j["labels"][0]] = out.get(j["labels"][0], 0) + 1
+    return out
+
+
+def detect(runs: list, now: dt.datetime, min_age_min: float, grace_min: float, label_re=None,
+           max_runners=None):
     """Return {run_id: [orphaned job dicts]} for the given runs.
 
     runs: [{"id", "run_attempt", "status", "created_at", "jobs": [{"id", "name", "status",
@@ -58,6 +87,8 @@ def detect(runs: list, now: dt.datetime, min_age_min: float, grace_min: float, l
                 t = parse_ts(j["created_at"])
                 if lab not in newest_started or t > newest_started[lab]:
                     newest_started[lab] = t
+    busy = in_progress_by_label(runs)
+    max_runners = max_runners or {}
     out: dict = {}
     for run in runs:
         for j in run["jobs"]:
@@ -66,6 +97,8 @@ def detect(runs: list, now: dt.datetime, min_age_min: float, grace_min: float, l
             lab = j["labels"][0]
             if label_re is not None and not label_re.search(lab):
                 continue
+            if lab in max_runners and busy.get(lab, 0) >= max_runners[lab]:
+                continue  # saturated: starvation, not an orphan
             created = parse_ts(j["created_at"])
             if (now - created).total_seconds() < min_age_min * 60:
                 continue
@@ -76,14 +109,20 @@ def detect(runs: list, now: dt.datetime, min_age_min: float, grace_min: float, l
     return out
 
 
-def plan(runs: list, orphans: dict, own_run_id, max_attempt: int, max_runs: int):
-    """Order runs oldest first and decide redispatch, defer or skip for each."""
+def plan(runs: list, orphans: dict, own_run_id, max_attempt: int, max_runs: int, known_labels=None):
+    """Order runs oldest first and decide redispatch, defer, report or skip for each.
+
+    known_labels: when given (enforce mode), a run whose orphaned jobs are on a label outside it
+    is only reported, because the saturation guard cannot apply to that label."""
     by_id = {r["id"]: r for r in runs}
     decisions = []
     for rid in sorted(orphans, key=lambda i: min(parse_ts(j["created_at"]) for j in orphans[i])):
         run = by_id[rid]
+        unknown = sorted({j["labels"][0] for j in orphans[rid]} - set(known_labels)) if known_labels is not None else []
         if str(rid) == str(own_run_id):
             decisions.append((rid, "skip", "own run"))
+        elif unknown:
+            decisions.append((rid, "report", "no --max-runners for " + ", ".join(unknown)))
         elif int(run.get("run_attempt", 1)) >= max_attempt:
             decisions.append((rid, "skip", "attempt %s >= %s" % (run.get("run_attempt"), max_attempt)))
         elif any(j.get("status") == "in_progress" for j in run["jobs"]):
@@ -163,16 +202,24 @@ def main(argv=None) -> int:
     p.add_argument("--max-attempt", type=int, default=3)
     p.add_argument("--pace", type=float, default=5)
     p.add_argument("--label-re", default="")
+    p.add_argument("--max-runners", default="", help="LABEL=N[,LABEL=N]: each set's maxRunners")
     a = p.parse_args(argv)
     token = os.environ.get("GITHUB_TOKEN", "")
     if not a.repo or not token:
         print("orphan-redispatch: need --repo (or GITHUB_REPOSITORY) and GITHUB_TOKEN", file=sys.stderr)
         return 2
+    try:
+        max_runners = parse_max_runners(a.max_runners)
+    except ValueError as e:
+        print("orphan-redispatch: %s" % e, file=sys.stderr)
+        return 2
     gh = GitHub(a.repo, token)
     now = dt.datetime.now(dt.timezone.utc)
     runs = gh.runs()
-    orphans = detect(runs, now, a.min_age, a.grace, re.compile(a.label_re) if a.label_re else None)
-    decisions = plan(runs, orphans, os.environ.get("GITHUB_RUN_ID"), a.max_attempt, a.max_runs)
+    orphans = detect(runs, now, a.min_age, a.grace, re.compile(a.label_re) if a.label_re else None,
+                     max_runners)
+    decisions = plan(runs, orphans, os.environ.get("GITHUB_RUN_ID"), a.max_attempt, a.max_runs,
+                     set(max_runners) if a.mode == "enforce" else None)
     results = []
     for rid, act, why in decisions:
         res = act

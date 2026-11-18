@@ -67,6 +67,32 @@ got = orr.plan(runs, orph, own_run_id=5, max_attempt=3, max_runs=1)
 check("plan decisions", [(r, a) for r, a, _ in got],
       [(1, "redispatch"), (2, "defer"), (3, "skip"), (4, "defer"), (5, "skip")])
 
+# 8. Saturation guard (2026-11-18 estate-platform-ci): max 4, 4 in progress, an older lint job
+# starved while newer gates jobs got runners. Without --max-runners it reads as an orphan; with
+# it the label is saturated and nothing is flagged.
+runs = [run(1, [job(11, 25, label="ep-ci")]),
+        run(2, [job(21, 20, "in_progress", "r-1", label="ep-ci"), job(22, 20, label="ep-ci")]),
+        run(3, [job(31, 10, "in_progress", "r-2", label="ep-ci")]),
+        run(4, [job(41, 8, "in_progress", "r-3", label="ep-ci"), job(42, 8, "in_progress", "r-4", label="ep-ci")])]
+check("saturated, no max: flagged", sorted(orr.detect(runs, NOW, 15, 5)), [1, 2])
+check("saturated, max 4: not flagged", orr.detect(runs, NOW, 15, 5, max_runners={"ep-ci": 4}), {})
+# 9. Idle capacity (the listener-restart orphan): 1 of 10 in progress, an old job still queued.
+runs = [run(1, [job(11, 40)]), run(2, [job(21, 10, "in_progress", "r-1")])]
+check("idle capacity, max 10: flagged", sorted(orr.detect(runs, NOW, 15, 5, max_runners={"ms-ci": 10})), [1])
+# 10. Enforce with no --max-runners entry for the label: report only.
+orph = orr.detect(runs, NOW, 15, 5)
+check("unknown label reported", [(r, a) for r, a, _ in orr.plan(runs, orph, None, 3, 10, known_labels=set())],
+      [(1, "report")])
+check("known label redispatched", [(r, a) for r, a, _ in orr.plan(runs, orph, None, 3, 10, known_labels={"ms-ci"})],
+      [(1, "redispatch")])
+# 11. --max-runners parsing.
+check("parse max-runners", orr.parse_max_runners("a=4, b=10"), {"a": 4, "b": 10})
+try:
+    orr.parse_max_runners("a=0")
+    check("parse rejects 0", "accepted", "ValueError")
+except ValueError:
+    pass
+
 if failed:
     print(f"orphan_redispatch: {failed} failure(s)")
     sys.exit(1)
