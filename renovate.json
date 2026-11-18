@@ -1,9 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "estate-ci#110 pilot: the estate version detector proposes updates; it never merges. Only the pinned pip tools in scripts/self-test.sh for now; more managers join batch by batch.",
-  "extends": [],
-  "dependencyDashboard": false,
-  "enabledManagers": ["custom.regex"],
+  "description": "estate-ci's own detector config (estate-ci#110 pilot, widened by estate-ci#261). Estate-wide policy (schedule, limits, no merge, no digest-only updates, zot pins excluded) is renovate/global.json; this file only chooses the managers.",
+  "enabledManagers": ["custom.regex", "github-actions"],
   "customManagers": [
     {
       "customType": "regex",
@@ -12,11 +10,5 @@
       "matchStrings": ["(?<depName>[A-Za-z0-9][A-Za-z0-9_.-]*)==(?<currentValue>[0-9][A-Za-z0-9_.+-]*)"],
       "datasourceTemplate": "pypi"
     }
-  ],
-  "minimumReleaseAge": "7 days",
-  "internalChecksFilter": "strict",
-  "prConcurrentLimit": 2,
-  "prHourlyLimit": 1,
-  "branchPrefix": "renovate/",
-  "commitMessagePrefix": "deps:"
+  ]
 }

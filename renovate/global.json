@@ -1,0 +1,67 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "estate-ci#261: estate-wide Renovate policy (self-hosted global config, RENOVATE_CONFIG_FILE in scripts/renovate-run.sh). Repository options here are defaults for every covered repository; each repository's renovate.json chooses its managers and may add packageRules.",
+    "Renovate proposes PRs only. It never merges, adds digest pins, rewrites first-party or mirrored zot digests (pin-bump.yml and mirrors.txt own those), moves estate-ci reusable-workflow pins or Argo git revisions (L4), and never rebases a PR unless it conflicts (L1)."
+  ],
+  "platform": "github",
+  "onboarding": false,
+  "requireConfig": "required",
+  "gitAuthor": "vallery-pin-bot[bot] <353541463+vallery-pin-bot[bot]@users.noreply.github.com>",
+  "statusCheckNames": {
+    "artifactError": null,
+    "configValidation": null,
+    "mergeConfidence": null,
+    "minimumReleaseAge": null
+  },
+  "dependencyDashboard": false,
+  "branchPrefix": "renovate/",
+  "commitMessagePrefix": "deps:",
+  "automerge": false,
+  "platformAutomerge": false,
+  "rebaseWhen": "conflicted",
+  "pinDigests": false,
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+  "prBodyNotes": [
+    "Proposed by the estate version detector (jvallery/estate-ci renovate.yml, STD-OPS-02). It merges only through this repository's normal path: CI, the merge train and any COORD GO or pin rule still apply. Renovate never merges or syncs."
+  ],
+  "packageRules": [
+    {
+      "description": "First-party images and estate-ci mirrors in the zot origin are pinned by digest through pin-bump.yml and mirrors.txt (STD-IAC pin writer rule), never by Renovate.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["registry.vallery.net/**"],
+      "enabled": false
+    },
+    {
+      "description": "No digest-only updates and no new pins: an existing tag@digest or SHA pin moves only together with a version update.",
+      "matchUpdateTypes": ["digest", "pinDigest", "pin"],
+      "enabled": false
+    },
+    {
+      "description": "Callers pin estate-ci reusable workflows by full SHA and move them with estate-ci changes (ADR-0006), not through Renovate.",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["jvallery/estate-ci"],
+      "enabled": false
+    },
+    {
+      "description": "Argo Application git revisions are SHA pins moved by the consolidated pin PR (L4). Helm chart versions in Applications stay proposable.",
+      "matchManagers": ["argocd"],
+      "matchDatasources": ["git-tags", "git-refs"],
+      "enabled": false
+    },
+    {
+      "description": "One PR per repository for GitHub Actions updates.",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    },
+    {
+      "description": "Group non-major pip and npm tool pins into one PR per repository; images, charts and majors stay one PR each.",
+      "matchDatasources": ["pypi", "npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "tool pins (non-major)"
+    }
+  ]
+}
