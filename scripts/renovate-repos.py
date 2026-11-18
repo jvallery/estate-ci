@@ -81,12 +81,15 @@ def installed(repo):
     owner, name = repo.split("/", 1)
     app = mod.jwt(os.environ["APP_CLIENT_ID"], os.environ["APP_PRIVATE_KEY"])
     try:
-        mod.call("GET", f"/repos/{owner}/{name}/installation", app)
+        inst = mod.call("GET", f"/repos/{owner}/{name}/installation", app)
     except urllib.error.HTTPError as e:
         if e.code == 404:
             return 3
         print(f"installation lookup for {repo}: HTTP {e.code}", file=sys.stderr)
         return 1
+    # Permission names and levels only (no ids or tokens): what a pass token can request.
+    perms = ",".join(f"{k}={v}" for k, v in sorted((inst.get("permissions") or {}).items()))
+    print(f"installation permissions for {repo}: {perms}", file=sys.stderr)
     return 0
 
 
