@@ -151,7 +151,12 @@ controller:
 # when platform requests move. EstateCIWorkerCPUSaturated is the live signal.
 # Measured 2026-11-13T14:32:51Z (kubectl --context vallery: node allocatable cpu,
 # ci-runner-slot, Running Pods outside ci-runners, effective request per Pod;
-# estate-ci#193, D-575 (c): budget 82.7, quota 82). The per-node 0.95 line is
+# estate-ci#193, D-575 (c): budget 82.7, quota 82). Re-measured the same way at
+# 2026-11-18T05:01:27Z (EXEC-W2-CI-CAP, D-848 capacity lever): 138.1 CPU of
+# non-runner requests in total (node4 23.0, node5 27.9, node6 31.7, node7 28.1,
+# node8 27.4). Load moved from node7 to node4 and node5, but the budget is still
+# 82.7, so the quota stays at 82. More runner CPU has to come from trimming
+# platform requests (RIGHTSIZE), not from the reserve (D-486). The per-node 0.95 line is
 # not an instantaneous maximum at D-502 (b) widths; the proof is no sustained
 # EstateCIWorkerCPUSaturated and no harm to non-CI Pods (ADR-0010 point 7).
 capacity:
@@ -159,10 +164,10 @@ capacity:
   bound: quota
   quota: estate-ci-runner-pods
   nodes:
-    vm-k3s-node4: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "20.5"}
-    vm-k3s-node5: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "28.5"}
+    vm-k3s-node4: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "23"}
+    vm-k3s-node5: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "28"}
     vm-k3s-node6: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "32"}
-    vm-k3s-node7: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "30.5"}
+    vm-k3s-node7: {allocatable_cpu: "47", slots: 20, non_runner_cpu: "28.5"}
     vm-k3s-node8: {allocatable_cpu: "47", slots: 4, non_runner_cpu: "27.5"}
 
 # GitHub App registration Secret per owner (Secret in namespace ci-runners).
