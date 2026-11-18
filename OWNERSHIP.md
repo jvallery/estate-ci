@@ -1,9 +1,8 @@
 # OWNERSHIP: jvallery/estate-ci
 
 Owner repo for the estate's standard CI/CD substrate. Registered in
-jvallery/agents `control-plane/agent-fleet-control/registry/policy/estate-ownership/`
-(the ownership record and its render path are planned to move to
-jvallery/estate-platform).
+jvallery/estate-platform `ownership/record/` (rendered by
+`python3 ownership/render.py`).
 
 | Item | Where | Health / how to check | Depends on |
 |---|---|---|---|
