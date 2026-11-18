@@ -23,6 +23,7 @@ Program owner: lane CI-ARCH. Program epic and issue tree: jvallery/agents
 | [0010](0010-runner-balancing.md) | Runner balancing: measured requests, one spread, node8 the only exception (D-87) | Accepted |
 | [0011](0011-phase-1-exceptions.md) | Accepted phase-1 exceptions E-1 and E-2 to the portability and secrets rules (D-52, D-373) | Accepted |
 | [0012](0012-image-signing-and-sbom.md) | Image signatures and SBOMs at the image-build chokepoint (estate-ci#125) | Proposed |
+| [0013](0013-renovate-for-every-owner-repo.md) | Renovate for every owner repository: one list, one-repo token per pass, estate policy in one global config (estate-ci#261) | Accepted (batches 0-1) |
 
 **Superseding notes (2026-11-09, estate-ci#105).** Later decisions changed
 parts of ADR-0001, 0002, 0005, 0006, 0008, 0009 and 0010. Each of those ADRs

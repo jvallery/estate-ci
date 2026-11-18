@@ -33,7 +33,8 @@ per-repo migration runbook. Read `README.md` and `docs/MIGRATION-RUNBOOK.md`.
   (registration, pull, per-repo zot push) live only in central KSOPS, today in
   jvallery/agents and planned to move to jvallery/estate-platform. The one
   Actions-secret exception is D-52: `PIN_BOT_PRIVATE_KEY` with variable
-  `PIN_BOT_CLIENT_ID` (GitHub App `vallery-pin-bot`), used only by `pin-bump.yml`.
+  `PIN_BOT_CLIENT_ID` (GitHub App `vallery-pin-bot`), used only by `pin-bump.yml`
+  and the Renovate detector (`renovate.yml`, one-repository tokens; ADR-0013).
 - Estate CI rules R1-R3 (README): no GitHub-hosted runners anywhere, including
   this repo; thin YAML (only `actions/checkout` and these workflows); logic in
   `deploy/foundation/bin/` (mounted at `/opt/estate-ci`); keep it runnable on

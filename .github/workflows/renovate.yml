@@ -1,18 +1,26 @@
-# Estate version detector (STD-OPS-02, DR-51, estate-ci#110): self-hosted
-# Renovate on ARC. Pilot batch: this repository only (RENOVATE_REPOSITORIES);
-# later batches add owner repositories one at a time, each with its own
-# renovate.json and a run whose token is scoped to that repository.
+# Estate version detector (STD-OPS-02, DR-51): self-hosted Renovate on ARC.
+# estate-ci#110 piloted it on this repository; estate-ci#261 runs it for every
+# owner repository in renovate/repositories.json, one batch at a time
+# (active_batches), with the estate-wide policy in renovate/global.json and each
+# repository's own renovate.json choosing its managers (docs/adr/0013).
 #
 # Runs on estate-ci-ci-renovate (runners.yaml: job image renovate/renovate,
-# mirrored). Identity: the runner mints a vallery-pin-bot installation token
-# for this repository only (D-52, $ESTATE_CI/app-token.py: contents and
-# pull_requests write, 1 h) and revokes it when the step ends, so Renovate's
-# PRs start pull_request workflows and their required checks attach. Renovate
-# only opens PRs: it never merges, pins digests or touches Argo.
+# mirrored). Identity: scripts/renovate-run.sh mints a vallery-pin-bot
+# installation token for ONE repository per Renovate pass (D-52,
+# $ESTATE_CI/app-token.py: contents and pull_requests write, 1 h) and revokes
+# it when that pass ends, so Renovate's PRs start pull_request workflows and
+# their required checks attach. The App key stays in the runner container; the
+# Renovate sidecar only sees the one-repo token. Renovate only opens PRs: it
+# never merges, pins digests or touches Argo.
 #
-# Portability (Forgejo/Gitea Actions): one run step calling
-# $ESTATE_CI/app-token.py and $ESTATE_CI/sidecar-run.sh; Renovate supports
-# platform=gitea/forgejo with a forge token instead of the App token.
+# mode=probe (dispatch only) reports, for every listed repository, whether
+# vallery-pin-bot is installed there, without minting a token or running
+# Renovate: the input for widening the App installation batch by batch.
+# Pull requests that change the detector run renovate-config-validator only.
+#
+# Portability (Forgejo/Gitea Actions): checkout plus one run step calling a repo
+# script, $ESTATE_CI/app-token.py and $ESTATE_CI/sidecar-run.sh; Renovate
+# supports platform=gitea/forgejo with a forge token instead of the App token.
 name: renovate
 
 on:
@@ -20,50 +28,62 @@ on:
     - cron: "17 9 * * 1-5"
   workflow_dispatch:
     inputs:
+      mode:
+        description: run (Renovate passes for the active batches) or probe (App installation check only)
+        type: choice
+        options: [run, probe]
+        default: run
       log_level:
         description: Renovate LOG_LEVEL (debug to diagnose a skipped or aborted run)
         type: choice
         options: [info, debug]
         default: info
+  pull_request:
+    paths:
+      - renovate.json
+      - renovate/**
+      - scripts/renovate-*
+      - .github/workflows/renovate.yml
 
 permissions:
   contents: read
 
 concurrency:
-  group: renovate
-  cancel-in-progress: false
+  group: renovate-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'run' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  validate:
+    name: validate
+    if: github.event_name == 'pull_request'
+    runs-on: ${{ format('{0}-ci-renovate', github.event.repository.name) }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: renovate-config-validator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/renovate-repos.py check
+          RENOVATE_CONFIG_FILE="$PWD/renovate/global.json" ENV_NAMES="RENOVATE_CONFIG_FILE" TIMEOUT_MINUTES=10 \
+            "$ESTATE_CI/sidecar-run.sh" job <<< '/usr/local/sbin/renovate-entrypoint.sh renovate-config-validator --strict'
+
   renovate:
     name: renovate
+    if: github.event_name != 'pull_request'
     runs-on: ${{ format('{0}-ci-renovate', github.event.repository.name) }}
-    timeout-minutes: 30
+    timeout-minutes: 180
     steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
       - name: renovate
         shell: bash
         env:
           APP_CLIENT_ID: ${{ vars.PIN_BOT_CLIENT_ID }}
           APP_PRIVATE_KEY: ${{ secrets.PIN_BOT_PRIVATE_KEY }}
           RENOVATE_LOG_LEVEL: ${{ inputs.log_level || 'info' }}
-        run: |
-          set -euo pipefail
-          RENOVATE_TOKEN="$(python3 "$ESTATE_CI/app-token.py" "$GITHUB_REPOSITORY")"
-          echo "::add-mask::$RENOVATE_TOKEN"
-          trap 'APP_TOKEN="$RENOVATE_TOKEN" python3 "$ESTATE_CI/app-token.py" --revoke || true' EXIT
-          unset APP_PRIVATE_KEY
-          export RENOVATE_TOKEN RENOVATE_PLATFORM=github RENOVATE_REPOSITORIES="$GITHUB_REPOSITORY"
-          export RENOVATE_ONBOARDING=false RENOVATE_REQUIRE_CONFIG=required LOG_LEVEL="$RENOVATE_LOG_LEVEL"
-          # gitAuthor must be the App's own bot identity: on GitHub with an App
-          # token Renovate commits through the API (platformCommit), so the
-          # branch commit is authored by vallery-pin-bot[bot]. A different
-          # gitAuthor makes Renovate treat its own branch as edited and skip
-          # PR creation ("Branch has been edited but found no PR"; estate-ci#110).
-          export RENOVATE_GIT_AUTHOR="vallery-pin-bot[bot] <353541463+vallery-pin-bot[bot]@users.noreply.github.com>"
-          # The token has no statuses permission: a 403 on POST /statuses (the
-          # renovate/stability-days check) makes Renovate abort with "Repository
-          # has changed during renovation" and open no PR (estate-ci#110, debug
-          # run 43093177637). Skip Renovate's own commit statuses; minimumReleaseAge
-          # still applies through internalChecksFilter.
-          export RENOVATE_STATUS_CHECK_NAMES='{"artifactError":null,"configValidation":null,"mergeConfidence":null,"minimumReleaseAge":null}'
-          ENV_NAMES="RENOVATE_TOKEN RENOVATE_PLATFORM RENOVATE_REPOSITORIES RENOVATE_ONBOARDING RENOVATE_REQUIRE_CONFIG LOG_LEVEL RENOVATE_GIT_AUTHOR RENOVATE_STATUS_CHECK_NAMES" \
-            TIMEOUT_MINUTES=25 "$ESTATE_CI/sidecar-run.sh" job <<< 'cd /tmp && /usr/local/sbin/renovate-entrypoint.sh renovate'
+          MODE: ${{ inputs.mode || 'run' }}
+        run: bash scripts/renovate-run.sh "$MODE"
