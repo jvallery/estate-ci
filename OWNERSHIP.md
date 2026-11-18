@@ -40,12 +40,13 @@ holds the authoritative row for each; this list names what estate-ci keeps
 inside the stated bounds.
 
 - **STD-CI-10, slot-free `ci-gate` sets** (D-831 = a, estate-ci#229; review
-  2027-02-17): `agents-ci-gate`, `monitoring-stack-ci-gate`,
+  2027-02-17; fifth set PENDING a new COORD decision, estate-ci#296 demand cut):
+  `agents-ci-gate`, `estate-platform-ci-gate`, `monitoring-stack-ci-gate`,
   `network-infra-ci-gate` and `verdify-platform-ci-gate` request no
   `ci-runner-slot` (`runners.yaml` profile `ci-gate`, `slot: false`). Bounds:
-  only these four sets; max 4 and min 1-2 each (at most 16 pods); runner
+  only these five sets; max 4 and min 1-2 each (at most 20 pods); runner
   container only (toolbox image, no job sidecar or Postgres); request 100m CPU /
-  128Mi and limit 1 CPU / 512Mi per pod (at most 1.6 CPU requested, inside the
+  128Mi and limit 1 CPU / 512Mi per pod (at most 2.0 CPU requested, inside the
   `estate-ci-runner-pods` quota); PriorityClass `ci-gate` (-850, Never). Check:
   `kubectl -n ci-runners get autoscalingrunnersets | grep ci-gate`. Another
   slot-free set or a larger bound needs a new decision.

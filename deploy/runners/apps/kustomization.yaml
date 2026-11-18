@@ -21,6 +21,7 @@ resources:
 - estate-ci-ci-toolbox.yaml
 - estate-ci-ci.yaml
 - estate-platform-build.yaml
+- estate-platform-ci-gate.yaml
 - estate-platform-ci.yaml
 - home-dotfiles-ci.yaml
 - homeassistant-build.yaml
