@@ -318,6 +318,17 @@ check("CPU hot bounds a memory raise", g.memory_decide(60, 3, held, MEM, 20, cei
 check("CPU hot blocks a memory lift", g.memory_decide(60, 10, "cap=10 x reserve:mem<6GiB", MEM, 20, ceiling=10), ("keep", None))
 check("recap skips memory holds", g.reserve_recap(held, 10) is not None and g.MEM_TAG not in held, False)
 
+# R21: ConfigMap writes carry the named field manager; evictions and reads do not.
+CM = "/api/v1/namespaces/ci-runners/configmaps/ci-runner-slot-hold"
+check("cm patch names the manager", g.write_path(CM, "PATCH"), CM + "?fieldManager=estate-ci-hot-guard")
+check("cm create names the manager, dry run kept",
+      g.write_path("/api/v1/namespaces/ci-runners/configmaps", "POST", dry_run=True),
+      "/api/v1/namespaces/ci-runners/configmaps?fieldManager=estate-ci-hot-guard&dryRun=All")
+check("cm read unchanged", g.write_path(CM, "GET"), CM)
+EV = "/api/v1/namespaces/ci-runners/pods/x/eviction"
+check("eviction has no manager", g.write_path(EV, "POST"), EV)
+check("eviction dry run", g.write_path(EV, "POST", dry_run=True), EV + "?dryRun=All")
+
 if failures:
     sys.exit(f"hot-guard tests: {failures} failure(s)")
 print("hot-guard tests: OK")

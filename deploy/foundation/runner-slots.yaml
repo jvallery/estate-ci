@@ -43,7 +43,7 @@ data:
   vm-k3s-node8: "4"
 ---
 # Written only by the node8 hot guard (bin/hot-guard.py, merge patch of data and
-# annotations). Declared here so the object is owned in Git; Git sets no data, and
+# annotations, fieldManager estate-ci-hot-guard). Declared here so the object is owned in Git; Git sets no data, and
 # the server-side diff keeps the guard's fields out of the comparison.
 apiVersion: v1
 kind: ConfigMap
