@@ -23,6 +23,10 @@ ghcr.io/esphome/esphome@sha256:526a75c8d64a0d962a3b088c3af4fa7cf8ecf7161b995be57
 # Research Vault vault-server bases (estate-ci#113; research-vault Dockerfile L7, L20/L44).
 docker.io/library/node:24.22.1-bookworm-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205  jvallery/estate-ci/mirror/docker.io/library/node
 docker.io/library/python:3.12-slim@sha256:4840d514c583a4d3d8cad3940e68dee6f0f6f3635c12fcd0a3d74c21a5b93a54  jvallery/estate-ci/mirror/docker.io/library/python
+# sentinel#621: python 3.12-slim-trixie (Debian 13, image index read 2026-11-18) for the Frigate
+# sidecar, frigate-archive*, frigate-genai-observer and sentinel-camera-truth, replacing the bookworm
+# mirror-docker-io-library-python:3.12-slim-12316debbfb8 (fixable High, bookworm no-fix CVEs).
+docker.io/library/python:3.12-slim-trixie@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b  jvallery/estate-ci/mirror/docker.io/library/python
 # Runner job images and the hot guard (estate-ci#114), so runners.yaml and
 # hot-guard.yaml pin them from the origin: kepler-ci, verdify-platform-ci (was
 # mirror.gcr.io/library/python, the Docker Hub pull-through of the same index),
