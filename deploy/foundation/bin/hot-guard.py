@@ -77,6 +77,11 @@ CONFIG_PATH = os.environ.get("GUARD_CONFIG", "/etc/hot-guard/config.json")
 TOKEN_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 CA_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 TIMEOUT = 10
+# Named field manager for every ConfigMap write (R21 / STD-IAC-01): without it the API
+# server records urllib's default "Python-urllib", which the estate-audit field-manager
+# inventory cannot attribute. Registered in estate-platform r21-writers.json
+# field_manager_allow.
+FIELD_MANAGER = "estate-ci-hot-guard"
 READY_RUN = 4
 PROM_ATTEMPTS = 3
 
@@ -289,14 +294,27 @@ def parse_iso(text: str | None) -> dt.datetime | None:
 
 # ---------------------------------------------------------------- I/O
 
+def write_path(path: str, method: str, dry_run=False) -> str:
+    """Add the write query: fieldManager on ConfigMap writes, dryRun=All on dry runs.
+
+    Pod evictions keep no managedFields, so only ConfigMap writes carry the manager name.
+    """
+    params = []
+    if method in ("POST", "PATCH", "PUT") and "/configmaps" in path:
+        params.append("fieldManager=" + FIELD_MANAGER)
+    if dry_run and method != "GET":
+        params.append("dryRun=All")
+    if not params:
+        return path
+    return path + ("&" if "?" in path else "?") + "&".join(params)
+
+
 def kube(path: str, method: str = "GET", body=None, content_type: str = "application/json", dry_run=False):
     host = os.environ.get("KUBERNETES_SERVICE_HOST", "kubernetes.default.svc")
     port = os.environ.get("KUBERNETES_SERVICE_PORT", "443")
     if ":" in host and not host.startswith("["):
         host = "[" + host + "]"
-    url = "https://%s:%s%s" % (host, port, path)
-    if dry_run and method != "GET":
-        url += ("&" if "?" in url else "?") + "dryRun=All"
+    url = "https://%s:%s%s" % (host, port, write_path(path, method, dry_run))
     with open(TOKEN_PATH, encoding="utf-8") as stream:
         token = stream.read().strip()
     req = urllib.request.Request(url, method=method,
