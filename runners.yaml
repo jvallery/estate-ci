@@ -1022,6 +1022,17 @@ sets:
   # 179108157 (Jason). Offline gates only: gitleaks, YAML/SOPS, kustomize build.
   - repo: jvallery/estate-platform
     profiles:
+      ci-gate:
+        # COORD-W2 2026-11-18T11:05:02Z demand cut: warm, tiny, slot-free runners for the
+        # two light reusable checks of every CI run ("lint / lint" and
+        # "kustomize-exec-guard / exec-guard", stdlib Python + PyYAML in the toolbox runner
+        # image), so estate-platform-ci slots serve only estate-platform-gates. Same shape as
+        # the agents and network-infra ci-gate sets.
+        max: 4
+        min: 1
+        slot: false
+        runner_image: *toolbox
+        runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
       ci:
         # COORD-W2 2026-11-16T17:39:49Z (11 runs queued; the estate-platform train's bottleneck): 2 -> 4.
         # +2 pods x (runner 100m/256Mi + job 100m/256Mi; init tools/nss 50m) = +0.4 CPU / +1Gi requests,
