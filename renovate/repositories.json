@@ -1,6 +1,6 @@
 {
-  "description": "estate-ci#261 (STD-OPS-02, DR-51): the repositories the estate version detector covers. renovate.yml runs one Renovate pass per repository whose batch is in active_batches, each with its own one-repository vallery-pin-bot token. A repository joins by moving its batch into active_batches after its own renovate.json PR merges (until then Renovate skips it: requireConfig=required). Entries with batch \"exception\" are not run; each needs a Jason decision and a STD-OPS-02 exception row in estate-platform docs/estate/STANDARDS.md naming estate-ci#261. Every active (non-archived) owner repository from the root AGENTS.md lane table appears exactly once.",
-  "active_batches": [0, 1],
+  "description": "estate-ci#261 (STD-OPS-02, DR-51). HOLD 2026-11-18: batch 1 is out of active_batches until D-871 (vallery-pin-bot Issues: read; Renovate init needs it, estate-ci#298); restore [0, 1] with #298. the repositories the estate version detector covers. renovate.yml runs one Renovate pass per repository whose batch is in active_batches, each with its own one-repository vallery-pin-bot token. A repository joins by moving its batch into active_batches after its own renovate.json PR merges (until then Renovate skips it: requireConfig=required). Entries with batch \"exception\" are not run; each needs a Jason decision and a STD-OPS-02 exception row in estate-platform docs/estate/STANDARDS.md naming estate-ci#261. Every active (non-archived) owner repository from the root AGENTS.md lane table appears exactly once.",
+  "active_batches": [0],
   "repositories": [
     {"repo": "jvallery/estate-ci", "batch": 0, "lane": "CI/CD", "note": "pilot since estate-ci#110"},
 
