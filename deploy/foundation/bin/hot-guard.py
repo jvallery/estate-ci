@@ -84,6 +84,13 @@ TIMEOUT = 10
 FIELD_MANAGER = "estate-ci-hot-guard"
 READY_RUN = 4
 PROM_ATTEMPTS = 3
+# estate-ci#280: one transient kube API miss (a timeout or refused connection, not an
+# HTTP status) is retried once after KUBE_RETRY_SLEEP seconds before it counts as an
+# error and fails the run. Only idempotent methods retry: GET, and the ConfigMap
+# PATCH/PUT that rewrites the same hold. A POST (eviction, ConfigMap create) is sent once,
+# because a retry after a lost reply would turn a success into a 404/409.
+KUBE_ATTEMPTS = 2
+KUBE_RETRY_SLEEP = 1
 
 
 class GuardError(Exception):
@@ -309,7 +316,23 @@ def write_path(path: str, method: str, dry_run=False) -> str:
     return path + ("&" if "?" in path else "?") + "&".join(params)
 
 
-def kube(path: str, method: str = "GET", body=None, content_type: str = "application/json", dry_run=False):
+def kube(path: str, method: str = "GET", body=None, content_type: str = "application/json", dry_run=False,
+         sleep=None):
+    import time
+    sleep = sleep or time.sleep
+    attempts = KUBE_ATTEMPTS if method in ("GET", "PATCH", "PUT") else 1
+    for attempt in range(attempts):
+        try:
+            return kube_once(path, method, body, content_type, dry_run)
+        except urllib.error.HTTPError:
+            raise
+        except OSError:  # URLError, socket timeout, connection reset
+            if attempt == attempts - 1:
+                raise
+            sleep(KUBE_RETRY_SLEEP)
+
+
+def kube_once(path: str, method: str = "GET", body=None, content_type: str = "application/json", dry_run=False):
     host = os.environ.get("KUBERNETES_SERVICE_HOST", "kubernetes.default.svc")
     port = os.environ.get("KUBERNETES_SERVICE_PORT", "443")
     if ":" in host and not host.startswith("["):

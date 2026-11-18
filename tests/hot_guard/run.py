@@ -295,6 +295,38 @@ _ur.urlopen = _flaky
 check("prom_scalar retries a refused backend", g2.prom_scalar("http://p", "up", sleep=lambda d: None), 0.5)
 _ur.urlopen = _orig
 
+# estate-ci#280: kube retries one transient miss on idempotent methods only, never an HTTP status.
+def _kube_flaky(fails, exc):
+    n = [0]
+    def once(path, method="GET", body=None, content_type="application/json", dry_run=False):
+        n[0] += 1
+        if n[0] <= fails:
+            raise exc
+        return {"ok": n[0]}
+    return n, once
+_n, g2.kube_once = _kube_flaky(1, urllib.error.URLError("timed out"))
+check("kube GET retries one URLError", g2.kube("/api/v1/x", sleep=lambda d: None), {"ok": 2})
+_n, g2.kube_once = _kube_flaky(1, TimeoutError("read timed out"))
+check("kube PATCH retries one socket timeout", g2.kube("/api/v1/x", "PATCH", {}, sleep=lambda d: None), {"ok": 2})
+_n, g2.kube_once = _kube_flaky(2, urllib.error.URLError("timed out"))
+try:
+    g2.kube("/api/v1/x", sleep=lambda d: None); _got = "no raise"
+except urllib.error.URLError:
+    _got = "raised"
+check("kube GET fails after the retry also misses", (_got, _n[0]), ("raised", 2))
+_n, g2.kube_once = _kube_flaky(1, urllib.error.URLError("timed out"))
+try:
+    g2.kube("/api/v1/namespaces/ci-runners/pods/x/eviction", "POST", {}, sleep=lambda d: None); _got = "no raise"
+except urllib.error.URLError:
+    _got = "raised"
+check("kube POST (eviction) is never retried", (_got, _n[0]), ("raised", 1))
+_n, g2.kube_once = _kube_flaky(1, urllib.error.HTTPError("u", 500, "x", {}, None))
+try:
+    g2.kube("/api/v1/x", sleep=lambda d: None); _got = "no raise"
+except urllib.error.HTTPError:
+    _got = "raised"
+check("kube HTTP status is not retried", (_got, _n[0]), ("raised", 1))
+
 # estate-ci#248: memory-headroom cap (pure logic; fake node allocatable 88 GiB, 20 slots)
 MEM = cfg["reserve"]["memory"]
 check("memory config ships dry-run", MEM["mode"], "dry-run")
