@@ -65,6 +65,9 @@ RUNNER_LABEL = "estate-ci.vallery.net/runner"
 # runaway job cannot take a worker; p99 of every measured class is below it.
 MAX_CPU_LIMIT = 8
 QUOTA_FILE = ROOT / "deploy" / "foundation" / "quota.yaml"
+# Per-set spread domain (set_spread). It must differ from the D-87 spread's hostname key:
+# a Pod spec may not hold two constraints with the same (topologyKey, whenUnsatisfiable).
+SET_SPREAD_TOPOLOGY_KEY = "topology.vallery.net/proxmox-host"
 FRIGATE_TOLERATION = {"key": "dedicated", "operator": "Equal", "value": "frigate", "effect": "NoSchedule"}
 
 
@@ -320,11 +323,16 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
         # pi#1036 (node5 stall, COORD-W2 2026-11-18T09:00Z): a per-set soft spread on top of
         # the all-runner one, so a heavy set's Pods (which burst far past their request)
         # do not stack on one worker. Soft (ScheduleAnyway) like the D-87 spread.
+        # topologySpreadConstraints merge on (topologyKey, whenUnsatisfiable), so a second
+        # hostname/ScheduleAnyway entry is a duplicate key that server-side apply rejects
+        # (estate-platform#978, 09:29Z). The per-set spread keys on the Proxmox host label
+        # instead: each runner-eligible worker (node4-8) is alone on its host once tainted
+        # control-plane nodes drop out (nodeTaintsPolicy Honor), so the domains are the same.
         if not set_name:
             raise RenderError(f"{base}: set_spread needs the scale set name")
         labels["estate-ci.vallery.net/set"] = set_name
         spread.append({
-            "maxSkew": 1, "topologyKey": "kubernetes.io/hostname", "whenUnsatisfiable": "ScheduleAnyway",
+            "maxSkew": 1, "topologyKey": SET_SPREAD_TOPOLOGY_KEY, "whenUnsatisfiable": "ScheduleAnyway",
             "nodeTaintsPolicy": "Honor",
             "labelSelector": {"matchLabels": {"estate-ci.vallery.net/set": set_name}}})
     return {

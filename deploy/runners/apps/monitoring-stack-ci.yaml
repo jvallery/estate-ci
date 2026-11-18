@@ -54,7 +54,7 @@ spec:
                 matchLabels:
                   estate-ci.vallery.net/runner: 'true'
             - maxSkew: 1
-              topologyKey: kubernetes.io/hostname
+              topologyKey: topology.vallery.net/proxmox-host
               whenUnsatisfiable: ScheduleAnyway
               nodeTaintsPolicy: Honor
               labelSelector:

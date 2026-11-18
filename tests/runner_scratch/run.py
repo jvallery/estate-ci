@@ -94,10 +94,32 @@ tsc = sp["spec"]["topologySpreadConstraints"]
 check("set_spread constraints", len(tsc), 2)
 check("set_spread selector", tsc[1]["labelSelector"], {"matchLabels": {"estate-ci.vallery.net/set": "x-ci"}})
 check("set_spread soft", tsc[1]["whenUnsatisfiable"], "ScheduleAnyway")
+check("set_spread key", tsc[1]["topologyKey"], "topology.vallery.net/proxmox-host")
 check("set_spread label", sp["metadata"]["labels"].get("estate-ci.vallery.net/set"), "x-ci")
 plain = rr.pod_template(D, "ci", {}, "o/x", "x", "ci", set_name="x-ci")
 check("no set_spread constraints", len(plain["spec"]["topologySpreadConstraints"]), 1)
 check("no set_spread label", "estate-ci.vallery.net/set" in plain["metadata"]["labels"], False)
+
+# 6. No rendered set may carry two topologySpreadConstraints with the same merge key
+#    (topologyKey, whenUnsatisfiable): server-side apply refuses the Application
+#    (estate-platform#978 ComparisonError, 2026-11-18).
+for app in sorted((root / "deploy/runners/apps").glob("*.yaml")):
+    def find(node):
+        if isinstance(node, dict):
+            for k, v in node.items():
+                if k == "topologySpreadConstraints":
+                    yield v
+                else:
+                    yield from find(v)
+        elif isinstance(node, list):
+            for v in node:
+                yield from find(v)
+        elif isinstance(node, str) and "topologySpreadConstraints:" in node:
+            yield from find(yaml.safe_load(node))
+    for doc in yaml.safe_load_all(app.read_text()):
+        for tsc_list in find(doc):
+            keys = [(c["topologyKey"], c["whenUnsatisfiable"]) for c in tsc_list]
+            check(f"{app.name} spread merge keys unique", len(keys), len(set(keys)))
 
 if failed:
     print(f"runner_scratch: {failed} failure(s)")
