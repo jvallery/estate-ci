@@ -163,6 +163,18 @@ spec:
                 items:
                 - key: .dockerconfigjson
                   path: config.json
+        listenerTemplate:
+          spec:
+            containers:
+            - name: listener
+            topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+              nodeTaintsPolicy: Honor
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: runner-scale-set-listener
   destination:
     server: https://kubernetes.default.svc
     namespace: ci-runners

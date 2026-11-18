@@ -456,6 +456,29 @@ podSecurityContext:
 """
 
 
+LISTENER_COMPONENT = "runner-scale-set-listener"
+
+
+def listener_template() -> dict:
+    """The listener Pod template every scale set shares (estate-ci#70).
+
+    Listeners are singletons the ARC controller recreates when one is evicted or
+    deleted. Without a spread, a drained worker's listeners all land on the
+    next-emptiest node (2026-11-08: 28 of 59 on node7). A soft hostname spread over
+    every listener keeps any one host under about half of them after a drain; it
+    is ScheduleAnyway, so a listener is never stranded. Only the container name is
+    given: the controller merges its own listener container (image, command,
+    config) into it.
+    """
+    return {"spec": {
+        "containers": [{"name": "listener"}],
+        "topologySpreadConstraints": [{
+            "maxSkew": 1, "topologyKey": "kubernetes.io/hostname", "whenUnsatisfiable": "ScheduleAnyway",
+            "nodeTaintsPolicy": "Honor",
+            "labelSelector": {"matchLabels": {"app.kubernetes.io/component": LISTENER_COMPONENT}}}],
+    }}
+
+
 def controller_apps(cfg: dict) -> dict[str, dict]:
     """Application arc-controller (the chart, values as live) and estate-ci-arc-systems.
 
@@ -606,6 +629,7 @@ def render(cfg: dict) -> dict[str, str]:
                 "maxRunners": int(opts.get("max", d["max"][profile])),
                 "controllerServiceAccount": d["controller_service_account"],
                 "template": pod_template(d, profile, opts, expected, base, key, priority, name),
+                "listenerTemplate": listener_template(),
             }
             pod_cpu.append(pod_cpu_request(values["template"]))
             app = {
