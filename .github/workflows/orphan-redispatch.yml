@@ -15,6 +15,7 @@
 #       with:
 #         runner: <repo>-ci-gate   # a warm set, so this job is not stuck behind the queue it fixes
 #         mode: dry-run            # enforce after a dry-run review (COORD GO)
+#         max-runners: <set>=<maxRunners>   # saturation guard; required for enforce to act
 #       permissions:
 #         actions: write
 #
@@ -42,6 +43,10 @@ on:
         description: Most runs re-dispatched per cycle
         type: string
         default: "10"
+      max-runners:
+        description: LABEL=N[,LABEL=N] maxRunners per set. A set with N jobs in progress is saturated and not flagged; enforce only acts on listed labels
+        type: string
+        default: ""
 
 permissions:
   actions: write
@@ -63,6 +68,7 @@ jobs:
           MODE: ${{ inputs.mode }}
           MIN_AGE: ${{ inputs.min-age }}
           MAX_RUNS: ${{ inputs.max-runs }}
+          MAX_RUNNERS: ${{ inputs.max-runners }}
         run: |
           set -euo pipefail
-          python3 "$ESTATE_CI/orphan-redispatch.py" --mode "$MODE" --min-age "$MIN_AGE" --max-runs "$MAX_RUNS"
+          python3 "$ESTATE_CI/orphan-redispatch.py" --mode "$MODE" --min-age "$MIN_AGE" --max-runs "$MAX_RUNS" --max-runners "$MAX_RUNNERS"
