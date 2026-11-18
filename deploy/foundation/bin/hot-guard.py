@@ -326,8 +326,12 @@ def kube(path: str, method: str = "GET", body=None, content_type: str = "applica
             return kube_once(path, method, body, content_type, dry_run)
         except urllib.error.HTTPError:
             raise
-        except OSError:  # URLError, socket timeout, connection reset
-            if attempt == attempts - 1:
+        except OSError as error:  # URLError, socket timeout, connection reset
+            exhausted = attempt == attempts - 1
+            outcome = "failed" if exhausted else "retry"
+            print(f"kube api {outcome} method={method} attempt={attempt + 1}/{attempts} "
+                  f"type={type(error).__name__}", file=sys.stderr, flush=True)
+            if exhausted:
                 raise
             sleep(KUBE_RETRY_SLEEP)
 
