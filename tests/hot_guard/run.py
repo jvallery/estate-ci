@@ -11,6 +11,12 @@ spec = importlib.util.spec_from_file_location("guard", ROOT / "deploy/foundation
 g = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(g)
 cfg = json.loads((ROOT / "deploy/foundation/hot-guard-config.json").read_text())
+SHIPPED = json.loads(json.dumps(cfg))
+# The memory-tier cases below were written against the dry-run reference values (reserve 6 GiB,
+# mode dry-run); pin them here so the shipped values can move (COORD-W2 2026-11-18T10:10:29Z:
+# enforce at 4 GiB) without rewriting the arithmetic. SHIPPED is checked separately.
+cfg["reserve"]["memory"]["mode"] = "dry-run"
+cfg["reserve"]["memory"]["reserve_gib"] = 6
 SIG = cfg["signals"]
 NOW = dt.datetime(2026, 11, 7, 2, 0, tzinfo=dt.timezone.utc)
 CALM = {"node_cpu_busy_4m": 0.80, "node_memory_used_2m": 0.46, "frigate_skipped_ratio_4m": 0.0,
@@ -329,7 +335,10 @@ check("kube HTTP status is not retried", (_got, _n[0]), ("raised", 1))
 
 # estate-ci#248: memory-headroom cap (pure logic; fake node allocatable 88 GiB, 20 slots)
 MEM = cfg["reserve"]["memory"]
-check("memory config ships dry-run", MEM["mode"], "dry-run")
+check("memory config ships enforce (COORD-W2 2026-11-18T10:10:29Z)", SHIPPED["reserve"]["memory"]["mode"], "enforce")
+check("memory config ships reserve 4 GiB", SHIPPED["reserve"]["memory"]["reserve_gib"], 4)
+check("memory free_query excludes Terminating pods", "unless on(namespace,pod) kube_pod_deletion_timestamp"
+      in SHIPPED["reserve"]["memory"]["free_query"], True)
 check("memory cap formula", g.memory_cap(10.0, 4, 20, 6, 2), 6)
 check("memory cap floor at runners", g.memory_cap(2.0, 7, 20, 6, 2), 7)
 a, c = g.memory_decide(88 - 86, 7, None, MEM, 20)
