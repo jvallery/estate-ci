@@ -8,6 +8,8 @@ metadata:
     app.kubernetes.io/part-of: github-actions-runners
   annotations:
     argocd.argoproj.io/sync-wave: '-2'
+    estate.vallery.net/create-namespace-reason: 'estate-platform#1 recorded exception: arc-controller and estate-ci-arc-systems share sync-wave -2 in estate-ci-runners, so on an empty cluster the controller
+      can sync before the Namespace that deploy/arc-systems/namespace.yaml declares exists; CreateNamespace=true is the bootstrap path. Remove when the controller moves to a later wave than estate-ci-arc-systems.'
 spec:
   project: estate-ci-arc
   source:

@@ -391,6 +391,12 @@ OPS_KEY = "../../foundation/ops-egress.generated.yaml"
 # estate-ci#192 (D-542): the ARC controller and its arc-systems objects. Not scale sets.
 CONTROLLER_FILES = ("arc-controller.yaml", "estate-ci-arc-systems.yaml")
 ARC_SYSTEMS_PATH = "deploy/arc-systems"
+CONTROLLER_CREATE_NAMESPACE_REASON = (
+    "estate-platform#1 recorded exception: arc-controller and estate-ci-arc-systems share sync-wave -2 "
+    "in estate-ci-runners, so on an empty cluster the controller can sync before the Namespace that "
+    "deploy/arc-systems/namespace.yaml declares exists; CreateNamespace=true is the bootstrap path. "
+    "Remove when the controller moves to a later wave than estate-ci-arc-systems."
+)
 CONTROLLER_VALUES = """replicaCount: {replicas}
 image:
   repository: {repository}
@@ -443,7 +449,12 @@ def controller_apps(cfg: dict) -> dict[str, dict]:
             "namespace": "argocd",
             "labels": meta_labels,
             # Before the scale sets in the same nested root: they need its CRDs.
-            "annotations": {"argocd.argoproj.io/sync-wave": "-2"},
+            "annotations": {
+                "argocd.argoproj.io/sync-wave": "-2",
+                # STD-IAC-08 recorded exception (estate-platform#1): the reason the
+                # desired-state validator and the W1 verifier read for CreateNamespace=true.
+                "estate.vallery.net/create-namespace-reason": CONTROLLER_CREATE_NAMESPACE_REASON,
+            },
         },
         "spec": {
             "project": c["project"],
