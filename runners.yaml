@@ -679,7 +679,10 @@ sets:
         # EXEC-W2-CI-CAP (COORD-W2 2026-11-17T20:31:17Z): 10 -> 16 with the job request 1550m -> 3 (Pod 1.75 -> 3.2 CPU):
         # 16 x 3.2 = 51.2 CPU requests at max. About 55 runs queued at max 10. The 19:36Z revert to 24 and the
         # 00:00Z revert to 14 are superseded: at 3.2 CPU per Pod, 24 would be 76.8 of the 82-CPU runner quota. Revert: 16 -> 10.
-        max: 16
+        # EXEC-W2-CI-CAP (COORD-W2 2026-11-18T05:39:34Z, D-848 raise CI capacity): 16 -> 20. At max 16, ms#2028's
+        # 6 jobs were queued while the runner quota was 62.5/82, so +4 x 3.2 = 12.8 CPU fits. Guard: if
+        # estate-ci-runner-pods requests.cpu stays above 78/82 for 10 min after delivery, revert to 18.
+        max: 20
         job_image: *toolbox
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
