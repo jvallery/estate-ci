@@ -33,3 +33,22 @@ ladder, `estate-scheduling` in jvallery/agents, moving to jvallery/estate-platfo
 with estate-platform#177); the `arc-systems` namespace default-deny policies
 (`namespace-ingress-isolation`); the legacy `github-runners` scale sets (jvallery/agents, planned
 for decommission); zot (jvallery/storage-infra).
+
+## Accepted exceptions
+
+The standards register (jvallery/estate-platform `docs/estate/STANDARDS.md`)
+holds the authoritative row for each; this list names what estate-ci keeps
+inside the stated bounds.
+
+- **STD-CI-10, slot-free `ci-gate` sets** (D-831 = a, estate-ci#229; review
+  2027-02-17): `agents-ci-gate`, `monitoring-stack-ci-gate`,
+  `network-infra-ci-gate` and `verdify-platform-ci-gate` request no
+  `ci-runner-slot` (`runners.yaml` profile `ci-gate`, `slot: false`). Bounds:
+  only these four sets; max 4 and min 1-2 each (at most 16 pods); runner
+  container only (toolbox image, no job sidecar or Postgres); request 100m CPU /
+  128Mi and limit 1 CPU / 512Mi per pod (at most 1.6 CPU requested, inside the
+  `estate-ci-runner-pods` quota); PriorityClass `ci-gate` (-850, Never). Check:
+  `kubectl -n ci-runners get autoscalingrunnersets | grep ci-gate`. Another
+  slot-free set or a larger bound needs a new decision.
+- **STD-CI-10, node8 reduced `ci-runner-slot` count** (D-87, D-168 (c); review
+  2027-02-01): node8 advertises 4 slots.
