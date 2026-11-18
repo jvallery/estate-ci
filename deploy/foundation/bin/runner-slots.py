@@ -62,13 +62,17 @@ def request(path, method="GET", body=None, content_type="application/json"):
     for attempt in range(RETRIES):
         try:
             return request_once(path, method, body, content_type)
-        except urllib.error.HTTPError:
+        except urllib.error.HTTPError as error:
+            if error.code != 404 or method != "GET":
+                print(f"api failed method={method} http={error.code}", flush=True)
             raise
-        except (urllib.error.URLError, OSError) as error:
-            if attempt == RETRIES - 1:
+        except OSError as error:
+            exhausted = attempt == RETRIES - 1
+            outcome = "failed" if exhausted else "retry"
+            print(f"api {outcome} method={method} attempt={attempt + 1}/{RETRIES} "
+                  f"type={type(error).__name__}", flush=True)
+            if exhausted:
                 raise
-            print(f"api retry {attempt + 1}/{RETRIES - 1} type={type(error).__name__} "
-                  f"reason={getattr(error, 'reason', error)}", flush=True)
             time.sleep(RETRY_WAIT)
     raise AssertionError("unreachable")
 

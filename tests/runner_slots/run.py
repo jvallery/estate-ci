@@ -124,7 +124,7 @@ check("apply is forced under the estate-ci field manager",
       "fieldManager=estate-ci-runner-slots&force=true" in patches[0][1], True)
 
 # Connection-level failures are retried; an HTTP answer is not.
-def retry_case(errors):
+def retry_case(errors, method="GET", diagnostics=False):
     seq = list(errors)
     calls = []
     def once(path, method="GET", body=None, content_type="application/json"):
@@ -138,9 +138,12 @@ def retry_case(errors):
     try:
         s.request = REAL_REQUEST
         try:
-            return s.request("/x"), len(calls)
+            result = s.request("/x", method)
         except urllib.error.URLError as error:
-            return type(error).__name__, len(calls)
+            result = type(error).__name__
+        if diagnostics:
+            return sys.stdout.getvalue()
+        return result, len(calls)
     finally:
         sys.stdout = out
         s.request_once, s.time.sleep, s.request = real_once, real_sleep, real_request
@@ -151,6 +154,16 @@ check("URLError on every attempt raises after RETRIES",
       retry_case([urllib.error.URLError("x")] * s.RETRIES), ("URLError", s.RETRIES))
 check("HTTPError is not retried",
       retry_case([urllib.error.HTTPError("/x", 500, "err", {}, None)]), ("HTTPError", 1))
+
+log = retry_case([urllib.error.URLError("private transport detail")] * s.RETRIES,
+                 method="PATCH", diagnostics=True)
+check("transport diagnostics distinguish PATCH and redact the reason",
+      (f"api failed method=PATCH attempt={s.RETRIES}/{s.RETRIES} type=URLError" in log,
+       "private transport detail" in log), (True, False))
+log = retry_case([urllib.error.HTTPError("/private", 409, "private response detail", {}, None)],
+                 method="PATCH", diagnostics=True)
+check("HTTP diagnostics distinguish PATCH without URL or response detail", log,
+      "api failed method=PATCH http=409\n")
 
 if failures:
     print(f"{failures} failure(s)")
