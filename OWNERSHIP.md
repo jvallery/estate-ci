@@ -40,7 +40,7 @@ holds the authoritative row for each; this list names what estate-ci keeps
 inside the stated bounds.
 
 - **STD-CI-10, slot-free `ci-gate` sets** (D-831 = a, estate-ci#229; review
-  2027-02-17; fifth set PENDING a new COORD decision, estate-ci#296 demand cut):
+  2027-02-17; bound amended 4 -> 5 sets under Jason's D-848 lever "raise CI capacity", COORD-W2 2026-11-18T11:08:05Z, estate-ci#309):
   `agents-ci-gate`, `estate-platform-ci-gate`, `monitoring-stack-ci-gate`,
   `network-infra-ci-gate` and `verdify-platform-ci-gate` request no
   `ci-runner-slot` (`runners.yaml` profile `ci-gate`, `slot: false`). Bounds:
