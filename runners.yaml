@@ -88,7 +88,10 @@ defaults:
   # COORD-W2 2026-11-17T21:20:43Z tier 0 (Jason Verdify priority): verdify-platform-ci and
   # verdify-platform-ci-dashboard were preempted mid-job (exit 130) by estate-production Pods;
   # at ci-gate the scheduler picks ci-preemptible and ci-preemptible-infra victims first.
-  gate_sets: [monitoring-stack-ci, verdify-platform-ci, verdify-platform-ci-dashboard]
+  # COORD-W2 2026-11-18 (vp#1819, TSDB slot): verdify-platform-ci-tools runs campaign-qualification and
+  # was preempted twice at ci-preemptible during the node4 drain; at ci-gate it is chosen after the
+  # ci-preemptible and ci-preemptible-infra victims.
+  gate_sets: [monitoring-stack-ci, verdify-platform-ci, verdify-platform-ci-dashboard, verdify-platform-ci-tools]
   max:
     ci: 3
     pg: 1
