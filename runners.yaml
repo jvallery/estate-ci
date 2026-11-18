@@ -279,7 +279,9 @@ sets:
       ci:
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 6 -> 5 (donor: 24 h peak busy 1, peak pods 2-3).
-        max: 5
+        # COORD-W2 2026-11-18T10:54:59Z rebalance: 5 -> 3, donor to estate-platform-ci 4 -> 6
+        # (gha_busy_runners 24 h p95 0, 7 d peak 3; requests freed 2 x 250m job >= 2 x 200m added).
+        max: 3
         runner_image: *toolbox
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
         job_uid: 1001
@@ -1024,7 +1026,9 @@ sets:
         # COORD-W2 2026-11-16T17:39:49Z (11 runs queued; the estate-platform train's bottleneck): 2 -> 4.
         # +2 pods x (runner 100m/256Mi + job 100m/256Mi; init tools/nss 50m) = +0.4 CPU / +1Gi requests,
         # +2 ci-runner-slots. Quota estate-ci-runner-pods read 63.25/82 CPU at 17:3xZ.
-        max: 4
+        # COORD-W2 2026-11-18T10:54:59Z rebalance, no quota raise: 4 -> 6, donor kepler-ci 5 -> 3.
+        # 24 h p95 busy 4.0 of 4 (saturated; lint jobs starved 10+ min, ec#296 comment 6976446761).
+        max: 6
         job_image: *toolbox
         job_uid: 1001
         job_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "4", limit_memory: 2Gi}
