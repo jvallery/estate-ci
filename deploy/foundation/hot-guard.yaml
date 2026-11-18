@@ -132,7 +132,12 @@ spec:
       labels: {app.kubernetes.io/name: ci-runner-hot-guard, app.kubernetes.io/part-of: estate-ci}
     spec:
       backoffLimit: 0
-      activeDeadlineSeconds: 55
+      # estate-ci#280: 55 s did not fit a slow container start on a CPU-busy worker
+      # plus net_wait_seconds (25) plus a 10 s kube/Prometheus timeout and its retry, so
+      # runs that had done their work ended DeadlineExceeded and fired
+      # KubeCronJobRepeatedFailures. 110 s fits that worst case; concurrencyPolicy
+      # Forbid keeps one run at a time, so a long run only skips the next minute.
+      activeDeadlineSeconds: 110
       ttlSecondsAfterFinished: 600
       template:
         metadata:
