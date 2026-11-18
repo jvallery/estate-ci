@@ -49,8 +49,11 @@ defaults:
   controller_service_account: {namespace: arc-systems, name: arc-gha-rs-controller}
   # Stock actions-runner 2.338.2, mirrored by mirrors.txt (same index digest as upstream).
   runner_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232
-  # gcr.io/kaniko-project/executor:v1.23.2-debug, mirrored by mirrors.txt (same digest native CI uses).
-  kaniko_image: registry.vallery.net/jvallery/estate-ci/mirror/gcr.io/kaniko-project/executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e
+  # ghcr.io/osscontainertools/kaniko:v1.29.1-debug (maintained fork, linux/amd64 child), mirrored by mirrors.txt.
+  # estate-ci#236 / D-825: pilot 2026-11-18 showed 0 fixable Critical and config/history-equivalent builds
+  # against v1.23.2 on ci-tools and estate-ci-toolbox. Rollback: restore the v1.23.2 line below.
+  # was: registry.vallery.net/jvallery/estate-ci/mirror/gcr.io/kaniko-project/executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e
+  kaniko_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/osscontainertools/kaniko@sha256:9585e0a789d698ae5755e190fb8f75e04ee793ec542929bf706d862144f44a97
   # CloudNativePG PostgreSQL (includes pgvector), mirrored in zot.
   postgres_image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-777ad6774e00fff6@sha256:d66df406385b9f3c43c47e94fe3a0002278ef56d21b82a8c9d3a22f91aa9c3f0
   # D-87 fair share (COORD/Jason P0 2026-11-07): pending Pods schedule by

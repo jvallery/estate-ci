@@ -109,7 +109,7 @@ spec:
                 mountPath: /run/secrets/zot-push
                 readOnly: true
             - name: kaniko
-              image: registry.vallery.net/jvallery/estate-ci/mirror/gcr.io/kaniko-project/executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e
+              image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/osscontainertools/kaniko@sha256:9585e0a789d698ae5755e190fb8f75e04ee793ec542929bf706d862144f44a97
               command:
               - /busybox/sh
               - /opt/estate-ci/sidecar-agent.sh
