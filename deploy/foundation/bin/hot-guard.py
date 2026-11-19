@@ -164,6 +164,27 @@ def decide(now: dt.datetime, tripped: list[str], missing: list[str], hold: dict 
 
 
 RESERVE_TAG = " reserve:"
+RESERVE_NUMBER = r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]*[1-9])?(?:e[+-][0-9]{2,3})?"
+
+
+def reserve_owner(reason: str | None) -> str | None:
+    """Recognize the complete format written by the CPU or memory reserve tier."""
+    fields = (reason or "").split(" ", maxsplit=2)
+    if len(fields) != 3 or not re.fullmatch(r"cap=(?:0|[1-9][0-9]*)", fields[0]):
+        return None
+    _, stamp, detail = fields
+    parsed = parse_iso(stamp)
+    if parsed is None or iso(parsed) != stamp:
+        return None
+    cpu = re.fullmatch(r"reserve:busy>(" + RESERVE_NUMBER + ")", detail)
+    if cpu and "%g" % float(cpu[1]) == cpu[1]:
+        return "cpu"
+    memory = re.fullmatch(
+        r"reserve:mem<(" + RESERVE_NUMBER + r")GiB free=(-?(?:0|[1-9][0-9]*)\.[0-9])GiB", detail
+    )
+    if memory and "%g" % float(memory[1]) == memory[1] and "%.1f" % float(memory[2]) == memory[2]:
+        return "memory"
+    return None
 
 
 def reserve_decide(busy: float | None, calm: float | None, reason: str | None, trip: dict, recover: dict,
@@ -177,7 +198,7 @@ def reserve_decide(busy: float | None, calm: float | None, reason: str | None, t
     telemetry is stalling, which happens when the node is saturated (estate-ci#177 follow-up), so it
     counts as hot: an unheld node is capped and a held node stays capped."""
     text = (reason or "").strip()
-    if text and RESERVE_TAG not in " " + text:
+    if text and reserve_owner(reason) is None:
         return "foreign"
     held = bool(text)
     if failed:
@@ -196,15 +217,11 @@ def reserve_cap(res: dict, node: str) -> int:
 
 
 def reserve_recap(reason: str | None, cap: int) -> str | None:
-    """A held reserve value rewritten to cap, keeping its timestamp and tag; None when it already
-    carries cap or is not a reserve hold. Lets a config cap change reach a node that is already held."""
+    """Re-cap a CPU reserve hold while keeping its timestamp and reason."""
     text = (reason or "").strip()
-    if RESERVE_TAG not in " " + text or hold_cap(text) in (None, cap):
+    if reserve_owner(reason) != "cpu" or hold_cap(text) == cap:
         return None
     return re.sub(r"^cap=\d+", "cap=%d" % cap, text)
-
-
-MEM_TAG = "reserve:mem<"
 
 
 def memory_cap(free_gib: float, runners: int, slots: int, reserve_gib: float, per_runner_gib: float) -> int:
@@ -222,11 +239,12 @@ def memory_decide(free_gib: float | None, runners: int, reason: str | None, mem:
     margin, and lifts once the margin clears the full slots. ceiling (the CPU reserve cap while
     the node's CPU is hot) bounds the cap and blocks a lift."""
     text = (reason or "").strip()
-    if text and RESERVE_TAG not in " " + text:
+    owner = reserve_owner(reason)
+    if text and owner is None:
         return "foreign", None
     if failed or free_gib is None:
         return "keep", None
-    mem_held = MEM_TAG in text
+    mem_held = owner == "memory"
     reserve = float(mem["reserve_gib"]) + (float(mem.get("recover_gib", 0)) if mem_held else 0.0)
     cap = memory_cap(free_gib, runners, slots, reserve, float(mem["per_runner_gib"]))
     current = hold_cap(text)
@@ -550,15 +568,14 @@ def main() -> int:
                                     got["coverage"], res.get("coverage"), failed)
             reserve_log[rnode] = {"busy": got["trip"], "calm": got["recover"], "coverage": got["coverage"],
                                   "action": action}
-            recap = (reserve_recap(reason, reserve_cap(res, rnode))
-                     if action == "keep" and not failed and MEM_TAG not in (reason or "") else None)
+            recap = reserve_recap(reason, reserve_cap(res, rnode)) if action == "keep" and not failed else None
             # Raising a held cap waits until the node is below the trip line; lowering applies at once.
             if recap is not None and hold_cap(recap) > (hold_cap(reason) or 0) and (
                     got["trip"] is None or evaluate({"t": res["trip"]}, {"t": got["trip"]})[0]):
                 recap = None
             if recap is not None:
                 action = reserve_log[rnode]["action"] = "recap"
-            if action == "clear" and MEM_TAG in (reason or ""):
+            if action == "clear" and reserve_owner(reason) == "memory":
                 # A memory hold is lifted by the memory tier only (estate-ci#248).
                 action = reserve_log[rnode]["action"] = "keep"
             mem = res.get("memory")
