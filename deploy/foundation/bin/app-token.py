@@ -6,8 +6,9 @@
 
 Used by pin-bump.yml (D-52, vallery-pin-bot) so pin PRs are opened by an App
 and start pull_request workflows. The token is limited to the named repository
-and to contents + pull_requests write; it expires after one hour and pin-bump
-revokes it when the step ends. Never print the output; the caller masks it.
+and to contents + pull_requests write (plus issues:read when the caller sets
+APP_TOKEN_EXTRA_PERMISSIONS=issues=read, as renovate-run.sh does); it expires
+after one hour and the caller revokes it when the step ends. Never print the output; the caller masks it.
 """
 import base64
 import json
@@ -71,6 +72,21 @@ def call(method, path, token, body=None):
     return json.loads(raw) if raw else {}
 
 
+# estate-ci#261: Renovate's repository init reads issues over GraphQL (repository.issues),
+# so its passes add issues:read. Only read levels of an allow-listed set may be added.
+EXTRA_ALLOWED = {"issues": "read"}
+
+
+def extra_permissions():
+    extra = {}
+    for item in filter(None, os.environ.get("APP_TOKEN_EXTRA_PERMISSIONS", "").split(",")):
+        name, _, level = item.partition("=")
+        if EXTRA_ALLOWED.get(name) != level:
+            raise SystemExit(f"app-token: extra permission {item!r} is not allowed")
+        extra[name] = level
+    return extra
+
+
 def main():
     if sys.argv[1:] == ["--revoke"]:
         call("DELETE", "/installation/token", os.environ["APP_TOKEN"])
@@ -80,7 +96,7 @@ def main():
     inst = call("GET", f"/repos/{owner}/{repo}/installation", app)["id"]
     tok = call("POST", f"/app/installations/{inst}/access_tokens", app, {
         "repositories": [repo],
-        "permissions": {"contents": "write", "pull_requests": "write"},
+        "permissions": {"contents": "write", "pull_requests": "write", **extra_permissions()},
     })["token"]
     sys.stdout.write(tok)
 
