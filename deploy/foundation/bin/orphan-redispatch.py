@@ -22,7 +22,9 @@ prior retry was manual. Missing or invalid attempt metadata is also ineligible.
                          [--max-runners LABEL=N[,LABEL=N]]
 
 Token: $GITHUB_TOKEN (the caller's, with actions: read). Repo: $GITHUB_REPOSITORY.
-It prints one JSON summary line and appends a table to $GITHUB_STEP_SUMMARY when that is set.
+A successful scan prints one JSON summary line and appends a table to
+$GITHUB_STEP_SUMMARY when that is set. Invalid or incomplete list responses fail
+the scan before either report is emitted.
 Standard library only.
 """
 import argparse
@@ -128,6 +130,10 @@ def plan(runs: list, orphans: dict, own_run_id, max_attempt: int, max_runs: int,
     return capped
 
 
+class ScanError(ValueError):
+    """A GitHub list response cannot establish a complete single-page scan."""
+
+
 class GitHub:
     def __init__(self, repo: str, token: str):
         self.repo, self.token = repo, token
@@ -147,11 +153,28 @@ class GitHub:
                     continue
                 raise
 
+    def complete_page(self, path: str, key: str) -> list:
+        try:
+            response = self.get(path)
+        except ValueError as error:
+            raise ScanError(f"{path}: invalid JSON response") from error
+        rows = response.get(key) if isinstance(response, dict) else None
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+            raise ScanError(f"{path}: missing or invalid {key} list")
+        count = response.get("total_count")
+        if type(count) is not int or count < 0:
+            raise ScanError(f"{path}: invalid total_count")
+        if count != len(rows):
+            raise ScanError(f"{path}: total_count={count} does not match {len(rows)} returned rows")
+        if count > 100:
+            raise ScanError(f"{path}: exceeds the supported 100-row page")
+        return rows
+
     def runs(self):
         out = []
         for status in ("queued", "in_progress"):
-            d = self.get("/repos/%s/actions/runs?status=%s&per_page=100" % (self.repo, status))
-            out += d.get("workflow_runs", [])
+            path = "/repos/%s/actions/runs?status=%s&per_page=100" % (self.repo, status)
+            out += self.complete_page(path, "workflow_runs")
         # Only open runs: their in-progress and finished jobs show which labels are being
         # served. This keeps one cycle to about (open runs + 2) API calls.
         seen, runs = set(), []
@@ -159,11 +182,12 @@ class GitHub:
             if r["id"] in seen:
                 continue
             seen.add(r["id"])
-            jobs = self.get("/repos/%s/actions/runs/%s/jobs?filter=latest&per_page=100" % (self.repo, r["id"]))
+            path = "/repos/%s/actions/runs/%s/jobs?filter=latest&per_page=100" % (self.repo, r["id"])
+            jobs = self.complete_page(path, "jobs")
             runs.append({"id": r["id"], "run_attempt": r.get("run_attempt"), "status": r["status"],
                          "created_at": r["created_at"], "name": r.get("name", ""),
                          "jobs": [{k: j.get(k) for k in ("id", "name", "status", "created_at", "runner_name", "labels")}
-                                  for j in jobs.get("jobs", [])]})
+                                  for j in jobs]})
         return runs
 
 
@@ -191,7 +215,11 @@ def main(argv=None) -> int:
         return 2
     gh = GitHub(a.repo, token)
     now = dt.datetime.now(dt.timezone.utc)
-    runs = gh.runs()
+    try:
+        runs = gh.runs()
+    except ScanError as error:
+        print(f"orphan-redispatch: scan failed: {error}", file=sys.stderr)
+        return 1
     orphans = detect(runs, now, a.min_age, a.grace, re.compile(a.label_re) if a.label_re else None,
                      max_runners)
     decisions = plan(runs, orphans, os.environ.get("GITHUB_RUN_ID"), a.max_attempt, a.max_runs, a.mode)
