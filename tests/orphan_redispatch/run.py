@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Self-test for deploy/foundation/bin/orphan-redispatch.py detect() and plan() (estate-ci#296)."""
+"""Self-test for deploy/foundation/bin/orphan-redispatch.py (estate-ci#296)."""
+from contextlib import redirect_stdout
 import datetime as dt
 import importlib.util
+import io
+import json
+import os
 import re
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 root = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location("orr", root / "deploy/foundation/bin/orphan-redispatch.py")
@@ -65,7 +70,7 @@ orph = orr.detect(runs, NOW, 15, 5)
 check("plan orphans", sorted(orph), [1, 2, 3, 4, 5])
 got = orr.plan(runs, orph, own_run_id=5, max_attempt=3, max_runs=1)
 check("plan decisions", [(r, a) for r, a, _ in got],
-      [(1, "redispatch"), (2, "defer"), (3, "skip"), (4, "defer"), (5, "skip")])
+      [(1, "would-redispatch"), (2, "defer"), (3, "skip"), (4, "defer"), (5, "skip")])
 
 # 8. Saturation guard (2026-11-18 estate-platform-ci): max 4, 4 in progress, an older lint job
 # starved while newer gates jobs got runners. Without --max-runners it reads as an orphan; with
@@ -79,12 +84,16 @@ check("saturated, max 4: not flagged", orr.detect(runs, NOW, 15, 5, max_runners=
 # 9. Idle capacity (the listener-restart orphan): 1 of 10 in progress, an old job still queued.
 runs = [run(1, [job(11, 40)]), run(2, [job(21, 10, "in_progress", "r-1")])]
 check("idle capacity, max 10: flagged", sorted(orr.detect(runs, NOW, 15, 5, max_runners={"ms-ci": 10})), [1])
-# 10. Enforce with no --max-runners entry for the label: report only.
+# 10. Retry eligibility requires exact first-attempt provider metadata.
 orph = orr.detect(runs, NOW, 15, 5)
-check("unknown label reported", [(r, a) for r, a, _ in orr.plan(runs, orph, None, 3, 10, known_labels=set())],
-      [(1, "report")])
-check("known label redispatched", [(r, a) for r, a, _ in orr.plan(runs, orph, None, 3, 10, known_labels={"ms-ci"})],
-      [(1, "redispatch")])
+for invalid in (None, 0, 2, 3, "1", True):
+    runs[0]["run_attempt"] = invalid
+    check(f"attempt {invalid!r} rejected", orr.plan(runs, orph, None, 10, 10)[0][1], "skip")
+runs[0]["run_attempt"] = 1
+check("caller attempt cap still applies", orr.plan(runs, orph, None, 1, 10)[0][1], "skip")
+del runs[0]["run_attempt"]
+check("missing attempt rejected", orr.plan(runs, orph, None, 3, 10)[0][1], "skip")
+
 # 11. --max-runners parsing.
 check("parse max-runners", orr.parse_max_runners("a=4, b=10"), {"a": 4, "b": 10})
 try:
@@ -92,6 +101,49 @@ try:
     check("parse rejects 0", "accepted", "ValueError")
 except ValueError:
     pass
+
+# 12. Exercise the CLI through the mocked GitHub REST boundary. A busy slot clears
+# while a younger job has a runner. The report still surfaces the queued candidate,
+# while even explicit enforce cannot POST a cancel or rerun.
+candidate_run = run(1, [job(11, 40)])
+running_run = run(2, [job(21, 10, "in_progress", "r-1"), job(22, 8, "in_progress", "r-2")])
+running_run["status"] = "in_progress"
+
+
+def open_url(request, timeout):
+    if request.get_method() != "GET":
+        raise AssertionError(f"unexpected provider mutation: {request.get_method()} {request.full_url}")
+    path = request.full_url[len(orr.API):]
+    fixtures = {
+        "/repos/jvallery/example/actions/runs?status=queued&per_page=100": {"workflow_runs": [candidate_run]},
+        "/repos/jvallery/example/actions/runs?status=in_progress&per_page=100": {"workflow_runs": [running_run]},
+        "/repos/jvallery/example/actions/runs/1/jobs?filter=latest&per_page=100": {"jobs": candidate_run["jobs"]},
+        "/repos/jvallery/example/actions/runs/2/jobs?filter=latest&per_page=100": {"jobs": running_run["jobs"]},
+    }
+    return io.BytesIO(json.dumps(fixtures[path]).encode())
+
+
+def cli_report(mode):
+    output = io.StringIO()
+    with patch.dict(os.environ, {"GITHUB_TOKEN": "fixture"}, clear=True), \
+         patch.object(orr.urllib.request, "urlopen", side_effect=open_url), \
+         patch.object(orr.dt, "datetime", wraps=dt.datetime) as clock, redirect_stdout(output):
+        clock.now.return_value = NOW
+        result = orr.main(["--repo", "jvallery/example", "--mode", mode, "--max-runners", "ms-ci=2"])
+    check(f"{mode} exit", result, 0)
+    return json.loads(output.getvalue())
+
+
+check("saturated enforce scan", cli_report("enforce")["orphaned_jobs"], 0)
+running_run["jobs"][1]["status"] = "completed"
+report = cli_report("enforce")
+check("single idle snapshot reported", report["runs"],
+      [{"run": 1, "action": "report", "why": "ARC listener assignment evidence unavailable", "jobs": ["j11"]}])
+check("dry-run simulation retained", cli_report("dry-run")["runs"][0]["action"], "would-redispatch")
+candidate_run["run_attempt"] = 2
+check("repeat attempt skipped through provider", cli_report("enforce")["runs"][0]["action"], "skip")
+del candidate_run["run_attempt"]
+check("missing provider attempt isn't defaulted", cli_report("dry-run")["runs"][0]["action"], "skip")
 
 if failed:
     print(f"orphan_redispatch: {failed} failure(s)")

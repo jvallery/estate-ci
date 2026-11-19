@@ -1,38 +1,27 @@
 #!/usr/bin/env python3
-"""Detect and re-dispatch GitHub Actions jobs orphaned by an ARC listener restart (estate-ci#296).
+"""Report GitHub Actions jobs that may be orphaned by an ARC listener restart (estate-ci#296).
 
 A runner-set change re-creates that set's ARC listener. The new listener session counts only
 the jobs GitHub assigns to it from then on. Jobs that were already queued stay `queued` on
 GitHub, but no runner is ever created for them, until someone cancels and re-runs the run.
 This happened three times on 2026-11-18 (ep#966; monitoring-stack 09:59Z and 10:33Z).
 
-Signal, from GitHub alone. A scale set takes its jobs roughly in queue order. So a queued job
-with no runner is orphaned when a job on the same runs-on label that was created more than
---grace minutes LATER already got a runner, and the job itself is older than --min-age minutes.
-A plain backlog does not match, because there the oldest jobs start first. Only open (queued
-and in-progress) runs are read.
+GitHub-only signal: an old queued job without a runner is a candidate when a newer job
+on the same runs-on label got a runner. Only open (queued and in-progress) runs are read.
+Non-FIFO assignment can yield the same signal during ordinary starvation, including
+when GitHub momentarily shows spare capacity. --max-runners LABEL=N[,LABEL=N] suppresses
+candidates when a label already has at least N in-progress jobs.
 
-Saturation guard (2026-11-18, estate-platform-ci). GitHub does not hand a saturated set its jobs
-in creation order, so with every runner busy an older job can wait while newer ones start. That
-is starvation, not an orphan, and a cancel + re-run would only send it to the back of the queue.
---max-runners LABEL=N[,LABEL=N] names each set's maxRunners. A label whose in-progress job count
-is at or above N is saturated and none of its jobs is flagged. A genuine orphan stays queued
-while its set has idle capacity. In enforce mode a label with no --max-runners entry is only
-reported (action "report"), never re-dispatched.
-
-Action (--mode enforce): for each run holding orphaned jobs, oldest first, up to --max-runs:
-  * skip the run if any of its jobs is in progress (try again next cycle, so running work is
-    never cancelled), if run_attempt >= --max-attempt (no re-run loops), or if it is this
-    workflow's own run;
-  * otherwise cancel the run, wait for it to complete, and POST rerun-failed-jobs. Completed jobs
-    keep their results; only the cancelled and failed jobs run again.
---mode dry-run (the default) only reports. Writes are paced --pace seconds apart.
+Dry-run reports the candidates and simulates first-attempt redispatch. Enforce mode also
+only reports because the caller supplies no ARC listener identity or job assignment
+evidence. A run that already has a second or later attempt is ineligible even if the
+prior retry was manual. Missing or invalid attempt metadata is also ineligible.
 
     orphan-redispatch.py [--repo OWNER/NAME] [--mode dry-run|enforce] [--min-age 15] [--grace 5]
                          [--max-runs 10] [--max-attempt 3] [--pace 5] [--label-re REGEX]
                          [--max-runners LABEL=N[,LABEL=N]]
 
-Token: $GITHUB_TOKEN (the caller's, with actions: write for enforce). Repo: $GITHUB_REPOSITORY.
+Token: $GITHUB_TOKEN (the caller's, with actions: read). Repo: $GITHUB_REPOSITORY.
 It prints one JSON summary line and appends a table to $GITHUB_STEP_SUMMARY when that is set.
 Standard library only.
 """
@@ -98,7 +87,7 @@ def detect(runs: list, now: dt.datetime, min_age_min: float, grace_min: float, l
             if label_re is not None and not label_re.search(lab):
                 continue
             if lab in max_runners and busy.get(lab, 0) >= max_runners[lab]:
-                continue  # saturated: starvation, not an orphan
+                continue  # saturation makes the GitHub-only signal ambiguous
             created = parse_ts(j["created_at"])
             if (now - created).total_seconds() < min_age_min * 60:
                 continue
@@ -109,30 +98,29 @@ def detect(runs: list, now: dt.datetime, min_age_min: float, grace_min: float, l
     return out
 
 
-def plan(runs: list, orphans: dict, own_run_id, max_attempt: int, max_runs: int, known_labels=None):
-    """Order runs oldest first and decide redispatch, defer, report or skip for each.
-
-    known_labels: when given (enforce mode), a run whose orphaned jobs are on a label outside it
-    is only reported, because the saturation guard cannot apply to that label."""
+def plan(runs: list, orphans: dict, own_run_id, max_attempt: int, max_runs: int, mode="dry-run"):
+    """Order candidates oldest first and simulate eligibility or report them."""
     by_id = {r["id"]: r for r in runs}
     decisions = []
     for rid in sorted(orphans, key=lambda i: min(parse_ts(j["created_at"]) for j in orphans[i])):
         run = by_id[rid]
-        unknown = sorted({j["labels"][0] for j in orphans[rid]} - set(known_labels)) if known_labels is not None else []
+        attempt = run.get("run_attempt")
         if str(rid) == str(own_run_id):
             decisions.append((rid, "skip", "own run"))
-        elif unknown:
-            decisions.append((rid, "report", "no --max-runners for " + ", ".join(unknown)))
-        elif int(run.get("run_attempt", 1)) >= max_attempt:
-            decisions.append((rid, "skip", "attempt %s >= %s" % (run.get("run_attempt"), max_attempt)))
+        elif type(attempt) is not int or attempt != 1:
+            decisions.append((rid, "skip", "requires provider run_attempt=1"))
+        elif attempt >= max_attempt:
+            decisions.append((rid, "skip", "attempt %s >= %s" % (attempt, max_attempt)))
         elif any(j.get("status") == "in_progress" for j in run["jobs"]):
             decisions.append((rid, "defer", "jobs in progress"))
+        elif mode == "enforce":
+            decisions.append((rid, "report", "ARC listener assignment evidence unavailable"))
         else:
-            decisions.append((rid, "redispatch", "%d orphaned job(s)" % len(orphans[rid])))
+            decisions.append((rid, "would-redispatch", "%d orphaned job(s)" % len(orphans[rid])))
     n = 0
     capped = []
     for rid, act, why in decisions:
-        if act == "redispatch":
+        if act == "would-redispatch":
             n += 1
             if n > max_runs:
                 act, why = "defer", "over --max-runs %d" % max_runs
@@ -144,12 +132,10 @@ class GitHub:
     def __init__(self, repo: str, token: str):
         self.repo, self.token = repo, token
 
-    def call(self, method: str, path: str):
-        req = urllib.request.Request(API + path, method=method, headers={
+    def get(self, path: str):
+        req = urllib.request.Request(API + path, headers={
             "Authorization": "Bearer " + self.token, "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "estate-ci-orphan-redispatch"})
-        if method != "GET":
-            req.data = b""
         for attempt in (1, 2):
             try:
                 with urllib.request.urlopen(req, timeout=30) as r:
@@ -164,7 +150,7 @@ class GitHub:
     def runs(self):
         out = []
         for status in ("queued", "in_progress"):
-            d = self.call("GET", "/repos/%s/actions/runs?status=%s&per_page=100" % (self.repo, status))
+            d = self.get("/repos/%s/actions/runs?status=%s&per_page=100" % (self.repo, status))
             out += d.get("workflow_runs", [])
         # Only open runs: their in-progress and finished jobs show which labels are being
         # served. This keeps one cycle to about (open runs + 2) API calls.
@@ -173,34 +159,24 @@ class GitHub:
             if r["id"] in seen:
                 continue
             seen.add(r["id"])
-            jobs = self.call("GET", "/repos/%s/actions/runs/%s/jobs?filter=latest&per_page=100" % (self.repo, r["id"]))
-            runs.append({"id": r["id"], "run_attempt": r.get("run_attempt", 1), "status": r["status"],
+            jobs = self.get("/repos/%s/actions/runs/%s/jobs?filter=latest&per_page=100" % (self.repo, r["id"]))
+            runs.append({"id": r["id"], "run_attempt": r.get("run_attempt"), "status": r["status"],
                          "created_at": r["created_at"], "name": r.get("name", ""),
                          "jobs": [{k: j.get(k) for k in ("id", "name", "status", "created_at", "runner_name", "labels")}
                                   for j in jobs.get("jobs", [])]})
         return runs
 
-    def redispatch(self, rid) -> str:
-        self.call("POST", "/repos/%s/actions/runs/%s/cancel" % (self.repo, rid))
-        for _ in range(24):
-            time.sleep(5)
-            if self.call("GET", "/repos/%s/actions/runs/%s" % (self.repo, rid)).get("status") == "completed":
-                break
-        else:
-            return "cancel-timeout"
-        self.call("POST", "/repos/%s/actions/runs/%s/rerun-failed-jobs" % (self.repo, rid))
-        return "redispatched"
-
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY", ""))
-    p.add_argument("--mode", choices=("dry-run", "enforce"), default="dry-run")
+    p.add_argument("--mode", choices=("dry-run", "enforce"), default="dry-run",
+                   help="report candidates; dry-run also simulates redispatch eligibility")
     p.add_argument("--min-age", type=float, default=15)
     p.add_argument("--grace", type=float, default=5)
     p.add_argument("--max-runs", type=int, default=10)
     p.add_argument("--max-attempt", type=int, default=3)
-    p.add_argument("--pace", type=float, default=5)
+    p.add_argument("--pace", type=float, default=5, help="accepted for CLI compatibility")
     p.add_argument("--label-re", default="")
     p.add_argument("--max-runners", default="", help="LABEL=N[,LABEL=N]: each set's maxRunners")
     a = p.parse_args(argv)
@@ -218,22 +194,9 @@ def main(argv=None) -> int:
     runs = gh.runs()
     orphans = detect(runs, now, a.min_age, a.grace, re.compile(a.label_re) if a.label_re else None,
                      max_runners)
-    decisions = plan(runs, orphans, os.environ.get("GITHUB_RUN_ID"), a.max_attempt, a.max_runs,
-                     set(max_runners) if a.mode == "enforce" else None)
-    results = []
-    for rid, act, why in decisions:
-        res = act
-        if act == "redispatch":
-            if a.mode == "enforce":
-                try:
-                    res = gh.redispatch(rid)
-                except urllib.error.HTTPError as e:
-                    res = "error %s" % e.code
-                time.sleep(a.pace)
-            else:
-                res = "would-redispatch"
-        results.append({"run": rid, "action": res, "why": why,
-                        "jobs": [j["name"] for j in orphans[rid]]})
+    decisions = plan(runs, orphans, os.environ.get("GITHUB_RUN_ID"), a.max_attempt, a.max_runs, a.mode)
+    results = [{"run": rid, "action": act, "why": why, "jobs": [j["name"] for j in orphans[rid]]}
+               for rid, act, why in decisions]
     summary = {"repo": a.repo, "mode": a.mode, "ts": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
                "runs_scanned": len(runs), "orphaned_jobs": sum(len(v) for v in orphans.values()),
                "runs": results}
@@ -247,7 +210,7 @@ def main(argv=None) -> int:
                 f.write("| run | action | why | jobs |\n|---|---|---|---|\n")
                 for r in results:
                     f.write("| %s | %s | %s | %s |\n" % (r["run"], r["action"], r["why"], ", ".join(r["jobs"])))
-    return 1 if any(str(r["action"]).startswith("error") for r in results) else 0
+    return 0
 
 
 if __name__ == "__main__":
