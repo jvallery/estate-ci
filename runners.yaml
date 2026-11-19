@@ -121,7 +121,8 @@ defaults:
 # Argo adopts the live release in place with no controller restart:
 #  - replicas 2: chart 0.14.2 turns on leader election when replicaCount > 1 (hot
 #    standby); required anti-affinity on host_topology_key keeps the two replicas on
-#    different Proxmox hosts (agents#5405, B-POWER 2026-11-02).
+#    different Proxmox hosts (agents#5405, B-POWER 2026-11-02). Circuit spread
+#    enforces distinct inventory-backed power circuits (estate-ci#312, STD-HA-16).
 #  - metrics on :8080 for the controller-manager and every listener
 #    (monitoring-stack#1417, ADR-0007).
 #  - image: the zot origin by digest (estate-ci#107, D-517a; mirrored by mirrors.txt,
@@ -137,6 +138,7 @@ controller:
   image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/gha-runner-scale-set-controller:pinned-1b4c7f62e971@sha256:1b4c7f62e971ab259a4b8798e48e2adaad4af747f45990f474ea5feefa03531d
   replicas: 2
   host_topology_key: topology.vallery.net/proxmox-host
+  circuit_topology_key: vallery.net/power-circuit
   metrics_addr: ":8080"
 
 # Per-worker CPU budget (estate-ci#69, ADR-0010, STD-CI-10, D-87). render_runners.py

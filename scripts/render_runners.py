@@ -451,6 +451,18 @@ affinity:
           matchLabels:
             app.kubernetes.io/name: gha-rs-controller
             app.kubernetes.io/instance: {release}
+topologySpreadConstraints:
+  - maxSkew: 1
+    minDomains: 2
+    topologyKey: {circuit_topology}
+    whenUnsatisfiable: DoNotSchedule
+    nodeTaintsPolicy: Honor
+    matchLabelKeys:
+      - pod-template-hash
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: gha-rs-controller
+        app.kubernetes.io/instance: {release}
 podSecurityContext:
   runAsNonRoot: true
 """
@@ -476,7 +488,8 @@ def controller_apps(cfg: dict) -> dict[str, dict]:
     # adoption changes no Helm input. Quoted scalars keep ":8080" a string.
     values = CONTROLLER_VALUES.format(
         replicas=int(c["replicas"]), repository=f"{head}/{repo_last}", tag=f"{tag}@{digest}",
-        metrics=c["metrics_addr"], topology=c["host_topology_key"], release=c["release"])
+        metrics=c["metrics_addr"], topology=c["host_topology_key"],
+        circuit_topology=c["circuit_topology_key"], release=c["release"])
     meta_labels = {"app.kubernetes.io/part-of": "github-actions-runners"}
     sync = {"automated": {"prune": False, "selfHeal": True}}
     controller = {
