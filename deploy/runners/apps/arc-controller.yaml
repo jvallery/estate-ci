@@ -35,6 +35,18 @@ spec:
                   matchLabels:
                     app.kubernetes.io/name: gha-rs-controller
                     app.kubernetes.io/instance: arc
+        topologySpreadConstraints:
+          - maxSkew: 1
+            minDomains: 2
+            topologyKey: vallery.net/power-circuit
+            whenUnsatisfiable: DoNotSchedule
+            nodeTaintsPolicy: Honor
+            matchLabelKeys:
+              - pod-template-hash
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: gha-rs-controller
+                app.kubernetes.io/instance: arc
         podSecurityContext:
           runAsNonRoot: true
   destination:
