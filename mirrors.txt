@@ -35,6 +35,7 @@ docker.io/library/node:24.22.1-trixie-slim@sha256:89c5244bc22a9bc3287d89ebc7e49b
 # estate-ci-ci, ci-runner-hot-guard.
 docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2  jvallery/estate-ci/mirror/docker.io/library/python
 docker.io/library/python@sha256:cc55e4ded9c95f6ce2133b3d096db43f214d280c2a8af65d83e246c8fa7d168c  jvallery/estate-ci/mirror/docker.io/library/python
+docker.io/library/python@sha256:9ffe84122ce74ebdffe2e0e6b946c9dd95d0bf3463f6eb1006b4dc6fefe36d01  jvallery/estate-ci/mirror/docker.io/library/python
 docker.io/library/python:3.13-slim@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc  jvallery/estate-ci/mirror/docker.io/library/python
 # python 3.13.5-alpine3.22: the arc-lifecycle-guardian and arc-validation-pool-reconciler image (estate-ci#107).
 docker.io/library/python:3.13.5-alpine3.22@sha256:37b14db89f587f9eaa890e4a442a3fe55db452b69cca1403cc730bd0fbdc8aaf  jvallery/estate-ci/mirror/docker.io/library/python
