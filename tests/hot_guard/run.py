@@ -93,6 +93,14 @@ check("reserve per-node caps stay below 20", all(0 < g.reserve_cap(RES, n) < 20 
 check("reserve recap a held node to its cap", g.reserve_recap(RHELD, 16), "cap=16 2026-11-10T00:00:00Z reserve:busy>0.92")
 check("reserve recap no-op at the same cap", g.reserve_recap(RHELD, 10), None)
 check("reserve recap leaves foreign and empty holds", (g.reserve_recap("cap=4 2026-11-10T00:00:00Z soft:node_cpu_busy_4m", 16), g.reserve_recap(None, 16), g.reserve_recap("", 16)), (None, None, None))
+for foreign in (
+    "cap=8 operator: preserve previous reserve:busy>0.92 hold",
+    "cap=8 2026-11-10T00:00:00Z operator: preserve reserve:busy>0.92",
+    "cap=8 invalid-timestamp reserve:busy>0.92",
+    "cap=8 2026-11-10T00:00:00Z reserve:busy>0.92-comment",
+):
+    check(f"CPU reserve leaves foreign hold: {foreign}", rd(0.5, 0.5, foreign), "foreign")
+    check(f"CPU re-cap leaves foreign hold: {foreign}", g.reserve_recap(foreign, 4), None)
 rdc = lambda cov, reason=None, failed=False: g.reserve_decide(0.5, 0.5, reason, RES["trip"], RES["recover"], cov, RES["coverage"], failed)
 check("reserve partial samples are hot", (rdc(0.88), rdc(0.88, RHELD), rdc(None), rdc(0.97, RHELD)), ("set", "keep", "set", "clear"))
 check("reserve partial samples block a clear", g.reserve_decide(0.5, 0.5, RHELD, RES["trip"], RES["recover"], 0.9, RES["coverage"]), "keep")
@@ -258,6 +266,17 @@ check("memory enforce: node4 raised to 1 + (38-10)//2 at 50/88", state["cm"]["da
 VALUES["reserve_memfree:vm-k3s-node4"] = 60.0 * 2 ** 30
 check("memory lift rc", g.main(), 0)
 check("memory enforce: node4 hold lifted once 20 slots fit above the margin", "vm-k3s-node4" in state["cm"]["data"], False)
+# Operator note may quote a previous memory guard reason.
+operator_note = "cap=8 operator: preserve previous reserve:mem<4GiB hold"
+for fake_free in (1.0, 60.0):
+    state["cm"]["data"]["vm-k3s-node6"] = operator_note
+    VALUES["reserve_memfree:vm-k3s-node6"] = fake_free * 2 ** 30
+    check("operator note quoting memory tag keeps guard rc", g.main(), 0)
+    check(f"operator note quoting memory tag is unchanged at {fake_free:g} GiB",
+          state["cm"]["data"].get("vm-k3s-node6"), operator_note)
+state["cm"]["data"].pop("vm-k3s-node6", None)
+VALUES["reserve_memfree:vm-k3s-node6"] = 60.0 * 2 ** 30
+
 with open(cfgfile.name, "w") as _f:
     json.dump(cfg, _f)
 VALUES.update(CALM)
@@ -356,8 +375,8 @@ cpu = "cap=10 2026-11-17T06:00:00Z reserve:busy>0.92"
 check("memory lowers a CPU cap", g.memory_decide(4.0, 3, cpu, MEM, 20), ("set", 3))
 check("memory never raises a CPU cap", g.memory_decide(60, 3, cpu, MEM, 20), ("keep", None))
 check("CPU hot bounds a memory raise", g.memory_decide(60, 3, held, MEM, 20, ceiling=10), ("set", 10))
-check("CPU hot blocks a memory lift", g.memory_decide(60, 10, "cap=10 x reserve:mem<6GiB", MEM, 20, ceiling=10), ("keep", None))
-check("recap skips memory holds", g.reserve_recap(held, 10) is not None and g.MEM_TAG not in held, False)
+check("CPU hot blocks a memory lift", g.memory_decide(60, 10, held, MEM, 20, ceiling=7), ("keep", None))
+check("CPU re-cap skips a real memory hold", g.reserve_recap(held, 10), None)
 
 # R21: ConfigMap writes carry the named field manager; evictions and reads do not.
 CM = "/api/v1/namespaces/ci-runners/configmaps/ci-runner-slot-hold"
