@@ -27,6 +27,8 @@ docker.io/library/python:3.12-slim@sha256:4840d514c583a4d3d8cad3940e68dee6f0f6f3
 # sidecar, frigate-archive*, frigate-genai-observer and sentinel-camera-truth, replacing the bookworm
 # mirror-docker-io-library-python:3.12-slim-12316debbfb8 (fixable High, bookworm no-fix CVEs).
 docker.io/library/python:3.12-slim-trixie@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b  jvallery/estate-ci/mirror/docker.io/library/python
+# memoryos#92 app base (Docker Official Node 24.22.1 on Debian Trixie slim, image index).
+docker.io/library/node:24.22.1-trixie-slim@sha256:89c5244bc22a9bc3287d89ebc7e49b9cb5bb84cd40e6175ac3421d5a9f68b95a  jvallery/estate-ci/mirror/docker.io/library/node
 # Runner job images and the hot guard (estate-ci#114), so runners.yaml and
 # hot-guard.yaml pin them from the origin: kepler-ci, verdify-platform-ci (was
 # mirror.gcr.io/library/python, the Docker Hub pull-through of the same index),
