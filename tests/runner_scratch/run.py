@@ -4,8 +4,9 @@
 1. scratch: pvc renders work, exchange (and pg) as generic ephemeral volumes on the disposable
    Longhorn class with the emptyDir size as the claim size; emptyDir stays the default.
 2. An unknown scratch mode is refused.
-3. Every rendered set whose runners.yaml entry says scratch: pvc carries no emptyDir work,
-   exchange or pg volume, so an emptyDir scratch volume cannot come back for a flipped set.
+3. Every flipped set renders exactly its expected scratch claims on the disposable Longhorn
+   class. The migrated-set baseline rejects registry downgrades. Fixtures cover both dedicated
+   and optional Postgres scratch before those sets flip.
 4. defaults.scratch_pvc_exclude_nodes renders a required hostname NotIn term on scratch: pvc sets
    only; emptyDir sets and an empty list get none.
 """
@@ -21,7 +22,34 @@ spec = importlib.util.spec_from_file_location("rr", root / "scripts/render_runne
 rr = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(rr)
 failed = 0
-SCRATCH = ("work", "exchange", "pg")
+SCRATCH_SIZES = {"work": "16Gi", "exchange": "24Gi", "pg": "10Gi"}
+STORAGE_CLASS = "longhorn-v1-disposable-cache-rwo"
+# Independently record the sets already migrated in estate-ci#101 sets 1–4.
+# Newly migrated sets also get their claims checked through the registry below.
+REQUIRED_PVC_SETS = {
+    "ai-presentation-ci",
+    "crm-ci",
+    "estate-ci-build",
+    "estate-ci-buildcheck",
+    "estate-ci-ci",
+    "estate-ci-ci-renovate",
+    "estate-ci-ci-toolbox",
+    "home-dotfiles-ci",
+    "imagineproposals-ci",
+    "immich-config-ci",
+    "memoryos-ci",
+    "options-tracker-ci",
+    "orbit-ci",
+    "proxmox-infrastructure-ci",
+    "radio-ci",
+    "sunshine-club-ci",
+    "sunshine-research-ci",
+    "tictactoe-ci",
+    "vallery-family-ci",
+    "vault-personal-ci",
+    "verdify-www-ci",
+    "wordpress-ci",
+}
 
 
 def check(name, got, want):
@@ -31,9 +59,25 @@ def check(name, got, want):
         print(f"FAIL {name}: got {got!r} want {want!r}")
 
 
+def check_pvc_scratch(name, volumes, postgres):
+    expected = {"work", "exchange"}
+    if postgres:
+        expected.add("pg")
+    scratch = [volume for volume in volumes if volume["name"] in SCRATCH_SIZES]
+    check(f"{name} scratch names", sorted(volume["name"] for volume in scratch), sorted(expected))
+    for volume in scratch:
+        key = volume["name"]
+        check(f"{name} {key} volume source", set(volume) - {"name"}, {"ephemeral"})
+        spec = volume.get("ephemeral", {}).get("volumeClaimTemplate", {}).get("spec", {})
+        check(f"{name} {key} storage class", spec.get("storageClassName"), STORAGE_CLASS)
+        check(f"{name} {key} access modes", spec.get("accessModes"), ["ReadWriteOnce"])
+        check(f"{name} {key} storage request", spec.get("resources", {}).get("requests", {}).get("storage"),
+              SCRATCH_SIZES[key])
+
+
 pvc = rr.scratch_volume("work", "16Gi", {"scratch": "pvc"}, "fixture")
 tmpl = pvc["ephemeral"]["volumeClaimTemplate"]["spec"]
-check("pvc class", tmpl["storageClassName"], "longhorn-v1-disposable-cache-rwo")
+check("pvc class", tmpl["storageClassName"], STORAGE_CLASS)
 check("pvc size", tmpl["resources"]["requests"]["storage"], "16Gi")
 check("pvc access", tmpl["accessModes"], ["ReadWriteOnce"])
 check("pvc has no emptyDir", "emptyDir" in pvc, False)
@@ -53,15 +97,24 @@ check("no exclusion on emptyDir set", rr.scratch_pvc_exclusion(d_ex, {}), {})
 check("no exclusion when list empty", rr.scratch_pvc_exclusion({"scratch_pvc_exclude_nodes": []}, {"scratch": "pvc"}), {})
 
 cfg = yaml.safe_load((root / "runners.yaml").read_text())
+for profile, options in (
+    ("pg", {"scratch": "pvc"}),
+    ("ci", {"scratch": "pvc", "postgres": True}),
+):
+    template = rr.pod_template(cfg["defaults"], profile, options, "o/x", "x", profile)
+    check_pvc_scratch(f"{profile} Postgres fixture", template["spec"]["volumes"], postgres=True)
+
 flipped = {}
 for entry in cfg["sets"]:
     # Same normalisation as render_runners.py (AI_presentation -> ai-presentation).
     base = re.sub(r"[^a-z0-9-]", "-", entry["repo"].split("/")[1].lower())
     for profile, opts in (entry.get("profiles") or {}).items():
         if isinstance(opts, dict) and opts.get("scratch") == "pvc":
-            flipped[f"{base}-{rr.SUFFIX.get(profile, profile)}"] = profile
-if not flipped:
-    check("at least one scratch: pvc set", 0, ">=1")
+            effective_profile = "ci" if rr.CI_VARIANT.match(profile) else profile
+            flipped[f"{base}-{rr.SUFFIX.get(profile, profile)}"] = (
+                effective_profile == "pg" or (effective_profile == "ci" and opts.get("postgres") is True)
+            )
+check("migrated sets missing scratch: pvc", sorted(REQUIRED_PVC_SETS - flipped.keys()), [])
 for name in sorted(flipped):
     app = root / "deploy/runners/apps" / f"{name}.yaml"
     text = app.read_text()
@@ -81,10 +134,7 @@ for name in sorted(flipped):
 
     for doc in yaml.safe_load_all(text):
         walk(doc)
-    for v in vols:
-        if v["name"] in SCRATCH:
-            check(f"{name} {v['name']} is ephemeral", "ephemeral" in v and "emptyDir" not in v, True)
-    check(f"{name} renders scratch volumes", sum(v["name"] in SCRATCH for v in vols) >= 2, True)
+    check_pvc_scratch(name, vols, postgres=flipped[name])
 
 # 5. set_spread (pi#1036): a per-set soft hostname spread on top of the all-runner one, keyed on
 #    the set label; sets without it keep the single D-87 spread and no set label.
