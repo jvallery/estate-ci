@@ -561,7 +561,7 @@ TAG_ONLY_ENFORCE_FROM = "2026-11-23"
 
 def tag_mode(today=None):
     import datetime
-    today = today or datetime.date.today()
+    today = today or datetime.datetime.now(datetime.timezone.utc).date()
     return "--tags" if today >= datetime.date.fromisoformat(TAG_ONLY_ENFORCE_FROM) else "--tags=warn"
 
 

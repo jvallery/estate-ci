@@ -5,6 +5,7 @@ import importlib.util
 import sys
 from collections import Counter
 from pathlib import Path
+from unittest.mock import patch
 
 root = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location("li", root / "deploy/foundation/bin/lint-images.py")
@@ -44,6 +45,21 @@ start = datetime.date.fromisoformat(lw.TAG_ONLY_ENFORCE_FROM)
 if lw.tag_mode(start - datetime.timedelta(days=1)) != "--tags=warn" or lw.tag_mode(start) != "--tags":
     failed += 1
     print("FAIL tag_mode: want --tags=warn before TAG_ONLY_ENFORCE_FROM and --tags from it")
+# At midnight UTC, a Denver runner still has the previous calendar date.
+cutoff = datetime.datetime.combine(start, datetime.time(), tzinfo=datetime.timezone.utc)
+previous_day = start - datetime.timedelta(days=1)
+with patch.object(datetime, "date", wraps=datetime.date) as local_date, patch.object(
+    datetime, "datetime", wraps=datetime.datetime
+) as utc_clock:
+    local_date.today.return_value = previous_day
+    utc_clock.now.return_value = cutoff - datetime.timedelta(seconds=1)
+    if lw.tag_mode() != "--tags=warn":
+        failed += 1
+        print("FAIL tag_mode: want warnings one second before the UTC cutoff")
+    utc_clock.now.return_value = cutoff
+    if lw.tag_mode() != "--tags" or utc_clock.now.call_args.args != (datetime.timezone.utc,):
+        failed += 1
+        print("FAIL tag_mode: want enforcement at midnight UTC while the local date is still the previous day")
 if failed:
     sys.exit(f"lint-images self-test: {failed} failure(s)")
-print(f"lint-images self-test: {len(cases) + 1} case(s) OK")
+print(f"lint-images self-test: {len(cases) + 3} case(s) OK")
