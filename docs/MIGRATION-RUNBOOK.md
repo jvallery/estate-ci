@@ -72,6 +72,15 @@ Merge when `self-test` is green. `estate-ci-runners` auto-syncs (prune off);
 check `kubectl -n ci-runners get autoscalingrunnerset <r>-ci` and the listener
 in `arc-systems`.
 
+During Lease-held worker maintenance, the planner re-reads an EphemeralRunner
+before evicting its idle Pod with a UID precondition. Idle runners have no
+assigned job ID or job request ID, and ARC can replace their Pods on schedulable
+workers. Runners with an assigned job remain subject to the planner's bounded
+batch wait. The worker-run receipt records accepted idle Pod evictions under
+`evictions.idle_runners_evicted`. See the
+[planned maintenance runbook](https://github.com/jvallery/proxmox-infrastructure/blob/main/config/k3s-planned-maintenance/README.md)
+for the drain sequence.
+
 jvallery only (D19, ADR-0002): there are no VerdifyConsultancy or org-level
 sets. A VerdifyConsultancy repository that needs CI is transferred to jvallery
 first (REPO-MOVE), then onboarded here like any jvallery repository.
