@@ -40,12 +40,21 @@ FROM registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/actions-runn
 
 USER root
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+# Upgrade the inherited APT and Brotli packages before installing other tools.
+# Disable download retries until APT meets the CVE-2026-109518 security floor.
+# The Brotli floor covers CVE-2026-111497.
+RUN set -eu; \
+    apt-get -o Acquire::Retries=0 update; \
+    apt-get -o Acquire::Retries=0 install -y --only-upgrade --no-install-recommends \
+      apt libapt-pkg6.0t64 libbrotli1; \
+    dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge 2.8.4ubuntu0.1; \
+    dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libapt-pkg6.0t64)" ge 2.8.4ubuntu0.1; \
+    dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libbrotli1)" ge 1.1.0-2ubuntu0.1; \
+    apt-get install -y --no-install-recommends \
       ca-certificates curl file g++ git gnupg jq make openssh-client \
       php-cli python3 python3-pip python3-venv python3-yaml ruby-full \
-      sqlite3 tar unzip xz-utils zip zsh \
-    && rm -rf /var/lib/apt/lists/*
+      sqlite3 tar unzip xz-utils zip zsh; \
+    rm -rf /var/lib/apt/lists/*
 
 # CVE-2026-59873: drop every runner-bundled npm whose tar is older than 7.5.19
 # (node20's npm carries tar 6.2.1), as the fleet toolbox does (#5812); the
