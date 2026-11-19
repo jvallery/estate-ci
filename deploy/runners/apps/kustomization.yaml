@@ -76,4 +76,6 @@ resources:
 - weather-build.yaml
 - weather-buildcheck.yaml
 - weather-ci.yaml
+- wordpress-build.yaml
+- wordpress-buildcheck.yaml
 - wordpress-ci.yaml
