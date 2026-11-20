@@ -15,22 +15,22 @@ on dispatch; its `pin` job then opens the digest pin PR) and published as
 |---|---|---|
 | Base: stock ARC runner | actions-runner 2.338.2 (Ubuntu 24.04 noble) amd64 | `mirrors.txt`, same index digest as `runners.yaml` `runner_image`; startup contract unchanged |
 | python3 + pip + venv + PyYAML | 3.12 (apt) | noble archive (`python3-yaml`); `PIP_BREAK_SYSTEM_PACKAGES=1`, user installs to `~/.local` |
-| uv / uvx | 0.13.5 | GitHub release, sha256 |
-| Node.js + npm + corepack (pnpm) | v24.22.1 | nodejs.org, SHASUMS256 |
+| uv / uvx | 0.13.9 | GitHub release, sha256 |
+| Node.js + npm + corepack (pnpm) | v24.22.3 | nodejs.org, SHASUMS256 |
 | ruby | 3.2 (apt `ruby-full`) | noble archive |
 | php-cli | 8.3 (apt) | noble archive (wordpress `php -l`) |
 | kubectl | v1.35.10 | dl.k8s.io, sha256 (fleet toolbox pin) |
 | kustomize | v5.8.3 | GitHub release, sha256 (fleet/Argo CD pin; cortex checks it exactly) |
 | helm | v3.22.1 | get.helm.sh, sha256 (cortex renders need v3) |
 | kubeconform | v0.8.0 | GitHub release, CHECKSUMS |
-| yq (mikefarah) | v4.54.1 | GitHub release, sha256 |
+| yq (mikefarah) | v4.54.3 | GitHub release, sha256 |
 | jq, git, curl, make, zip/unzip, xz, sqlite3, g++, openssh-client, file | apt | noble archive |
 | zsh | 5.9 (apt) | noble archive (`zsh -f -n` syntax checks and zsh self-tests; home-dotfiles#104 retires the workflow's inline package download) |
 | crane | v0.22.1 | GitHub release, sha256 (same pin as `image-build.sh`) |
 | gitleaks | 8.30.1 | built from module source with go1.27.3 (go.sum hash pinned; fleet recipe) |
 | shellcheck | v0.11.0 | GitHub release, sha256 recorded from the asset |
 | actionlint | 1.7.12 | GitHub release, checksums.txt |
-| gh | 2.103.3 | GitHub release, checksums.txt. **Exception E-1** (ADR-0011, accepted under D-373): only `gh attestation verify` of upstream artifacts (sentinel frigate-promotion); no token in the image |
+| gh | 2.105.0 | GitHub release, checksums.txt. **Exception E-1** (ADR-0011, accepted under D-373): only `gh attestation verify` of upstream artifacts (sentinel frigate-promotion); no token in the image |
 | monitoring-stack Static Validation archives (ms#1560) | kustomize v5.4.2, kubeconform v0.6.7, prometheus 3.13.5, alertmanager 0.34.1, tempo 3.0.2, blackbox_exporter 0.29.1 | Upstream release archives kept whole under their original basenames at `/opt/estate-ci-tools/<tool>/<version>/` (off PATH), each sha256-verified against the monitoring-stack pins and the upstream checksum files. Callers check the archive sha256 and use it only on an exact match. Bump together with monitoring-stack |
 
 `versions.sh --assert` runs at build time and fails on any drift; the result is

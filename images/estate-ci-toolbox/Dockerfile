@@ -103,9 +103,9 @@ RUN cd /tmp/tools && fetch-verified "https://get.helm.sh/helm-${HELM_VERSION}-li
     && tar -xzf kubeconform.tgz kubeconform && install -m 0755 kubeconform /usr/local/bin/kubeconform \
     && rm -rf /tmp/tools/*
 
-# yq v4.54.1, crane v0.22.1 (same pin as estate-ci image-build.sh / mirror.sh).
-ARG YQ_VERSION=v4.54.1
-ARG YQ_SHA256=8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f
+# yq v4.54.3 (newest release, 2026-11-20 refresh), crane v0.22.1 (same crane pin as estate-ci image-build.sh / mirror.sh).
+ARG YQ_VERSION=v4.54.3
+ARG YQ_SHA256=129534601871538efe0ba4c5e62a34fb1d5f469bcb975c4fddeb467d82974973
 ARG CRANE_VERSION=v0.22.1
 ARG CRANE_SHA256=0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0
 RUN cd /tmp/tools && fetch-verified "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" "${YQ_SHA256}" yq \
@@ -126,12 +126,12 @@ RUN cd /tmp/tools && fetch-verified "https://github.com/koalaman/shellcheck/rele
     && tar -xzf actionlint.tgz actionlint && install -m 0755 actionlint /usr/local/bin/actionlint \
     && rm -rf /tmp/tools/*
 
-# uv 0.13.5 (the weather CI pin) and Node.js 24.22.1 with npm and corepack (pnpm),
+# uv 0.13.9 and Node.js 24.22.3 (newest releases, 2026-11-20 refresh) with npm and corepack (pnpm),
 # installed under /usr/local so PATH stays the runner's.
-ARG UV_VERSION=0.13.5
-ARG UV_SHA256=f68d291c75783122dad58ab77def0e13f3233f358731db5d6d7e8715603b928f
-ARG NODE_VERSION=v24.22.1
-ARG NODE_SHA256=6c172a9ab6718f7b801fb5a7bd486af2ee5e32758086a04b84fcce2aa77095e6
+ARG UV_VERSION=0.13.9
+ARG UV_SHA256=a7fbaff2b9a271d85c1bdb540941090fd1ce011797b4abeb48e4dcd39c2471d5
+ARG NODE_VERSION=v24.22.3
+ARG NODE_SHA256=4f2b175a6d53a5c617a80dba2676238a0688cef28c6da4eba35c7d844e66fcfb
 RUN cd /tmp/tools && fetch-verified "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz" "${UV_SHA256}" uv.tgz \
     && tar -xzf uv.tgz && install -m 0755 uv-x86_64-unknown-linux-gnu/uv uv-x86_64-unknown-linux-gnu/uvx /usr/local/bin/ \
     && fetch-verified "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.xz" "${NODE_SHA256}" node.txz \
@@ -139,12 +139,12 @@ RUN cd /tmp/tools && fetch-verified "https://github.com/astral-sh/uv/releases/do
     && rm -f /usr/local/CHANGELOG.md /usr/local/README.md /usr/local/LICENSE \
     && rm -rf /tmp/tools/*
 
-# gh v2.103.3: ADR-0009 exception E-1 (upstream supply-chain attestation
+# gh v2.105.0: ADR-0009 exception E-1 (upstream supply-chain attestation
 # verification). Only for `gh attestation verify` of upstream release artifacts
 # (sentinel frigate-promotion); never for forge API calls, which go through the
 # forge wrapper (forge-api.sh). The image carries no token.
-ARG GH_VERSION=2.103.3
-ARG GH_SHA256=4c806978ffce1cec70853302a56d70ac6da4f19bae7adca4e1a8ab00633dd91d
+ARG GH_VERSION=2.105.0
+ARG GH_SHA256=79e7ab5db738c48777b696e374f8b428f0647debfb424f44d2f426370407fe2f
 RUN cd /tmp/tools && fetch-verified "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" "${GH_SHA256}" gh.tgz \
     && tar -xzf gh.tgz "gh_${GH_VERSION}_linux_amd64/bin/gh" \
     && install -m 0755 "gh_${GH_VERSION}_linux_amd64/bin/gh" /usr/local/bin/gh \
