@@ -27,7 +27,7 @@
     {
       "component": "estate-ci-toolbox",
       "kind": "runtime",
-      "notes": "First-party CI toolchain image (ADR-0004): actions-runner 2.338.2 base plus gitleaks 8.30.1 (built with go 1.27.3), kubectl v1.35.10, kustomize v5.8.3, helm v3.22.1, kubeconform v0.8.0, yq v4.54.1, crane v0.22.1 and shellcheck v0.11.0 (images/estate-ci-toolbox/Dockerfile ARGs). Rebuilt by build.yml on push to main; the pin job is its only pin writer (estate-ci#114). Its upstream is the actions-runner row; tool versions follow the Dockerfile ARGs and Renovate (estate-ci#110).",
+      "notes": "First-party CI toolchain image (ADR-0004): actions-runner 2.338.2 base plus gitleaks 8.30.1 (built with go 1.27.3), kubectl v1.35.10, kustomize v5.8.3, helm v3.22.1, kubeconform v0.8.0, yq v4.54.3, crane v0.22.1 and shellcheck v0.11.0 (images/estate-ci-toolbox/Dockerfile ARGs). Rebuilt by build.yml on push to main; the pin job is its only pin writer (estate-ci#114). Its upstream is the actions-runner row; tool versions follow the Dockerfile ARGs and Renovate (estate-ci#110).",
       "installed": {
         "digest": "sha256:8b7f3ebd27052b11b57be2e0887649bc1b3e3fb7b7af1cd242e50e7e59efa710",
         "image": "registry.vallery.net/jvallery/estate-ci/toolbox",
