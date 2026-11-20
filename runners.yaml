@@ -37,7 +37,15 @@ defaults:
   # (commit trailer Estate-CI-Source names the built commit). FROM the stock
   # runner (uid 1001), so it serves as runner_image and as job_image.
   toolbox: &toolbox registry.vallery.net/jvallery/estate-ci/toolbox@sha256:75bd1355d4e35701d71d81543b0bdbbf49dad8c7063e6271522f1dce16cbe804
-  chart_version: 0.14.2
+  # gha-runner-scale-set chart of every scale set. The controller chart is controller.chart_version.
+  # ARC 0.14 -> 0.15 (AMC-CI T18) moves in two pins, scale sets first while the 0.14.2 controller
+  # cleans up its own sets, then the controller (upstream #4706: one pin for both strands the
+  # 0.14-era EphemeralRunnerSets in Terminating). Both versions delete a set whose major.minor
+  # label differs from the controller's, so between the pins no scale set exists.
+  chart_version: 0.15.1
+  # The 0.15 scale-set chart renders spec.listenerConfig, which the 0.14 CRDs lack. Keep true while
+  # controller.chart_version is 0.14.x; the 0.15 listener applies the same qps 50 / burst 100 without it.
+  suppress_listener_config: true
   # scratch: pvc sets never schedule to these workers (required nodeAffinity; render_runners.py
   # scratch_pvc_exclusion). vm-k3s-node4 (COORD-W2 GO 2026-11-18T05:32:04Z): its plane-longhorn disks
   # are both unschedulable. Disk 01267A is allowScheduling=false (the garage guard for the garage
@@ -135,6 +143,10 @@ controller:
   project: estate-ci-arc
   release: arc
   namespace: arc-systems
+  # gha-runner-scale-set-controller chart; it installs the four actions.github.com CRDs. Move it only
+  # after the scale sets (defaults.chart_version) are on the same minor and no
+  # EphemeralRunnerSet, EphemeralRunner or AutoscalingListener is left (AMC-CI T18).
+  chart_version: 0.14.2
   image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/gha-runner-scale-set-controller:pinned-1b4c7f62e971@sha256:1b4c7f62e971ab259a4b8798e48e2adaad4af747f45990f474ea5feefa03531d
   replicas: 2
   host_topology_key: topology.vallery.net/proxmox-host

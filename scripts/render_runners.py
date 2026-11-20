@@ -36,6 +36,7 @@ SECRET_NAME = re.compile(r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
 CI_VARIANT = re.compile(r"^ci-[a-z0-9]{1,12}$")
 DIGEST_REF = re.compile(r"^[a-z0-9.\-]+(:[0-9]+)?(/[a-z0-9._\-]+)+(:[A-Za-z0-9._\-]+)?@sha256:[0-9a-f]{64}$")
 NAME = re.compile(r"^[a-z0-9]([a-z0-9-]{0,43}[a-z0-9])?$")
+CHART_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 class _NoAliasDumper(yaml.SafeDumper):
     def ignore_aliases(self, data):
         return True
@@ -475,6 +476,7 @@ def controller_apps(cfg: dict) -> dict[str, dict]:
     release so Argo adopts it in place; changing the image restarts every listener.
     """
     d, c = cfg["defaults"], cfg["controller"]
+    controller_chart = chart_version(c.get("chart_version"), "controller.chart_version")
     image = pinned(c["image"], "controller.image")
     name_tag, digest = image.split("@", 1)
     head, _, last = name_tag.rpartition("/")
@@ -512,7 +514,7 @@ def controller_apps(cfg: dict) -> dict[str, dict]:
             "source": {
                 "repoURL": "ghcr.io/actions/actions-runner-controller-charts",
                 "chart": "gha-runner-scale-set-controller",
-                "targetRevision": d["chart_version"],
+                "targetRevision": controller_chart,
                 # A values string (not valuesObject), so it replaces the field the
                 # previous parent wrote instead of sitting beside it.
                 "helm": {"releaseName": c["release"], "values": values},
@@ -563,8 +565,40 @@ def ops_egress_policy(name: str, opts: dict) -> dict:
     }
 
 
+def chart_version(v, what: str) -> str:
+    if not isinstance(v, str) or not CHART_VERSION.match(v):
+        raise RenderError(f"{what}: {v!r} is not a chart version x.y.z")
+    return v
+
+
+def arc_versions(cfg: dict) -> tuple[str, bool]:
+    """Scale-set chart version and whether spec.listenerConfig is suppressed (AMC-CI T18).
+
+    The scale-set charts (defaults.chart_version) and the controller chart
+    (controller.chart_version) move in separate pins, children first: upstream
+    #4706 strands EphemeralRunnerSets when one pin moves both across 0.14 -> 0.15.
+    The 0.15 scale-set chart renders spec.listenerConfig by default; the 0.14 CRDs
+    (installed by the controller chart) have no such field, so a 0.15 set under a
+    0.14 controller chart must set defaults.suppress_listener_config. The 0.15
+    listener applies the same qps 50 / burst 100 when the field is absent.
+    """
+    d, c = cfg["defaults"], cfg["controller"]
+    scale_set = chart_version(d.get("chart_version"), "defaults.chart_version")
+    controller = chart_version(c.get("chart_version"), "controller.chart_version")
+    suppress = d.get("suppress_listener_config", False)
+    if not isinstance(suppress, bool):
+        raise RenderError("defaults.suppress_listener_config must be true or false")
+    minor = lambda v: tuple(int(x) for x in v.split(".")[:2])  # noqa: E731
+    if minor(scale_set) >= (0, 15) and minor(controller) < (0, 15) and not suppress:
+        raise RenderError(
+            f"scale-set chart {scale_set} renders spec.listenerConfig, which the controller chart "
+            f"{controller} CRDs lack: set defaults.suppress_listener_config: true until the controller moves")
+    return scale_set, suppress
+
+
 def render(cfg: dict) -> dict[str, str]:
     d = cfg["defaults"]
+    scale_set_chart, suppress_listener_config = arc_versions(cfg)
     owners = cfg["owners"]
     out: dict[str, str] = {}
     pod_cpu: list[float] = []
@@ -620,6 +654,9 @@ def render(cfg: dict) -> dict[str, str]:
                 "controllerServiceAccount": d["controller_service_account"],
                 "template": pod_template(d, profile, opts, expected, base, key, priority, name),
             }
+            if suppress_listener_config:
+                # Helm drops a values key set to null, so the chart renders no spec.listenerConfig.
+                values["listenerConfig"] = None
             pod_cpu.append(pod_cpu_request(values["template"]))
             app = {
                 "apiVersion": "argoproj.io/v1alpha1",
@@ -634,7 +671,7 @@ def render(cfg: dict) -> dict[str, str]:
                     "source": {
                         "repoURL": "ghcr.io/actions/actions-runner-controller-charts",
                         "chart": "gha-runner-scale-set",
-                        "targetRevision": d["chart_version"],
+                        "targetRevision": scale_set_chart,
                         "helm": {"releaseName": name, "valuesObject": values},
                     },
                     "destination": {"server": "https://kubernetes.default.svc", "namespace": NAMESPACE},
