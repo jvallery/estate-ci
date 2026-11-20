@@ -712,7 +712,13 @@ sets:
         # per-job use (node7 at 104% CPU with 1-1.5 CPU requests under limit 8, so the scheduler stacked them); limit unchanged.
         # EXEC-W2-CS (COORD-W2 2026-11-18T09:00Z, pi#1036): 3 -> 6. HOSTEDGE traced the node5 D-state stall to
         # ms-ci Pods bursting to the 8-CPU limit with up to 4 on one node at 3 CPU requested each.
-        job_resources: {cpu: "6", memory: 640Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # AMC-CI (COORD AM campaign 2026-11-20, asks/AMC-CI-01): 6 -> 4 request, 8 -> 6 limit (Pod 6.2 -> 4.2 CPU).
+        # 02:20-03:20Z the runner quota sat at 70-81/82 CPU and 4 of 10 ms-ci EphemeralRunners could not get a
+        # Pod (exceeded quota estate-ci-runner-pods, requested 6200m), so only 6 jobs ran while 70 waited (median 40 min).
+        # 3 h job-sidecar use: per-Pod average p50 3.14 / p90 3.96 CPU, peak 8.0 (the limit). Request 4 covers the
+        # p90 average; limit 6 caps a 4-Pod stack on one node at 24 CPU (was 32 at the pi#1036 stall). Same quota:
+        # 10 x 4.2 = 42 CPU at max (was 10 x 6.2 = 62). Revert: cpu "6", limit_cpu "8".
+        job_resources: {cpu: "4", memory: 640Mi, limit_cpu: "6", limit_memory: 8Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.18 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
         runner_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
