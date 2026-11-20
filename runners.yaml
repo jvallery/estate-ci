@@ -704,7 +704,14 @@ sets:
         # AMC-CI (COORD D-902, 2026-11-20T04:50Z): 10 -> 16 with the job request 4 -> 2.5 (Pod 4.2 -> 2.7 CPU):
         # 16 x 2.7 = 43.2 CPU at max vs 10 x 4.2 = 42.0 (+1.2 CPU of requests). After ec#328 the quota fell to
         # 43-60/82 and max 10 became the limiter (10 running, 27 runs queued). Revert: max 10, job cpu "4".
-        max: 16
+        # AMC-CI WL-2 (COORD WORK-ORDERS-0855, 2026-11-20T08:58Z): 16 -> 12, the count the workers admit at the
+        # 6 h peak of every other runner set. Live 6 h (03-09Z, 2-min steps): runner requests of all other sets
+        # peak 51.1 CPU (p90 37.2), all runners peak 82.0 = quota; non-runner requests on node4-7 peak
+        # 28.0-29.5 per node, so runner room at 95% of 47 is 63-70 CPU on node4-7 plus node8's 4 slots.
+        # (82 - 51.1) / 2.7 = 11.4 -> 12 (12 x 2.7 = 32.4). At 16, up to 4 ms-ci Pods sat Pending (FailedScheduling
+        # insufficient cpu, 07:49-07:58Z), which kept assigned jobs above busy runners (EstateCIRunnerPoolSaturated).
+        # Cost: 4 fewer runners when the other sets are idle (p90 leaves room for 16). Revert: max 16.
+        max: 12
         # pi#1036: per-set soft hostname spread, so the set's 8-CPU bursts do not stack on one worker.
         set_spread: true
         job_image: *toolbox
