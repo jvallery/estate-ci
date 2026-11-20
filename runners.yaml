@@ -701,7 +701,10 @@ sets:
         # EXEC-W2-CS (COORD-W2 2026-11-18T10:03:52Z ruling): 9 -> 10 (10 x 6.2 = 62.0 CPU of the 82-CPU quota,
         # 20 CPU left for every other set; they used 7-25 CPU on the morning of 11-18). Node5 fell from 48% to
         # 25-36% busy after ec#295. 11 (68.2) is held for a full morning of quota data. Revert: 10 -> 9.
-        max: 10
+        # AMC-CI (COORD D-902, 2026-11-20T04:50Z): 10 -> 16 with the job request 4 -> 2.5 (Pod 4.2 -> 2.7 CPU):
+        # 16 x 2.7 = 43.2 CPU at max vs 10 x 4.2 = 42.0 (+1.2 CPU of requests). After ec#328 the quota fell to
+        # 43-60/82 and max 10 became the limiter (10 running, 27 runs queued). Revert: max 10, job cpu "4".
+        max: 16
         # pi#1036: per-set soft hostname spread, so the set's 8-CPU bursts do not stack on one worker.
         set_spread: true
         job_image: *toolbox
@@ -718,7 +721,10 @@ sets:
         # 3 h job-sidecar use: per-Pod average p50 3.14 / p90 3.96 CPU, peak 8.0 (the limit). Request 4 covers the
         # p90 average; limit 6 caps a 4-Pod stack on one node at 24 CPU (was 32 at the pi#1036 stall). Same quota:
         # 10 x 4.2 = 42 CPU at max (was 10 x 6.2 = 62). Revert: cpu "6", limit_cpu "8".
-        job_resources: {cpu: "4", memory: 640Mi, limit_cpu: "6", limit_memory: 8Gi}
+        # AMC-CI (D-902, 04:50Z): 4 -> 2.5, limit 6 unchanged. 50 min of 58 Pods at 4/6: per-Pod average p50 3.09,
+        # p75 3.46, p90 3.75 CPU; peak 6.0 (the limit). Request sits under the average on purpose so 16 fit the
+        # same requests as 10; the 6-CPU limit still bounds a stack (node8 stays at 4 ci-runner-slot, STD-CI-10).
+        job_resources: {cpu: "2.5", memory: 640Mi, limit_cpu: "6", limit_memory: 8Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.18 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
         runner_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
