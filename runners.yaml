@@ -47,8 +47,8 @@ defaults:
   # or 16865A is Schedulable=True again; read the Longhorn Node CR first.
   scratch_pvc_exclude_nodes: [vm-k3s-node4]
   controller_service_account: {namespace: arc-systems, name: arc-gha-rs-controller}
-  # Stock actions-runner 2.338.2, mirrored by mirrors.txt (same index digest as upstream).
-  runner_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232
+  # Stock actions-runner 2.338.2, upstream re-push 6d0b2d80 mirrored by mirrors.txt (same index digest as upstream; AMC-SEC-A2-10).
+  runner_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner@sha256:6d0b2d80d80f143f77dcb676e50920100bbb547e39e883454d57f45ab8c31300
   # ghcr.io/osscontainertools/kaniko:v1.29.1-debug (maintained fork, linux/amd64 child), mirrored by mirrors.txt.
   # estate-ci#236 / D-825: pilot 2026-11-18 showed 0 fixable Critical and config/history-equivalent builds
   # against v1.23.2 on ci-tools and estate-ci-toolbox. Rollback: restore the v1.23.2 line below.
