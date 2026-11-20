@@ -42,7 +42,7 @@ defaults:
   # cleans up its own sets, then the controller (upstream #4706: one pin for both strands the
   # 0.14-era EphemeralRunnerSets in Terminating). Both versions delete a set whose major.minor
   # label differs from the controller's, so between the pins no scale set exists.
-  chart_version: 0.15.1
+  chart_version: 0.14.2
   # The 0.15 scale-set chart renders spec.listenerConfig, which the 0.14 CRDs lack. Keep true while
   # controller.chart_version is 0.14.x; the 0.15 listener applies the same qps 50 / burst 100 without it.
   suppress_listener_config: true
