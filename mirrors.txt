@@ -58,3 +58,7 @@ ghcr.io/actions/gha-runner-scale-set-controller:0.14.2@sha256:1b4c7f62e971ab259a
 # verdify-www Dockerfile build and runtime stages (verdify-www#64): node 22.23.4 alpine
 # index, the digest node:22-alpine resolved to on 2026-11-09.
 docker.io/library/node:22.23.4-alpine@sha256:0e1754758c2df4cfa3e68d59e2e1b7374bb7fd9ea6328eaaacf15cc934af8202  jvallery/estate-ci/mirror/docker.io/library/node
+# crm twenty-redis (AMC campaign T-crm, COORD WORK-ORDERS-0642): Docker Official redis 7.2.17 on
+# Alpine 3.22 (image index, the digest redis:7.2-alpine resolved to via mirror.gcr.io on 2026-11-20),
+# replacing jvallery/verdify-crm-redis-recovery@84bab713 (redis:7.2-alpine on Alpine 3.21, end of support).
+docker.io/library/redis:7.2.17-alpine3.22@sha256:2f66de68111e64c3927859f158f8e666066dae2b97d9f82770a6f37a5aa1c335  jvallery/estate-ci/mirror/docker.io/library/redis
