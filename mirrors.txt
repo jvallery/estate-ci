@@ -7,6 +7,9 @@
 #
 # ARC runner (image index, as pinned in runners.yaml defaults.runner_image).
 ghcr.io/actions/actions-runner:2.338.2@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232  jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner
+# AMC-SEC-A2 T08: the upstream 2.338.2 re-push of 2026-11-11 (Ubuntu base 2026-11-09, full rebuild; amd64 4037925f).
+# The base for the toolbox rebuild and the next runners.yaml runner_image; 759a1d94 stays until both have moved.
+ghcr.io/actions/actions-runner:2.338.2@sha256:6d0b2d80d80f143f77dcb676e50920100bbb547e39e883454d57f45ab8c31300  jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner
 # Kaniko executor v1.23.2-debug (image index; same digest as the fleet-named jvallery/agents-kaniko-executor copy).
 gcr.io/kaniko-project/executor:v1.23.2-debug@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e  jvallery/estate-ci/mirror/gcr.io/kaniko-project/executor
 # Kaniko executor fork osscontainertools v1.29.1-debug, linux/amd64 child only (index sha256:ebc38a98...):
