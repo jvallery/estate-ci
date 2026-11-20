@@ -35,14 +35,16 @@ RUN set -eu; \
     test "$(go version -m /out/gitleaks | awk '$1 == "mod" && $2 == "github.com/zricethezav/gitleaks/v8" {print $3 " " $4}')" = "v${GITLEAKS_VERSION} ${GITLEAKS_MODULE_SUM}"
 
 # Stock ARC runner 2.338.2 (Ubuntu 24.04 noble: python 3.12, ruby 3.2, php 8.3);
-# the same index digest runners.yaml pins, from estate-ci's mirror.
-FROM registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232
+# the upstream 2026-11-11 re-push (index 6d0b2d80, amd64 4037925f; AMC-SEC-A2-10),
+# from estate-ci's mirror; runners.yaml moves to the same digest in the same delivery.
+FROM registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner@sha256:6d0b2d80d80f143f77dcb676e50920100bbb547e39e883454d57f45ab8c31300
 
 USER root
 ARG DEBIAN_FRONTEND=noninteractive
 # Upgrade the inherited APT and Brotli packages before installing other tools.
 # Disable download retries until APT meets the CVE-2026-109518 security floor.
-# The Brotli floor covers CVE-2026-111497.
+# The Brotli floor covers CVE-2026-111497. Then a full upgrade (AMC-SEC-A2-10):
+# linux-libc-dev must reach 6.8.0-151.151 or the build fails.
 RUN set -eu; \
     apt-get -o Acquire::Retries=0 update; \
     apt-get -o Acquire::Retries=0 install -y --only-upgrade --no-install-recommends \
@@ -50,10 +52,14 @@ RUN set -eu; \
     dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge 2.8.4ubuntu0.1; \
     dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libapt-pkg6.0t64)" ge 2.8.4ubuntu0.1; \
     dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libbrotli1)" ge 1.1.0-2ubuntu0.1; \
+    apt-get -o Acquire::Retries=0 upgrade -y --no-install-recommends; \
     apt-get install -y --no-install-recommends \
       ca-certificates curl file g++ git gnupg jq make openssh-client \
       php-cli python3 python3-pip python3-venv python3-yaml ruby-full \
       sqlite3 tar unzip xz-utils zip zsh; \
+    if dpkg-query -W linux-libc-dev >/dev/null 2>&1; then \
+      dpkg --compare-versions "$(dpkg-query -W -f='${Version}' linux-libc-dev)" ge 6.8.0-151.151; \
+    fi; \
     rm -rf /var/lib/apt/lists/*
 
 # CVE-2026-59873: drop every runner-bundled npm whose tar is older than 7.5.19
