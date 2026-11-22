@@ -18,6 +18,7 @@ ghcr.io/osscontainertools/kaniko:v1.29.1-debug@sha256:9585e0a789d698ae5755e190fb
 # estate-ci-toolbox bases (linux/amd64 children only).
 docker.io/library/ubuntu:24.04@sha256:78d4744ead1f5b19b04d0df558ab182a5300903900755e515b2ca4d10eb2044d  jvallery/estate-ci/mirror/docker.io/library/ubuntu
 docker.io/library/golang:1.27.3-bookworm@sha256:fea12ba16096adec0f699ce1c4da2154d320450e56c1f63671f95d2a3551c77b  jvallery/estate-ci/mirror/docker.io/library/golang
+docker.io/library/golang:1.27.4-bookworm@sha256:fb7cceb528b47141eccd9b60bf3cbd27d5ef5f8cf5b7d338bec866da495b50dc  jvallery/estate-ci/mirror/docker.io/library/golang
 # verdify-platform firmware-secretless-compile (DASH #1402): ESPHome 2026.6.5 index.
 ghcr.io/esphome/esphome:2026.6.5@sha256:ffe23402d169fc9b8ff29fc3c9fc13b3c47e8a53726fce4569e2280bd534c84c  jvallery/estate-ci/mirror/ghcr.io/esphome/esphome
 # homeassistant CI image homeassistant-ci-esphome (homeassistant#1137): its Dockerfile
