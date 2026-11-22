@@ -9,30 +9,67 @@
 # (uid 1001). Same rule as the fleet toolbox (a changed startup contract broke
 # the ARC JIT handshake, agents#3088 probe 3).
 #
-# Secret-free. Every downloaded tool is pinned by version and sha256 (upstream
-# checksum files, except shellcheck, which publishes none: its digest was
-# recorded from the release asset). Ubuntu packages come from the signed noble
+# Secret-free. Every downloaded release binary or archive is pinned by version and
+# sha256 (upstream checksum files, except shellcheck, which publishes none: its
+# digest was recorded from the release asset). The seven Go tools of the go-build
+# stage are pinned by module version and h1 module sum (from sum.golang.org,
+# asserted with `go version -m`), downloaded through proxy.golang.org and verified
+# against sum.golang.org at build time. Ubuntu packages come from the signed noble
 # archive. versions.sh --assert fails the build on any drift. amd64 only.
 
-# gitleaks 8.30.1 rebuilt from its module source with go1.27.3 (upstream's release
-# binary is go1.24.11; CVE-2025-68121 in the Go stdlib). Module version and go.sum
-# hash are fixed; the Go checksum database verifies the download. Same recipe as
-# the fleet toolbox, so the version string repos check stays "8.30.1".
-FROM registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/golang@sha256:fea12ba16096adec0f699ce1c4da2154d320450e56c1f63671f95d2a3551c77b AS gitleaks-build
+# Go tools rebuilt from their module source with go1.27.4 (newest Go; CVE-2026-97054 and the
+# other stdlib rows are fixed in 1.27.4/1.26.11), AMC-CI D-1257 R10/R17 and D-1264 R7. Upstream
+# release binaries of helm, kustomize, kubeconform, yq, crane and actionlint are linked with older
+# Go (go1.26.1 to go1.27.3) and none has a newer release (D-889 read 2026-11-22). Same recipe as
+# the gitleaks build before it, for all seven: the exact module version, its h1 module sum
+# asserted from `go version -m` (values from sum.golang.org, listed in the README), the version
+# ldflags upstream sets, and go1.27.4 asserted per binary. Module dependencies stay as each
+# release pins them (go install never bumps them), so x/net, x/crypto and x/text rows remain
+# until upstream releases. kubectl and gh stay upstream release binaries with sha256 pins.
+FROM registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/golang@sha256:fb7cceb528b47141eccd9b60bf3cbd27d5ef5f8cf5b7d338bec866da495b50dc AS go-build
+ARG GO_VERSION=go1.27.4
 ARG GITLEAKS_VERSION=8.30.1
 ARG GITLEAKS_MODULE_SUM=h1:PmEvCfVI7ti9dV3s5aMZUY7sS2GxRvG3yzih7E+cS3w=
+ARG HELM_VERSION=v3.22.1
+ARG HELM_MODULE_SUM=h1:uo2SouzAxMkKZTNzZ1lLP/c/Bu7xfUJKYDaYMxMHvk8=
+ARG KUSTOMIZE_VERSION=v5.8.3
+ARG KUSTOMIZE_MODULE_SUM=h1:SJXKgCEb4Ru+8PrhwQ+ORAASc2rPWBneHjh4fKTXPWY=
+ARG KUBECONFORM_VERSION=v0.8.0
+ARG KUBECONFORM_MODULE_SUM=h1:loDYd3a3spjIFrauqW67CDKF55Oo9R6uvC8AvpVd4ug=
+ARG YQ_VERSION=v4.54.3
+ARG YQ_MODULE_SUM=h1:1SnmdehRmL1Z56SuPH8IQUW3D73Q74F3mpGWW0jAb3E=
+ARG CRANE_VERSION=v0.22.1
+ARG CRANE_MODULE_SUM=h1:RZuuSYhTvlDvtsK+NkutoCZ//C0X2ebLK8X8l3ULs84=
+ARG ACTIONLINT_VERSION=1.7.12
+ARG ACTIONLINT_MODULE_SUM=h1:vQ4GeJN86C0QH+gTUQcs8McmK62OLT3kmakPMtEWYnY=
 ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOBIN=/out
 RUN set -eu; \
-    for attempt in 1 2 3; do \
-      if go install -trimpath \
-          -ldflags "-s -w -X github.com/zricethezav/gitleaks/v8/version.Version=${GITLEAKS_VERSION}" \
-          "github.com/zricethezav/gitleaks/v8@v${GITLEAKS_VERSION}"; then break; fi; \
-      if [ "$attempt" = 3 ]; then exit 1; fi; \
-      sleep 15; \
-    done; \
-    /out/gitleaks version | grep -qx "${GITLEAKS_VERSION}"; \
-    test "$(go version -m /out/gitleaks | sed -n '1s/.*: //p')" = go1.27.3; \
-    test "$(go version -m /out/gitleaks | awk '$1 == "mod" && $2 == "github.com/zricethezav/gitleaks/v8" {print $3 " " $4}')" = "v${GITLEAKS_VERSION} ${GITLEAKS_MODULE_SUM}"
+    test "$(go env GOVERSION)" = "${GO_VERSION}"; \
+    build() { \
+      bin="$1"; pkg="$2"; mainmod="$3"; ver="$4"; sum="$5"; ldx="$6"; \
+      for attempt in 1 2 3; do \
+        if go install -trimpath -ldflags "-s -w ${ldx}" "${pkg}@${ver}"; then break; fi; \
+        if [ "$attempt" = 3 ]; then exit 1; fi; \
+        sleep 15; \
+      done; \
+      test "$(go version -m "/out/${bin}" | sed -n '1s/.*: //p')" = "${GO_VERSION}"; \
+      test "$(go version -m "/out/${bin}" | awk -v m="${mainmod}" '$1 == "mod" && $2 == m {print $3 " " $4}')" = "${ver} ${sum}"; \
+    }; \
+    build gitleaks github.com/zricethezav/gitleaks/v8 github.com/zricethezav/gitleaks/v8 "v${GITLEAKS_VERSION}" "${GITLEAKS_MODULE_SUM}" \
+      "-X github.com/zricethezav/gitleaks/v8/version.Version=${GITLEAKS_VERSION}"; \
+    build helm helm.sh/helm/v3/cmd/helm helm.sh/helm/v3 "${HELM_VERSION}" "${HELM_MODULE_SUM}" \
+      "-X helm.sh/helm/v3/internal/version.version=${HELM_VERSION} -X helm.sh/helm/v3/internal/version.gitTreeState=clean \
+       -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMajor=1 -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMinor=37 \
+       -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMajor=1 -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor=37"; \
+    build kustomize sigs.k8s.io/kustomize/kustomize/v5 sigs.k8s.io/kustomize/kustomize/v5 "${KUSTOMIZE_VERSION}" "${KUSTOMIZE_MODULE_SUM}" ""; \
+    build kubeconform github.com/yannh/kubeconform/cmd/kubeconform github.com/yannh/kubeconform "${KUBECONFORM_VERSION}" "${KUBECONFORM_MODULE_SUM}" \
+      "-X main.version=${KUBECONFORM_VERSION}"; \
+    build yq github.com/mikefarah/yq/v4 github.com/mikefarah/yq/v4 "${YQ_VERSION}" "${YQ_MODULE_SUM}" ""; \
+    build crane github.com/google/go-containerregistry/cmd/crane github.com/google/go-containerregistry "${CRANE_VERSION}" "${CRANE_MODULE_SUM}" \
+      "-X github.com/google/go-containerregistry/cmd/crane/cmd.Version=${CRANE_VERSION#v}"; \
+    build actionlint github.com/rhysd/actionlint/cmd/actionlint github.com/rhysd/actionlint "v${ACTIONLINT_VERSION}" "${ACTIONLINT_MODULE_SUM}" \
+      "-X github.com/rhysd/actionlint.version=${ACTIONLINT_VERSION}"; \
+    ls -l /out
 
 # Stock ARC runner 2.338.2 (Ubuntu 24.04 noble: python 3.12, ruby 3.2, php 8.3);
 # the upstream 2026-11-11 re-push (index 6d0b2d80, amd64 4037925f; AMC-SEC-A2-10),
@@ -85,51 +122,24 @@ RUN printf '%s\n' '#!/bin/sh' 'set -eu' \
       'echo "$2  $3" | sha256sum -c -' > /usr/local/bin/fetch-verified \
     && chmod 0755 /usr/local/bin/fetch-verified && mkdir -p /tmp/tools
 
-# kubectl v1.35.10 (server minor 1.35; go1.26.10) and kustomize v5.8.3: the fleet
-# toolbox and Argo CD tools pins, which cortex-ai-compute checks exactly.
+# kubectl v1.35.10 (server minor 1.35; go1.26.10, upstream binary). kustomize v5.8.3 (the fleet
+# toolbox and Argo CD tools pin, which cortex-ai-compute checks exactly) comes from go-build.
 ARG KUBECTL_VERSION=v1.35.10
 ARG KUBECTL_SHA256=c49a28f1f4efc4d475ed05f47f2ce8e563bf7bef69ed77fe1b924ea6d83b6327
-ARG KUSTOMIZE_VERSION=v5.8.3
-ARG KUSTOMIZE_SHA256=cb9e31198d3f63b44848bd0afc4c8efc56e6cfef9c93a4a39a211940e6decd61
 RUN cd /tmp/tools && fetch-verified "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" "${KUBECTL_SHA256}" kubectl \
     && install -m 0755 kubectl /usr/local/bin/kubectl \
-    && fetch-verified "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" "${KUSTOMIZE_SHA256}" kustomize.tgz \
-    && tar -xzf kustomize.tgz kustomize && install -m 0755 kustomize /usr/local/bin/kustomize \
     && rm -f /tmp/tools/*
 
-# helm v3.22.1 (cortex-ai-compute renders need exactly v3; v4 fails; go1.26.9, no grpc in the
-# binary: clears CVE-2025-68121 and CVE-2026-33186 of v3.16.3), kubeconform v0.8.0.
-ARG HELM_VERSION=v3.22.1
-ARG HELM_SHA256=896cf63684a42a723d61c980369d6e588330927deb13676ca0d85006dd6da0ea
-ARG KUBECONFORM_VERSION=v0.8.0
-ARG KUBECONFORM_SHA256=9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
-RUN cd /tmp/tools && fetch-verified "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" "${HELM_SHA256}" helm.tgz \
-    && tar -xzf helm.tgz linux-amd64/helm && install -m 0755 linux-amd64/helm /usr/local/bin/helm \
-    && fetch-verified "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" "${KUBECONFORM_SHA256}" kubeconform.tgz \
-    && tar -xzf kubeconform.tgz kubeconform && install -m 0755 kubeconform /usr/local/bin/kubeconform \
-    && rm -rf /tmp/tools/*
+# helm v3.22.1 (cortex-ai-compute renders need exactly v3; v4 fails), kubeconform v0.8.0, yq v4.54.3
+# and crane v0.22.1 (same crane pin as estate-ci image-build.sh / mirror.sh) come from go-build.
 
-# yq v4.54.3 (newest release, 2026-11-20 refresh), crane v0.22.1 (same crane pin as estate-ci image-build.sh / mirror.sh).
-ARG YQ_VERSION=v4.54.3
-ARG YQ_SHA256=129534601871538efe0ba4c5e62a34fb1d5f469bcb975c4fddeb467d82974973
-ARG CRANE_VERSION=v0.22.1
-ARG CRANE_SHA256=0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0
-RUN cd /tmp/tools && fetch-verified "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" "${YQ_SHA256}" yq \
-    && install -m 0755 yq /usr/local/bin/yq \
-    && fetch-verified "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz" "${CRANE_SHA256}" crane.tgz \
-    && tar -xzf crane.tgz crane && install -m 0755 crane /usr/local/bin/crane \
-    && rm -f /tmp/tools/*
-
-# shellcheck v0.11.0, actionlint v1.7.12 (the versions estate-ci's self-test uses).
+# shellcheck v0.11.0 (Haskell, upstream binary); actionlint v1.7.12 comes from go-build (the
+# versions estate-ci's self-test uses).
 ARG SHELLCHECK_VERSION=v0.11.0
 ARG SHELLCHECK_SHA256=8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198
-ARG ACTIONLINT_VERSION=1.7.12
-ARG ACTIONLINT_SHA256=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
 RUN cd /tmp/tools && fetch-verified "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" "${SHELLCHECK_SHA256}" shellcheck.txz \
     && tar -xJf shellcheck.txz "shellcheck-${SHELLCHECK_VERSION}/shellcheck" \
     && install -m 0755 "shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck \
-    && fetch-verified "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" "${ACTIONLINT_SHA256}" actionlint.tgz \
-    && tar -xzf actionlint.tgz actionlint && install -m 0755 actionlint /usr/local/bin/actionlint \
     && rm -rf /tmp/tools/*
 
 # uv 0.13.9 and Node.js 24.22.3 (newest releases, 2026-11-20 refresh) with npm and corepack (pnpm),
@@ -178,7 +188,7 @@ RUN set -eu; \
     archive tempo 3.0.2 "https://github.com/grafana/tempo/releases/download/v3.0.2/tempo_3.0.2_linux_amd64.tar.gz" d2b95c01774c81c4494c4162e2f3511699a66b46506c96028745f5d4f0a78086; \
     archive blackbox_exporter 0.29.1 "https://github.com/prometheus/blackbox_exporter/releases/download/v0.29.1/blackbox_exporter-0.29.1.linux-amd64.tar.gz" b82b81839e6317e84fdd367f46d7ddd3b773fa09cbe2e3d5633a59171d741e76
 
-COPY --from=gitleaks-build /out/gitleaks /usr/local/bin/gitleaks
+COPY --from=go-build /out/gitleaks /out/helm /out/kustomize /out/kubeconform /out/yq /out/crane /out/actionlint /usr/local/bin/
 
 # Hosted-runner parity (as the fleet toolbox): UTF-8 locale and pip installs
 # into the PEP 668 system python. No other env change.

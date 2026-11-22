@@ -20,16 +20,16 @@ on dispatch; its `pin` job then opens the digest pin PR) and published as
 | ruby | 3.2 (apt `ruby-full`) | noble archive |
 | php-cli | 8.3 (apt) | noble archive (wordpress `php -l`) |
 | kubectl | v1.35.10 | dl.k8s.io, sha256 (fleet toolbox pin) |
-| kustomize | v5.8.3 | GitHub release, sha256 (fleet/Argo CD pin; cortex checks it exactly) |
-| helm | v3.22.1 | get.helm.sh, sha256 (cortex renders need v3) |
-| kubeconform | v0.8.0 | GitHub release, CHECKSUMS |
-| yq (mikefarah) | v4.54.3 | GitHub release, sha256 |
+| kustomize | v5.8.3 | built from module source with go1.27.4, module sum `h1:SJXKgCEb4Ru+8PrhwQ+ORAASc2rPWBneHjh4fKTXPWY=` asserted (`go version -m`) (fleet/Argo CD pin; cortex checks it exactly) |
+| helm | v3.22.1 | built from module source with go1.27.4, module sum `h1:uo2SouzAxMkKZTNzZ1lLP/c/Bu7xfUJKYDaYMxMHvk8=` asserted (`go version -m`); upstream version and k8s 1.37 lint ldflags (cortex renders need v3) |
+| kubeconform | v0.8.0 | built from module source with go1.27.4, module sum `h1:loDYd3a3spjIFrauqW67CDKF55Oo9R6uvC8AvpVd4ug=` asserted (`go version -m`) |
+| yq (mikefarah) | v4.54.3 | built from module source with go1.27.4, module sum `h1:1SnmdehRmL1Z56SuPH8IQUW3D73Q74F3mpGWW0jAb3E=` asserted (`go version -m`) |
 | jq, git, curl, make, zip/unzip, xz, sqlite3, g++, openssh-client, file | apt | noble archive |
 | zsh | 5.9 (apt) | noble archive (`zsh -f -n` syntax checks and zsh self-tests; home-dotfiles#104 retires the workflow's inline package download) |
-| crane | v0.22.1 | GitHub release, sha256 (same pin as `image-build.sh`) |
-| gitleaks | 8.30.1 | built from module source with go1.27.3 (go.sum hash pinned; fleet recipe) |
+| crane | v0.22.1 | built from module source with go1.27.4, module sum `h1:RZuuSYhTvlDvtsK+NkutoCZ//C0X2ebLK8X8l3ULs84=` asserted (`go version -m`) (same pin as `image-build.sh`) |
+| gitleaks | 8.30.1 | built from module source with go1.27.4, module sum `h1:PmEvCfVI7ti9dV3s5aMZUY7sS2GxRvG3yzih7E+cS3w=` asserted (`go version -m`) (fleet recipe) |
 | shellcheck | v0.11.0 | GitHub release, sha256 recorded from the asset |
-| actionlint | 1.7.12 | GitHub release, checksums.txt |
+| actionlint | 1.7.12 | built from module source with go1.27.4, module sum `h1:vQ4GeJN86C0QH+gTUQcs8McmK62OLT3kmakPMtEWYnY=` asserted (`go version -m`) |
 | gh | 2.105.0 | GitHub release, checksums.txt. **Exception E-1** (ADR-0011, accepted under D-373): only `gh attestation verify` of upstream artifacts (sentinel frigate-promotion); no token in the image |
 | monitoring-stack Static Validation archives (ms#1560) | kustomize v5.4.2, kubeconform v0.6.7, prometheus 3.13.5, alertmanager 0.34.1, tempo 3.0.2, blackbox_exporter 0.29.1 | Upstream release archives kept whole under their original basenames at `/opt/estate-ci-tools/<tool>/<version>/` (off PATH), each sha256-verified against the monitoring-stack pins and the upstream checksum files. Callers check the archive sha256 and use it only on an exact match. Bump together with monitoring-stack |
 
