@@ -400,7 +400,7 @@ sets:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (at max 65%; queue p50 28 min / 24h).
         max: 3
-        job_image: registry.vallery.net/jvallery/homeassistant-ci-homeassistant@sha256:ee28d5eaa7269fbbb3a8049f1bbd9723e784636cd3576be719c2471f9e704b90
+        job_image: registry.vallery.net/jvallery/homeassistant-ci-homeassistant@sha256:3114f1bb9259c3317bd534b4343be8c234daf4691543b38b59374effe25c8607
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.55 CPU, 2026-11-06T12Z..11-10T00Z (700m -> 550m); limits unchanged.
