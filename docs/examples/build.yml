@@ -7,6 +7,11 @@ on:
     branches: [main]
     paths: [Dockerfile, src/**, requirements.lock]
   workflow_dispatch:
+    inputs:
+      rescore-digest:
+        description: After a cve-gate block and its R26 row, re-score this pushed digest instead of building
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -22,6 +27,7 @@ jobs:
       image: jvallery/<repo>-app
       dockerfile: Dockerfile
       push: true
+      rescore-digest: ${{ inputs.rescore-digest }}   # empty on push events: a normal build
 
   pin:
     needs: [app]

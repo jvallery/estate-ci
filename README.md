@@ -94,6 +94,21 @@ storage-infra's zot ACL), delivered by central KSOPS as
 container. PR jobs (other sets) never have it and Dockerfile `RUN` steps never
 see it. No GitHub Environments, OIDC, Actions cache or artifact service.
 
+**After a cve-gate block.** A blocked digest stays in zot, unpinned (no digest output, so no pin PR).
+Rebuilding it pushes a new digest, because Kaniko builds are not reproducible, so the original row
+cannot apply to the rebuild. Instead, the owner adds an exact-digest R26 row for that digest to
+estate-platform `security/estate-security-report/findings-exceptions.json` (owner, `manifest_digest`,
+the blocked CVE ids, approval, expiry of 30 days or less) and merges it. Then the owner dispatches the
+repository's build with `image-build.yml` input `rescore-digest: sha256:…` and `push: true`, forwarded
+from the caller's own `workflow_dispatch` input as in `docs/examples/build.yml` (or runs
+`$ESTATE_CI/image-build.sh --image <image> --push --rescore sha256:…`). That run builds nothing. It
+refuses a digest that is not in zot under that image or whose `org.opencontainers.image.source`
+label names another repository. It rescans the digest with the same Trivy and DB freshness rule,
+scores it with the same `cve-gate.sh` against the current rows, and outputs the digest, so the pin job
+runs, only on pass. Do this before a newer build of the same image: the daily `zot-retention` keeps the
+newest push of each repository and every running or Git-pinned digest, and may delete an older
+unpinned one.
+
 **Pins.** `pin-bump.sh` rewrites digests (kustomize `images:` entries or
 inline `<image>@sha256:` references), pushes a branch and opens a PR. The PR is
 opened with an installation token of the GitHub App `vallery-pin-bot` (D-52;
