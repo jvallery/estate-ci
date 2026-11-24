@@ -80,8 +80,10 @@ spec:
 # R26 findings exceptions anonymously from the in-cluster git mirror. The mirror serves the
 # private history of every mirrored repo without auth, so only the build sets of owner-only
 # jvallery repos are listed (a new set is excluded until added here and in the matching
-# ingress in jvallery/agents platform/kubernetes/git-mirror/networkpolicy.yaml). Excluded:
-# options-tracker-build, verdify-platform-build, verdify-www-build (non-owner writers).
+# ingress in jvallery/estate-platform gitops/git-mirror/networkpolicy.yaml). Excluded:
+# options-tracker-build (non-owner writers). D-1344 (2026-11-24): memoryos-build and wordpress-build
+# (sets created after this list) and verdify-platform-build and verdify-www-build (owner-only since)
+# added; collaborators with write read 2026-11-24: jvallery only.
 # Only the git-mirror Pods, only 8080 (Service git-mirror:80 -> http).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -96,8 +98,9 @@ spec:
       - key: actions.github.com/scale-set-name # set by the ARC controller on every runner Pod
         operator: In
         values: [agents-build, cortex-ai-compute-build, docs-build, estate-ci-build,
-                 estate-platform-build, homeassistant-build, kepler-build, monitoring-stack-build,
-                 network-infra-build, research-vault-build, storage-infra-build, weather-build]
+                 estate-platform-build, homeassistant-build, kepler-build, memoryos-build,
+                 monitoring-stack-build, network-infra-build, research-vault-build, storage-infra-build,
+                 verdify-platform-build, verdify-www-build, weather-build, wordpress-build]
   policyTypes: [Egress]
   egress:
     - to:
