@@ -10,6 +10,10 @@
 # runs on the credential-free "<repo>-buildcheck" set, for PRs. Outputs digest
 # and image-ref (registry.vallery.net/<image>@sha256:...).
 #
+# rescore-digest (with push: true): build nothing; re-score a digest this repository already pushed
+# against the current R26 rows after a cve-gate block, and output it only on pass, so the caller's
+# pin job runs for it unchanged (image-build.sh --rescore; README "After a cve-gate block").
+#
 # Portability (Forgejo/Gitea Actions): all logic is /opt/estate-ci/image-build.sh;
 # no GitHub Environments, OIDC, cache or artifact services. Vendored fallback:
 # checkout + `run: $ESTATE_CI/image-build.sh --image ... [--push]`.
@@ -37,6 +41,10 @@ on:
       push:
         type: boolean
         default: false
+      rescore-digest:
+        description: sha256 digest of this image, already pushed by this repository, to re-score instead of building (needs push true)
+        type: string
+        default: ""
       runner:
         description: Scale set label. Default "<repo>-build" (push) or "<repo>-buildcheck"
         type: string
@@ -74,6 +82,7 @@ jobs:
           TARGET: ${{ inputs.target }}
           BUILD_ARGS: ${{ inputs.build-args }}
           PUSH: ${{ inputs.push }}
+          RESCORE: ${{ inputs.rescore-digest }}
           TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
         run: |
           set -euo pipefail
@@ -81,4 +90,5 @@ jobs:
           [[ -z "$TARGET" ]] || args+=(--target "$TARGET")
           while IFS= read -r a; do [[ -z "$a" ]] || args+=(--build-arg "$a"); done <<< "$BUILD_ARGS"
           [[ "$PUSH" != true ]] || args+=(--push)
+          [[ -z "$RESCORE" ]] || args+=(--rescore "$RESCORE")
           "$ESTATE_CI/image-build.sh" "${args[@]}"

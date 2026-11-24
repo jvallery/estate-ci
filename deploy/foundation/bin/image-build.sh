@@ -2,7 +2,12 @@
 # estate-ci: build one image with the Pod's Kaniko sidecar; optionally push it to zot by digest.
 #
 #   image-build.sh --image jvallery/weather-app [--dockerfile Dockerfile] [--context .]
-#                  [--target stage] [--build-arg NAME=value ...] [--push]
+#                  [--target stage] [--build-arg NAME=value ...] [--push [--rescore sha256:...]]
+#
+# --rescore (D-1344, after a cve-gate block): build nothing; re-score a digest this repository already
+# pushed. The digest must exist in zot under --image and its image config must carry this checkout's
+# org.opencontainers.image.source label (set by every build here), or the run refuses. Then the same
+# Trivy scan and cve-gate.sh run against the current R26 rows, and the digest is output only on pass.
 #
 # Kaniko builds to a tarball with --no-push and holds only the registry PULL
 # credential. With --push (only on a "<repo>-build" set, whose job guard admits
@@ -14,7 +19,7 @@
 # and appends them to $GITHUB_OUTPUT when set (Forgejo Actions honours it too).
 # Run from the repository root (the shared workspace).
 set -euo pipefail
-image="" dockerfile="Dockerfile" context="." target="" push=false
+image="" dockerfile="Dockerfile" context="." target="" push=false rescore=""
 build_args=()
 while (($#)); do
   case "$1" in
@@ -24,6 +29,7 @@ while (($#)); do
     --target) target="$2"; shift 2 ;;
     --build-arg) build_args+=("$2"); shift 2 ;;
     --push) push=true; shift ;;
+    --rescore) rescore="$2"; shift 2 ;;
     *) echo "unknown argument $1" >&2; exit 2 ;;
   esac
 done
@@ -44,9 +50,15 @@ TRIVY_JAVA_DB_REPOSITORIES="${ESTATE_CI_TRIVY_JAVA_DB:-mirror.gcr.io/aquasec/tri
 # register the estate image scan reads (estate-platform, moved from agents under ep#693; D-1344 M1).
 EXCEPTIONS_GIT="${ESTATE_CI_EXCEPTIONS_GIT:-http://git-mirror.git-mirror.svc.cluster.local/jvallery/estate-platform.git}"
 EXCEPTIONS_PATH="${ESTATE_CI_EXCEPTIONS_PATH:-security/estate-security-report/findings-exceptions.json}"
+# The repo's zot principal, mounted by the <repo>-build set (the override exists for tests/image_rescore).
+ZOT_AUTH="${ESTATE_CI_ZOT_AUTH_DIR:-/run/secrets/zot-push}"
 
 [[ "$image" =~ ^[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)+$ ]] || { echo "invalid --image" >&2; exit 2; }
 [[ "$target" =~ ^[A-Za-z0-9_.-]{0,128}$ ]] || { echo "invalid --target" >&2; exit 2; }
+if [[ -n "$rescore" ]]; then
+  [[ "$rescore" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "invalid --rescore (want sha256:<64 hex>)" >&2; exit 2; }
+  $push || { echo "--rescore needs --push (the <repo>-build set and its zot principal)" >&2; exit 2; }
+fi
 root="$(pwd -P)"
 ctx="$(realpath -m "$root/$context")"
 df="$(realpath -m "$root/$dockerfile")"
@@ -58,9 +70,10 @@ revision="$(git rev-parse HEAD)"
 source_url="$(git config --get remote.origin.url | sed -E 's#^https://[^@/]+@#https://#; s#\.git$##')"
 short="${revision:0:12}"
 if $push; then
-  [[ -r /run/secrets/zot-push/config.json ]] || { echo "--push needs the repo's zot push credential (run on a <repo>-build set)" >&2; exit 2; }
+  [[ -r "$ZOT_AUTH/config.json" ]] || { echo "--push needs the repo's zot push credential (run on a <repo>-build set)" >&2; exit 2; }
 fi
 
+if [[ -z "$rescore" ]]; then
 out_dir="${CI_EXCHANGE_DIR:-/exchange}/kaniko-out"
 mkdir -p "$out_dir"
 export K_CONTEXT="$ctx" K_DOCKERFILE="$df" K_TARGET="$target"
@@ -91,6 +104,7 @@ if ! $push; then
   echo "build-only: --push not set"
   exit 0
 fi
+fi
 
 bin="${RUNNER_TEMP:-/tmp}/estate-ci-bin"
 if [[ ! -x "$bin/crane" ]]; then
@@ -101,7 +115,19 @@ if [[ ! -x "$bin/crane" ]]; then
   tar -xzf "$bin/crane.tgz" -C "$bin" crane
   rm -f "$bin/crane.tgz"
 fi
-export DOCKER_CONFIG=/run/secrets/zot-push
+export DOCKER_CONFIG="$ZOT_AUTH"
+if [[ -n "$rescore" ]]; then
+  # Re-score only a digest of this image that this repository built: it must exist in zot (crane config
+  # fails otherwise) and its source label must name this checkout's repository.
+  digest="$rescore"
+  cfg="$("$bin/crane" config --insecure "${ORIGIN}/${image}@${digest}")" \
+    || { echo "rescore: ${image}@${digest} is not in the registry" >&2; exit 2; }
+  label="$(jq -r '.config.Labels["org.opencontainers.image.source"] // empty' <<<"$cfg")"
+  [[ -n "$source_url" && "$label" == "$source_url" ]] \
+    || { echo "rescore: ${image}@${digest} was not built by ${source_url} (source label: ${label:-none})" >&2; exit 2; }
+  echo "rescore: ${image}@${digest} (built from revision $(jq -r '.config.Labels["org.opencontainers.image.revision"] // "unknown"' <<<"$cfg"))"
+  short="${digest:7:12}"
+else
 # gha- prefix: native CI pushes sha-<12> for the same commit during a parallel run.
 tag="gha-${short}"
 pushed="$("$bin/crane" push --insecure "$K_TAR" "${ORIGIN}/${image}:${tag}")"
@@ -127,6 +153,7 @@ done
 rm -f "$rb_err"
 [[ "$readback" == "$digest" ]] || { echo "digest readback mismatch" >&2; exit 1; }
 rm -f "$K_TAR"
+fi
 ref="${PUBLIC}/${image}@${digest}"
 
 # --- critical-CVE gate (estate-ci#127). The digest stays in zot when blocked, so an owner can add an
@@ -147,7 +174,7 @@ if [[ -x "$bin/trivy" ]]; then
   if "${t[@]}" image --download-db-only --db-repository "$TRIVY_DB_REPOSITORIES" >&2 \
      && "${t[@]}" image --download-java-db-only --java-db-repository "$TRIVY_JAVA_DB_REPOSITORIES" >&2; then
     db_updated="$("${t[@]}" version --format json | jq -r '.VulnerabilityDB.UpdatedAt // empty')"
-    DOCKER_CONFIG=/run/secrets/zot-push "${t[@]}" image --skip-db-update --skip-java-db-update --insecure \
+    DOCKER_CONFIG="$ZOT_AUTH" "${t[@]}" image --skip-db-update --skip-java-db-update --insecure \
       --scanners vuln --timeout 15m --format json --output "$gate_dir/report.json" \
       "${ORIGIN}/${image}@${digest}" >&2 || { echo "cve-gate: trivy scan failed" >&2; rm -f "$gate_dir/report.json"; }
   else
@@ -173,7 +200,7 @@ if ((gate_rc == 0)); then
     rm -f "$bin/oras.tgz"
   fi
   bash "$(dirname "$0")/sbom-attach.sh" --trivy "$bin/trivy" --oras "$bin/oras" --cache "$gate_dir/cache" \
-    --registry-config /run/secrets/zot-push/config.json --ref "${ORIGIN}/${image}@${digest}" || true
+    --registry-config "$ZOT_AUTH/config.json" --ref "${ORIGIN}/${image}@${digest}" || true
 fi
 rm -rf "$gate_dir"
 ((gate_rc == 0)) || { echo "cve-gate blocked ${ref}: no digest output, so no pin PR" >&2; exit 1; }
