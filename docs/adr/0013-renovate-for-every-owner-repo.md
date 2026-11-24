@@ -110,8 +110,9 @@ closing its open `renovate/` PRs.
 |---|---|---|
 | 0 | estate-ci | Live since estate-ci#110; widened to github-actions here |
 | 1 | estate-platform, storage-infra, network-infra, proxmox-infrastructure, monitoring-stack, cortex-ai-compute | Active from this PR. Each is skipped until its `renovate.json` PR merges; a `not-covered` row needs the App installed (Jason) |
-| 2 | sentinel, homeassistant, immich-config, docs, orbit, kepler, options-tracker, weather, tictactoe, research-vault, verdify-platform, verdify-www, ImagineProposals, crm, memoryos, wordpress, sunshine_club | probe clean (or installs granted), then one estate-ci PR moving 2 into `active_batches` |
+| 2 | sentinel, immich-config, docs, orbit, kepler, options-tracker, weather, tictactoe, research-vault, verdify-platform, verdify-www, ImagineProposals, crm, memoryos, wordpress, sunshine_club | probe clean (or installs granted), then one estate-ci PR moving 2 into `active_batches` |
 | 3 | AI_presentation, vallery-family, radio | Same as batch 2 |
+| 4 | homeassistant | Enable its version detector independently after its repository configuration merges |
 | exception (proposed) | agents, home-dotfiles, vault-personal, sunshine-research, VerdifyConsultancy/research-template, VerdifyConsultancy/.github | Jason decision, then a STD-OPS-02 exception row in estate-platform `docs/estate/STANDARDS.md` naming estate-ci#261 |
 
 options-tracker has outside write collaborators, so the App key never goes there
