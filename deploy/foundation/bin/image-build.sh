@@ -40,9 +40,10 @@ ORAS_VERSION=1.3.6
 ORAS_SHA256=66fb0ad7206f3f6fa77ed5b552049d364ccf4b50b1684554f731f76302b52ca0
 TRIVY_DB_REPOSITORIES="${ESTATE_CI_TRIVY_DB:-mirror.gcr.io/aquasec/trivy-db:2,ghcr.io/aquasecurity/trivy-db:2}"
 TRIVY_JAVA_DB_REPOSITORIES="${ESTATE_CI_TRIVY_JAVA_DB:-mirror.gcr.io/aquasec/trivy-java-db:1,ghcr.io/aquasecurity/trivy-java-db:1}"
-# R26 findings exceptions, read anonymously from the in-cluster git mirror (no credential, STD-CI-15).
-EXCEPTIONS_GIT="${ESTATE_CI_EXCEPTIONS_GIT:-http://git-mirror.git-mirror.svc.cluster.local/jvallery/agents.git}"
-EXCEPTIONS_PATH="${ESTATE_CI_EXCEPTIONS_PATH:-platform/kubernetes/ci/estate-security-report/findings-exceptions.json}"
+# R26 findings exceptions, read anonymously from the in-cluster git mirror (no credential, STD-CI-15): the
+# register the estate image scan reads (estate-platform, moved from agents under ep#693; D-1344 M1).
+EXCEPTIONS_GIT="${ESTATE_CI_EXCEPTIONS_GIT:-http://git-mirror.git-mirror.svc.cluster.local/jvallery/estate-platform.git}"
+EXCEPTIONS_PATH="${ESTATE_CI_EXCEPTIONS_PATH:-security/estate-security-report/findings-exceptions.json}"
 
 [[ "$image" =~ ^[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)+$ ]] || { echo "invalid --image" >&2; exit 2; }
 [[ "$target" =~ ^[A-Za-z0-9_.-]{0,128}$ ]] || { echo "invalid --target" >&2; exit 2; }
