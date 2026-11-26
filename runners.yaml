@@ -202,8 +202,7 @@ sets:
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.99 CPU, 2026-11-06T12Z..11-10T00Z (1600m -> 1000m); limits unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.88 GiB, prometheus 1.88 / replica 1.87, read 2026-11-21T02:15Z); request unchanged.
-        job_resources: {cpu: 1000m, memory: 1664Mi, limit_cpu: "8", limit_memory: 4Gi}
+        job_resources: {cpu: 1000m, memory: 1664Mi, limit_cpu: "8", limit_memory: 8Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.10 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
