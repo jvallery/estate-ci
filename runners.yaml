@@ -206,8 +206,10 @@ sets:
   - repo: jvallery/weather
     profiles:
       ci:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
-        max: 9
         # estate-ci#80 / weather#293 (EXEC-W2-CS 2026-11-18): 6c10ebd4 -> 128f86e1, openexr CVE-2026-42216/42217
         # fixed (cve-gate verdict=pass, no-fix-only). Revert: 6c10ebd4ddb8326727fb0f7d2bf6bcfea9bf1dec4a356f82a74dd8a7537a3baa.
         job_image: registry.vallery.net/jvallery/weather-ci@sha256:128f86e1a25b2cb3a8ea4a1a0f4341dc0bc469c6f2e0e88fd9b9cf798390ea32
@@ -218,14 +220,18 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.10 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 6 -> 4 (donor: 24 h peak 1 runner).
-        max: 4
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.90 CPU, 2026-11-06T12Z..11-10T00Z (2000m -> 900m); limits unchanged.
         kaniko_resources: {cpu: 900m, memory: 512Mi, limit_cpu: "8", limit_memory: 12Gi}
       buildcheck:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "8", limit_memory: 12Gi}
   # Research Vault v2 (research-vault#200, second pilot; COORD 2026-11-06).
   # Native steps -> profiles: lint-unit and manifests -> research-vault-ci,
@@ -245,12 +251,14 @@ sets:
   - repo: jvallery/research-vault
     profiles:
       ci:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # COORD GO-FAST 2026-11-06 ~18:0xZ (Jason first-hand: "Drive FAST"): 3 -> 4.
         # D-39 (Jason 2026-11-06 ~21:15Z): 4 -> 12.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 12 -> 16 (queue p90 7.5 min, busy hit 12).
         # D-87 hold absorb (CI-BALANCE, COORD 2026-11-07): node6 hold +4 vCPU -> 16 -> 18.
         # TEMPORARY (COORD 2026-11-17T19:36:11Z): 18 -> 6 until release 8a ends (22:00Z); node7/node5 CPU starvation (Longhorn RWX false failover, Argo repo-server lag) and 8a runner slots. Revert PR follows.
-        max: 6
         job_image: registry.vallery.net/jvallery/vault-ci@sha256:5aa9ce134834104c594e2dd0883c3a8443534eee9659b3cb59022a153be14412
         job_uid: 1001
         # COORD 2026-11-06 ~20:0xZ (Jason: accelerate RV2 CI): 'unit' took 30-36 min
@@ -263,11 +271,13 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.11 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       pg:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # COORD 2026-11-06 ~18:4xZ (D5 critical path, Jason GO): 1 -> 3.
         # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 9 -> 12 (running+pending hit 9; queue p90 7.5 min).
         # TEMPORARY (COORD 2026-11-17T19:36:11Z): 12 -> 4, same reason and revert.
-        max: 4
         job_image: registry.vallery.net/jvallery/vault-ci@sha256:5aa9ce134834104c594e2dd0883c3a8443534eee9659b3cb59022a153be14412
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
@@ -279,9 +289,11 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = postgres active p50 0.28 CPU, 2026-11-06T12Z..11-10T00Z (350m -> 300m); limits unchanged.
         postgres_resources: {cpu: 300m, memory: 1Gi, limit_cpu: "1", limit_memory: 2Gi}
       build:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         # D-55 (Jason via COORD 2026-11-07 ~01:0xZ: RV2 needs more research-vault runners): 2 -> 3.
-        max: 3
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.44 CPU, 2026-11-06T12Z..11-10T00Z (500m -> 450m); limits unchanged.
         kaniko_resources: {cpu: 450m, memory: 384Mi, limit_cpu: "8", limit_memory: 12Gi}
   # kepler (jvallery/agents#6092, kepler#34). Job image = the python base the
@@ -292,11 +304,13 @@ sets:
   - repo: jvallery/kepler
     profiles:
       ci:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 6 -> 5 (donor: 24 h peak busy 1, peak pods 2-3).
         # COORD-W2 2026-11-18T10:54:59Z rebalance: 5 -> 3, donor to estate-platform-ci 4 -> 6
         # (gha_busy_runners 24 h p95 0, 7 d peak 3; requests freed 2 x 250m job >= 2 x 200m added).
-        max: 3
         runner_image: *toolbox
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
         job_uid: 1001
@@ -304,14 +318,18 @@ sets:
         # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.14 GiB, prometheus 0.14 / replica 0.14, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
       buildcheck:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       # Pushes jvallery/kepler-estate-mcp with zot principal ci-kepler
       # (storage-infra si#1395) via the KSOPS Secret ci-runners/zot-push-kepler.
       build:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         kaniko_resources: {cpu: 250m, memory: 1Gi, limit_cpu: "8", limit_memory: 8Gi}
   # MIGRATE-APPS repos (jvallery/agents#6092). Checks run in the estate-ci
   # toolbox; homeassistant adds sets for its two CI images (ci-<variant>).
@@ -319,7 +337,9 @@ sets:
   - repo: jvallery/docs
     profiles:
       ci:
-        max: 3
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         job_image: *toolbox
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.15 CPU, 2026-11-06T12Z..11-10T00Z (200m -> 250m); limits unchanged.
@@ -330,13 +350,18 @@ sets:
       # BUILD-APPS (D-22): docs-portal, docs-ingest, docs-kiwix with zot principal
       # ci-docs (ACL storage-infra#1387) via KSOPS Secret ci-runners/zot-push-docs.
       build:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (250m -> 350m); limits unchanged.
         kaniko_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       # docs#114: PR image builds (push: false, no zot credential) for docs-portal,
       # docs-kiwix and docs-kolibri; same Kaniko size as docs-build, default max 1.
       buildcheck:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         kaniko_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/options-tracker
     profiles:
@@ -353,14 +378,18 @@ sets:
       # BUILD-APPS (D-22): jvallery/options-tracker with zot principal
       # ci-options-tracker (ACL storage-infra#1387) via Secret ci-runners/zot-push-options-tracker.
       build:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         kaniko_resources: {cpu: 450m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/sentinel
     profiles:
       ci:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
-        max: 6
         job_image: *toolbox
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
@@ -373,8 +402,10 @@ sets:
       # prepare-promotion). Label swap: their bare run: steps execute in the
       # toolbox (python3, ruby, jq, git, gh for ADR-0009 E-1) as the runner image.
       ci-tools:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   # sunshine_club (moved from VerdifyConsultancy 2026-11-06, REPO-MOVE). Its one
@@ -400,13 +431,17 @@ sets:
       # consumer row: separate network-infra PR). Until the Secret exists a
       # dispatched job's runner Pod waits in ContainerCreating; nothing else changes.
       ops:
-        max: 1
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         secret: ops-homeassistant
         egress:
           - {cidr: 192.168.30.107/32, tcp: [22]}
       ci:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
-        max: 6
         job_image: *toolbox
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
@@ -414,9 +449,11 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.17 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
         runner_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-ha:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (at max 65%; queue p50 28 min / 24h).
-        max: 3
         job_image: registry.vallery.net/jvallery/homeassistant-ci-homeassistant@sha256:11e774f58c81ff1c2b53fb89d8391033c3cce78952b01ed0b9ad7c3eef4b67e5
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
@@ -425,8 +462,10 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.17 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
         runner_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-esphome:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # D-1359: Home Assistant rebuilds the ESPHome image with security fixes.
         job_image: registry.vallery.net/jvallery/homeassistant-ci-esphome@sha256:568a8a6ab1c6a038fe92a0a9d9a0a826a069cfeecd93c5717ee52db94e321464
         job_uid: 1001
@@ -438,13 +477,18 @@ sets:
       # mosquitto) with zot principal ci-homeassistant (ACL storage-infra#1387)
       # via Secret ci-runners/zot-push-homeassistant.
       build:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.11 CPU, 2026-11-06T12Z..11-10T00Z (350m -> 250m); limits unchanged.
         kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "8", limit_memory: 12Gi}
       # homeassistant#1137: PR build check for changed images (image-build.yml
       # push: false), credential-free (pull-only zot-pull). Kaniko sized like -build.
       buildcheck:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "8", limit_memory: 12Gi}
   # verdify-platform (DASH, verdify-platform#1397/#1402). It transfers to jvallery
   # first (D19), hence the jvallery URL. Sets follow #1402's job map, all uid 1001
@@ -466,6 +510,9 @@ sets:
   - repo: jvallery/verdify-platform
     profiles:
       ci-gate:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # estate-ci#229 C3 (D-709, Jason 2026-11-16 "make CI reliable and fast"; COORD
         # 19:16:54Z): warm, tiny, slot-free runners for verdify-platform's gate and
         # aggregate jobs (require-success, buildcheck-result, trusted-precheck,
@@ -474,12 +521,13 @@ sets:
         # network-infra ci-gate sets; VERDIFY asked ~50m/64Mi, sized like the proven
         # agents gate pods (the runner listener needs more than 64Mi). max 4, not the
         # asked ~10: the renderer caps slot-free gate sets at 4; the jobs run ~12 s each.
-        max: 4
-        min: 1
         slot: false
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
       ci:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # COORD 2026-11-06 ~18:1xZ (verdify#1402 waiting on capacity): 2 -> 3.
         # COORD 2026-11-06 ~19:1xZ (9 runs queued; #1437 migration 303 critical path): 3 -> 5.
         # D-39 (Jason 2026-11-06 ~21:15Z): 5 -> 15.
@@ -488,7 +536,6 @@ sets:
         # COORD-W2 2026-11-16T17:26:30Z (Verdify CI capacity): 6 -> 12. +6 pods x (job 800m/768Mi + runner
         # 150m/256Mi + tools/nss 100m) = +6.3 CPU / +6.1Gi requests, +6 ci-runner-slots. Quota
         # estate-ci-runner-pods read 63.25/82 CPU at 17:3xZ. Goes live after the opal window (drain reserve).
-        max: 12
         # verdify-platform#1542 (STD-EXP-13, D-242): the toolbox runner image, as
         # kepler/sentinel/sunshine_club use, so the bare-run "ci / secret-scan" job has
         # gitleaks; the python job sidecar is unchanged.
@@ -504,12 +551,14 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.12 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-tools:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # COORD/DASH 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 2 -> 6.
         # D-39 (Jason 2026-11-06 ~21:15Z): 6 -> 18.
         # COORD P0 fair share 2026-11-07 05:08Z (CI-BALANCE): 18 -> 6 until the infra backlog drains, then back to 18.
         # COORD-W2 2026-11-16T17:26:30Z (Verdify CI capacity): 6 -> 12. +6 pods x (job 350m/512Mi + runner
         # 150m/256Mi) = +3.0 CPU / +4.5Gi requests, +6 ci-runner-slots (both sets: +9.3 CPU, quota 72.6/82).
-        max: 12
         job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:678da404b6d73239d341bf0c6bd72c7c09c661587cdb2367a3edccabc5d5a66d
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
@@ -519,9 +568,11 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.14 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-esphome:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # COORD/DASH 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 1 -> 2.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (at max 89%; queue p90 65 min / 24h).
-        max: 3
         # verdify-platform#1535: baked ESPHome CI image (PlatformIO core + toolchain inside, built by
         # verdify-platform build.yml esphome-ci profile, gha-c962f188dad8, run 42838703363).
         job_image: registry.vallery.net/verdifyconsultancy/verdify-esphome-ci@sha256:288643bd5b25a534ba22205062c5c87b2acec6c8913806e6768f09111d54cc70
@@ -533,8 +584,10 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-dashboard:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # estate-ci#80 / weather#293 (EXEC-W2-CS 2026-11-18): 6c10ebd4 -> 128f86e1, openexr CVE-2026-42216/42217
         # fixed (cve-gate verdict=pass, no-fix-only). Revert: 6c10ebd4ddb8326727fb0f7d2bf6bcfea9bf1dec4a356f82a74dd8a7537a3baa.
         job_image: registry.vallery.net/jvallery/weather-ci@sha256:128f86e1a25b2cb3a8ea4a1a0f4341dc0bc469c6f2e0e88fd9b9cf798390ea32
@@ -544,16 +597,21 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.15 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         # COORD-W2 2026-11-17T11:59:42Z (estate-ci#229): 2 -> 3. Release 6 (ce2a6e51) fans out 3 Kaniko
         # builds; with 2 slots one waited 18 min. Not 4.
-        max: 3
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         kaniko_resources: {cpu: 450m, memory: 640Mi, limit_cpu: "8", limit_memory: 12Gi}
       # PR image builds without a push credential (verdify-platform#1534, STD-CI-12):
       # ci.yml builds only the images whose Dockerfile inputs a PR changes, push false.
       # Same Kaniko size as build; max 1 (default) so PR builds never crowd the build set.
       buildcheck:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         kaniko_resources: {cpu: 450m, memory: 640Mi, limit_cpu: "8", limit_memory: 12Gi}
   # jvallery/agents on ARC (D19, Jason first-hand). The job image is native CI's own
   # source-check image (native_ci_controller_deployment.IMAGE): Python 3.11-3.13,
@@ -565,11 +623,12 @@ sets:
   - repo: jvallery/agents
     profiles:
       ci-gate:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # COORD P0 2026-11-07: warm, tiny, slot-free runners for gate/aggregator
         # jobs only (the required "all"/"static"/"networking-required" checks),
         # so a green PR does not wait 10-20 min for a runner just to aggregate.
-        max: 4
-        min: 2
         slot: false
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
@@ -577,6 +636,9 @@ sets:
       # agents-native-ci-source@fec953f1) is retired. Every agents workflow runs on
       # agents-ci-tools since agents#6882 and the step 7 agents PR (build.yml plan job).
       ci-tools:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # estate-platform#43 step 2 (W2, 2026-11-13): the direct agents gate
         # (ci/check.sh via .github/workflows/ci.yml, context 'ci / all') runs on the
         # shared estate-ci ci-tools image instead of agents-native-ci-source. Built
@@ -588,7 +650,6 @@ sets:
         # max 4 queued one run behind another (STD-CI-03, PR median < 15 min). +8
         # runners = +4 CPU / +6Gi requests (job 350m/512Mi + runner 150m/256Mi); live
         # 2026-11-14T22:5xZ estate-ci-runner-pods requests.cpu 31.1/82, memory 20.3/365Gi.
-        max: 12
         job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:678da404b6d73239d341bf0c6bd72c7c09c661587cdb2367a3edccabc5d5a66d
         job_uid: 1001
         # proxmox-infrastructure#868: job 7-day max working set 0.161 GiB across 12 runners; request 512Mi -> 256Mi, limit unchanged.
@@ -602,8 +663,10 @@ sets:
       # memory; 12Gi limit adds headroom for the research-runtime and argocd images.
       # No buildcheck set: native never built agents images on PRs.
       build:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # COORD GO-FAST 2026-11-06 ~18:0xZ: 2 -> 4.
-        max: 4
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.62 CPU, 2026-11-06T12Z..11-10T00Z (1400m -> 650m); limits unchanged.
         kaniko_resources: {cpu: 650m, memory: 2304Mi, limit_cpu: "8", limit_memory: 12Gi}
   # estate-ci's own self-test (R1: no GitHub-hosted runners, even here), image
@@ -687,15 +750,19 @@ sets:
   - repo: jvallery/monitoring-stack
     profiles:
       ci-gate:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # COORD P0 2026-11-07: warm, tiny, slot-free runners for gate/aggregator
         # jobs only (the required "all"/"static"/"networking-required" checks),
         # so a green PR does not wait 10-20 min for a runner just to aggregate.
-        max: 4
-        min: 2
         slot: false
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
       ci:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # ARC-RAISE rebalance 2 (Jason via COORD 2026-11-07 00:35Z, zero-sum): 6 -> 9 (+3 from verdify-platform-ci; at max, ~20 jobs queued incl. fleet-CI exit PRs ms#1444/#1446/#1449).
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 9 -> 11 (+2 on top of rebalance 2; was at max 79%, queue p50 12 min).
@@ -726,7 +793,6 @@ sets:
         # AMC-CI (COORD D-902, 2026-11-20T04:50Z): 10 -> 16 with the job request 4 -> 2.5 (Pod 4.2 -> 2.7 CPU):
         # 16 x 2.7 = 43.2 CPU at max vs 10 x 4.2 = 42.0 (+1.2 CPU of requests). After ec#328 the quota fell to
         # 43-60/82 and max 10 became the limiter (10 running, 27 runs queued). Revert: max 10, job cpu "4".
-        max: 16
         # pi#1036: per-set soft hostname spread, so the set's 8-CPU bursts do not stack on one worker.
         set_spread: true
         job_image: *toolbox
@@ -751,28 +817,36 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.18 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
         runner_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         kaniko_resources: {cpu: "1", memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
       buildcheck:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # monitoring-stack#1572: PR builds of the ci/images.tsv images (build.yml
         # pull_request, push: false); no push credential. Path-filtered and rare, so
         # one runner, sized like build. No quota change: it competes inside the
         # existing estate-ci-runners envelope.
-        max: 1
         kaniko_resources: {cpu: "1", memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/network-infra
     profiles:
       ci-gate:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # COORD P0 2026-11-07: warm, tiny, slot-free runners for gate/aggregator
         # jobs only (the required "all"/"static"/"networking-required" checks),
         # so a green PR does not wait 10-20 min for a runner just to aggregate.
-        max: 4
-        min: 2
         slot: false
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
       ci:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 6 -> 8 (at max 96%; queue p50 8 min, 136/197 jobs > 5 min).
         # D-488 (Jason 2026-11-09): 8 -> 10. 48 h to 2026-11-10T00:35Z: GitHub assigned more jobs than
@@ -780,7 +854,6 @@ sets:
         # COORD-W2 2026-11-16T23:49:11Z (evening CI throughput): 10 -> 14. The only set at max (10/10,
         # 1 pending) at 23:5xZ; quota estate-ci-runner-pods read 30.15/82 CPU. +4 runners x 0.40 CPU.
         # Revert: 14 -> 10.
-        max: 14
         job_image: *toolbox
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
@@ -790,16 +863,20 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.14 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 1.43 CPU, 2026-11-06T12Z..11-10T00Z (2400m -> 1450m); limits unchanged.
         kaniko_resources: {cpu: 1450m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
       buildcheck:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # network-infra#1091: PR builds of the patched kube-vip image (build.yml
         # pull_request, push: false); no push credential. Path-filtered and rare, so
         # one runner, sized like build. No quota change: it competes inside the
         # existing estate-ci-runners envelope.
-        max: 1
         kaniko_resources: {cpu: 1450m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/storage-infra
     profiles:
@@ -820,21 +897,28 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.11 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 3.
-        max: 3
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.30 CPU, 2026-11-06T12Z..11-10T00Z (2650m -> 350m); limits unchanged.
         kaniko_resources: {cpu: 350m, memory: 5Gi, limit_cpu: "8", limit_memory: 8Gi}
       # PR image builds without a push credential (storage-infra#1579, STD-CI-12):
       # build.yml builds only the images a PR changes, push false. Same Kaniko
       # size as build; max 1 (default) so PR builds never crowd the build set.
       buildcheck:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         kaniko_resources: {cpu: 2650m, memory: 5Gi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/cortex-ai-compute
     profiles:
       ci:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (queue p50 3.5 min, p90 7.5 min).
         # Jason first-hand 2026-11-10 ~20:00Z (cortex/RV/OCR health first): 3 -> 8; per-node slot caps still bound node load.
-        max: 8
         job_image: *toolbox
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
@@ -844,14 +928,19 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.12 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2. 2026-11-10 ~20:00Z cortex release queue (5 images): 2 -> 3.
-        max: 3
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.17 CPU, 2026-11-06T12Z..11-10T00Z (700m -> 250m); limits unchanged.
         kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 12Gi}
       # PR image builds without a push credential (cortex-ai-compute#552, STD-CI-12):
       # build.yml builds only the first-party contexts a PR changes, push false.
       # Same Kaniko size as build; max 1 (default) so PR builds never crowd the build set.
       buildcheck:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 12Gi}
   - repo: jvallery/proxmox-infrastructure
     profiles:
@@ -1014,10 +1103,14 @@ sets:
       # only); buildcheck has no push credential. Max 1 each: rare, attended builds. MaxScale is a
       # C++ source build, so kaniko keeps the 8-CPU / 12Gi limit; requests follow the weather sets.
       build:
-        max: 1
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         kaniko_resources: {cpu: 900m, memory: 512Mi, limit_cpu: "8", limit_memory: 12Gi}
       buildcheck:
-        max: 1
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "8", limit_memory: 12Gi}
   # crm (moved from VerdifyConsultancy 2026-11-06, REPO-MOVE; jvallery/crm#142):
   # offline check ci/check.sh (python unittest allowlist, kustomize render with
@@ -1054,7 +1147,7 @@ sets:
       # memoryos#16 / memoryos#40 build.yml (estate-ci image-build): pushes
       # jvallery/memoryos:gha-<sha12> with principal ci-memoryos via
       # ci-runners/zot-push-memoryos. Default Kaniko size, max 1.
-      build: {}
+      build: {max: 0, min: 0}  # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
   # verdify-www image build (BUILD-APPS, D-22; COORD 2026-11-06). Registers once
   # jvallery/verdify-www is in runner App installation 179108157 (Jason). build
   # needs the KSOPS Secret zot-push-verdify-www (zot principal ci-verdify-www,
@@ -1075,25 +1168,28 @@ sets:
         # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.79 GiB, prometheus 0.79 / replica 0.79, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 600m, memory: 640Mi, limit_cpu: "8", limit_memory: 4Gi}
       build:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
       # PR image build check without a push credential (verdify-www#65, STD-CI-12,
       # STD-CI-09): ci.yml builds only when a PR changes Dockerfile or package
       # files, push false. Default size and max 1.
-      buildcheck: {}
+      buildcheck: {max: 0, min: 0}  # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
   # estate-platform gates (SPRINT-X E0, D-78 Jason 2026-11-07; home-dotfiles#77).
   # Registers once jvallery/estate-platform is in runner App installation
   # 179108157 (Jason). Offline gates only: gitleaks, YAML/SOPS, kustomize build.
   - repo: jvallery/estate-platform
     profiles:
       ci-gate:
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # COORD-W2 2026-11-18T11:05:02Z demand cut: warm, tiny, slot-free runners for the
         # two light reusable checks of every CI run ("lint / lint" and
         # "kustomize-exec-guard / exec-guard", stdlib Python + PyYAML in the toolbox runner
         # image), so estate-platform-ci slots serve only estate-platform-gates. Same shape as
         # the agents and network-infra ci-gate sets.
-        max: 4
-        min: 1
         slot: false
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
@@ -1113,5 +1209,7 @@ sets:
       # (principal ci-estate-platform, storage-infra ACL). Sizes as agents-build (the
       # argocd and CNPG Go builds). No buildcheck set: these never built on PRs.
       build:
-        max: 1
+        # CI-09 r3 P2 (walk hop 1, D-1379): non-claim set paused from stage A to stage B (warm gate min to 0); restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         kaniko_resources: {cpu: 1400m, memory: 2304Mi, limit_cpu: "8", limit_memory: 12Gi}

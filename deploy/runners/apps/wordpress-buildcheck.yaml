@@ -19,7 +19,7 @@ spec:
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: wordpress-buildcheck
         minRunners: 0
-        maxRunners: 1
+        maxRunners: 0
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller
