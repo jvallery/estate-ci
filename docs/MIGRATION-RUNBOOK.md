@@ -1,41 +1,43 @@
-# Migrating a repository to estate-ci
+# Onboarding a repository to estate-ci
 
-The per-repo recipe for jvallery/agents#6092 (FLEET-DECOM). One repo at a time
-per lane, following the estate operating contract and steer (L1 to L12). The
-order is: add the runners and workflows, run them in parallel with native CI,
-switch the required checks, turn on build/pin, then remove the native-ci
-catalog entry. Every step can be undone on its own.
+The recipe for giving a jvallery repository runner sets, workflows, required
+checks and, if it builds images, a build and digest-pin flow. Every step can be
+undone on its own (see "Rollback per step").
 
 Notation: `<owner>/<repo>`, `<r>` = repo name lowercased with `_` and `.` → `-`
-(the scale-set prefix). Receipts go in your lane's receipts directory.
+(the scale-set prefix).
 
-## 0. Preconditions (once, estate-wide)
+Only jvallery repositories get runners (ADR-0002): there are no
+VerdifyConsultancy or organization-level sets. A VerdifyConsultancy repository
+that needs CI is transferred to jvallery first, then onboarded here. Commits to
+repositories still in VerdifyConsultancy must not contain operator-machine
+paths.
 
-- `estate-ci-foundation`, `estate-ci-runners` and `estate-ci-secrets` Synced/Healthy;
-  `kubectl -n ci-runners get secret arc-github-app-jvallery zot-pull`.
-- The repo's own Argo Application, if any, is unchanged by this work: CI never deploys
-  directly; merged pins do.
+## 0. Preconditions
 
-## 1. Inventory (read-only)
+- `estate-ci-foundation`, `estate-ci-runners` and `estate-ci-secrets` are
+  Synced and Healthy, and
+  `kubectl -n ci-runners get secret arc-github-app-jvallery zot-pull` lists both.
+- The GitHub App `vallery-ci-runners` (installation 179108157) covers the
+  repository. It is installed on all jvallery repositories; if a new set's
+  listener in `arc-systems` cannot register, check the installation first.
+- CI never deploys directly. The repository's own Argo CD Application is
+  unchanged by this work: merged digest pins are what deploy.
 
-From the repo's native catalog row (`jvallery/agents`
-`control-plane/agent-fleet-control/registry/repos/gh-<id>.yaml`, `ci_submission`):
-copy the validation steps (name, image, command), the build profiles
-(dockerfile, context, target, build args, path filters) and the delivery mode.
-Note the required checks today:
+## 1. Plan the profiles
+
+List what the repository's checks need and save its current required checks,
+which are your rollback for step 5:
 `gh api repos/<owner>/<repo>/rulesets` and
-`gh api repos/<owner>/<repo>/branches/main/protection` (save both as JSON:
-these are your rollback).
+`gh api repos/<owner>/<repo>/branches/main/protection`.
 
-Map each native step to a profile:
-
-| Native step | estate-ci |
+| Check | estate-ci |
 |---|---|
 | command in a repo CI image (`image: registry.vallery.net/...-ci@sha256`) | `ci` profile with `job_image:` that digest, `checks.yml` `in-job-image: true` |
-| plain command (python/node/ruby on the toolbox) | `ci` profile, `checks.yml` (use `actions/setup-*` steps in a custom job if tools are missing) |
+| plain command (python/node/ruby on the toolbox) | `ci` profile, `checks.yml` |
 | Postgres-backed suite | `pg` profile, `runner: <r>-pg`, `postgres: true`; shard with a matrix of `checks.yml` calls, each under 15 min |
-| image build | `build` profile, `image-build.yml`; plan the matrix with `build-plan.yml` (not a repo copy of `build_plan.py`) |
-| kustomize build + kubeconform | `kustomize-validate.yml` (repo-specific gates stay repo scripts via `checks.yml`) |
+| image build | `build` and `buildcheck` profiles, `image-build.yml`; plan the matrix with `build-plan.yml` |
+| kustomize build + kubeconform | `kustomize-validate.yml` (repo-specific checks stay repo scripts via `checks.yml`) |
 
 ## 2. Registry principal (only if the repo builds images)
 
@@ -44,58 +46,55 @@ Owner: jvallery/storage-infra. Follow its zot principal procedure
 
 1. storage-infra PR: exact zot ACL rule(s) for the repo's image paths, e.g.
    `jvallery/<repo>` and `jvallery/<repo>-*`, with policies
-   `ci-<r>`: read/create/update, `cluster-pull`: read, and, **until step 6**,
-   `jvallery-ci`: read/create/update (the native writer the longer rule would
-   otherwise lock out). No delete, no admin.
+   `ci-<r>`: read/create/update and `cluster-pull`: read. No delete, no admin.
 2. Generate the password in a private, mode-0600 process; add one bcrypt
    htpasswd entry `ci-<r>` to `registry-origin/zot-origin-htpasswd` with a
    resourceVersion-fenced JSON patch; reconcile only the registry-origin
-   ConfigMap/StatefulSet at the merged revision (zot restarts: announce in steer,
-   check no other lane is pushing, one Ready pod, PVC UID unchanged).
-3. Seal the consumer copy into central KSOPS, never printing it: a
+   ConfigMap/StatefulSet at the merged revision. zot restarts, so first check
+   that no build is pushing; afterwards check one Ready pod and an unchanged
+   PVC UID.
+3. Seal the consumer copy without printing it: a
    `kubernetes.io/dockerconfigjson` Secret `zot-push-<r>` (key `.dockerconfigjson`,
-   auth for `registry-origin.registry-origin.svc.cluster.local:5000`) in
-   jvallery/agents `platform/gitops/secrets-ksops/estate-ci/`, added to that
-   bundle's generator (agents PR, COORD-ASK; delivered by `estate-ci-secrets`).
+   auth for `registry-origin.registry-origin.svc.cluster.local:5000`) as
+   `secret-zot-push-<r>.enc.yaml` in jvallery/estate-platform
+   `secrets/estate-ci/`, added to that bundle's `secret-generator.yaml` and
+   delivered by `estate-ci-secrets` (pinned: move its pin to the merge commit).
    The renderer mounts it only into `<r>-build` runner containers. No GitHub
-   secrets or environments are involved (R2).
-4. Prove value-blind: an upload start to the repo's path is 202; to another
-   repo's path 401/403.
+   secrets or environments are involved.
+4. Prove it without reading the value: an upload start to the repo's path is
+   202; to another repo's path 401/403.
 
 ## 3. Runners (PR to jvallery/estate-ci)
 
 Add the repo to `runners.yaml` (`profiles: {ci: {...}, pg: {...}, build: {...}, buildcheck: {...}}`),
 run `python3 scripts/render_runners.py`, and open a PR. In the same PR, raise
-`deploy/foundation/quota.yaml` by what the new sets need, and write the matching
-decrease of the repo's native budget in the PR body (it lands in step 6).
-Merge when `self-test` is green. `estate-ci-runners` auto-syncs (prune off);
-check `kubectl -n ci-runners get autoscalingrunnerset <r>-ci` and the listener
+`deploy/foundation/quota.yaml` by what the new sets need. Merge when the
+required checks are green.
+
+`estate-ci-runners` is pinned to an estate-ci commit and to an explicit
+`directory.include` file list in jvallery/estate-platform
+`gitops/applications/local-staging/estate-ci-applications.yaml`. Move the pin
+to your merge commit (`targetRevision` and the
+`agent-fleet.vallery.net/source-revision` annotation), add the new
+`deploy/runners/apps/<r>-*.yaml` files to the include list, and deliver it.
+The pin delivers every runner change between the old and the new commit, so
+read `git diff <old>..<new> -- deploy/runners/apps` first.
+
+Check `kubectl -n ci-runners get autoscalingrunnerset <r>-ci` and the listener
 in `arc-systems`.
 
-During Lease-held worker maintenance, the planner re-reads an EphemeralRunner
-before evicting its idle Pod with a UID precondition. Idle runners have no
-assigned job ID or job request ID, and ARC can replace their Pods on schedulable
-workers. Runners with an assigned job remain subject to the planner's bounded
-batch wait. The worker-run receipt records accepted idle Pod evictions under
-`evictions.idle_runners_evicted`. See the
-[planned maintenance runbook](https://github.com/jvallery/proxmox-infrastructure/blob/main/config/k3s-planned-maintenance/README.md)
-for the drain sequence.
+During planned worker maintenance, the maintenance tool evicts an idle
+EphemeralRunner Pod (one with no assigned job) and ARC replaces it on another
+worker; runners with an assigned job are waited for. See the
+[planned maintenance runbook](https://github.com/jvallery/proxmox-infrastructure/blob/main/config/k3s-planned-maintenance/README.md).
 
-jvallery only (D19, ADR-0002): there are no VerdifyConsultancy or org-level
-sets. A VerdifyConsultancy repository that needs CI is transferred to jvallery
-first (REPO-MOVE), then onboarded here like any jvallery repository.
-Commits to repositories still in VerdifyConsultancy must not contain
-operator-machine paths or the string naming the fleet repo.
-
-## 4. Workflows in parallel (PR to the repo)
+## 4. Workflows (PR to the repo)
 
 Copy `docs/examples/ci.yml` (and `build.yml` if the repo builds) into
 `.github/workflows/`, with every `uses:` pinned to the current estate-ci SHA.
 Keep the job ids and names stable: they become the required check contexts
-(`<job id> / <name>`). In this phase:
+(`<job id> / <name>`).
 
-- `ci.yml` runs on PRs and `main` next to native CI. Native stays required.
-- `build.yml` is either absent or `push: false` on `<r>-buildcheck` (native still pushes and pins).
 - Every workflow must pass the estate-ci lint (`lint.yml`, the `workflow-lint`
   job in the example; locally `python3 deploy/foundation/bin/lint-workflows.py <repo>`
   from an estate-ci checkout): ARC labels only, `actions/checkout@<sha>` and
@@ -105,64 +104,49 @@ Keep the job ids and names stable: they become the required check contexts
   `secrets.*`, long inline shell) become errors with `strict: true`. Replace
   `actions/setup-*`, cache and marketplace actions with repo scripts or a
   `job_image` that already contains the toolchain.
-- Concurrency: `cancel-in-progress` on PRs only (see the example). That replaces
-  native's supersession and re-plan logic; a moved `main` does not rerun anything (L1).
-
-**Parallel-run gate (fast path, D19, ADR-0008):** merge-gated or image-building
-repos need 5 PRs where every estate-ci check finished and matched native's
-verdict; static-only repos need 3 runs including one `main` push. There is no
-minimum duration (no 48-hour wait).
-A red estate-ci check with green native is a migration bug: fix it before
-continuing. Infra failures: `gh run rerun --failed` once, then report (L2).
-
-- Public repos: `scripts/fork-policy.sh check <owner/repo>` (operator, `gh` admin
+- Concurrency: `cancel-in-progress` on PRs only (see the example). A push to a
+  PR supersedes its run; a moved `main` does not rerun anything.
+- An infrastructure failure: `gh run rerun <run-id> --failed`.
+- Public repos: `scripts/fork-policy.sh check <owner/repo>` (`gh` admin
   auth) must pass; `apply` sets approval for all outside collaborators.
 
-## 5. Switch required checks
+## 5. Required checks
 
-One API write per repo, with the before/after JSON in receipts:
+One API write per repo:
 
 - Ruleset repos: `gh api -X PUT repos/<owner>/<repo>/rulesets/<id>` with the
   `required_status_checks` rule listing the new contexts and
   `integration_id: 15368` (GitHub Actions).
-- Classic protection (e.g. weather): `gh api -X PATCH
+- Classic protection: `gh api -X PATCH
   repos/<owner>/<repo>/branches/main/protection/required_status_checks` with
   `{"strict": false, "checks": [{"context": "lint / lint", "app_id": 15368}, ...]}`.
-- Repos where the plan cannot enforce checks (`jvallery/options-tracker`, see J-2;
-  VerdifyConsultancy repos do not run on estate-ci until transferred, D19): skip the write. The checks are
-  **advisory**: the lane merges only when they are green (compare-check), and
-  states "advisory" in the PR.
+- Repos whose GitHub plan cannot enforce checks (`jvallery/options-tracker`):
+  skip the write. The checks are advisory there: merge only when they are
+  green.
 
-Keep "require branches to be up to date" **off**. Rollback: re-PUT the saved JSON.
+Keep "require branches to be up to date" **off**. Record the expected contexts
+in jvallery/estate-platform `ownership/record/branch-protection-baseline.yaml`.
+Rollback: re-PUT the JSON saved in step 1.
 
 Open a no-op PR to prove the new contexts gate and pass.
 
-## 6. Build, pin, and retire native for this repo
+## 6. Build and pin (only if the repo builds images)
 
-1. Repo PR: `build.yml` with `push: true` and the `pin` job. Merge.
-2. jvallery/agents PR (own PR, COORD-ASK): set the repo's catalog row
-   `ci_submission.activation: disabled` (and `events.activation: disabled`), so
-   native stops validating, building and pinning; lower its native budget by
-   what step 3 added. Remove `jvallery-ci` from the repo's zot rule
-   (storage-infra PR) once native no longer pushes there.
+1. Set the repository's Actions secret `PIN_BOT_PRIVATE_KEY` and variable
+   `PIN_BOT_CLIENT_ID` (GitHub App `vallery-pin-bot`), so that pin PRs start
+   their own checks. Without them the pin PR stays blocked on required checks.
+2. Repo PR: `build.yml` with `push: true` and the `pin` job. Merge.
 3. Verify end to end on one real change:
    - `build` run green; the step summary shows `registry.vallery.net/<image>@sha256:…`;
      `crane digest` of `:gha-<sha12>` equals it.
-   - The pin PR exists, its dispatched `ci` checks are green, merge it.
-   - Argo: the repo's Application is Synced/Healthy at the merge revision and the
-     workload's `imageID` is the new digest. Live probe the changed behaviour.
-4. Soak 10 minutes (CI-only change, L10), then close the repo's migration issue
-   with the evidence (an independent verifier closes, L9).
+   - The pin PR exists and its checks are green; merge it.
+   - Argo CD: the repo's Application is Synced and Healthy at the merge
+     revision and the workload's `imageID` is the new digest. Probe the
+     changed behaviour live.
 
-## 7. Clean up (after the epic's purge gate)
+## Forgejo/Gitea Actions portability checklist
 
-Remove the repo's legacy `github-runners` scale set and auth Application (if it
-had one) and its native catalog row, in the agents delete-set that FLEET-DECOM
-runs through COORD.
-
-## Forgejo/Gitea Actions portability checklist (R3)
-
-Run through this for every migrated repo; it is what keeps the later forge
+Run through this for every onboarded repo; it is what keeps a later forge
 move a re-registration rather than a rewrite.
 
 - [ ] Every `runs-on` is an estate ARC label; `lint.yml` passes (ideally with `strict: true`).
@@ -192,8 +176,8 @@ move a re-registration rather than a rewrite.
 
 | Step | Undo |
 |---|---|
-| 2 | Revert the ACL PR, re-reconcile registry-origin, remove the htpasswd entry after no consumer remains, remove `zot-push-<r>` from the estate-ci KSOPS bundle. |
-| 3 | Revert the estate-ci PR; Argo leaves the set (prune off): delete the Application `estate-ci-runner-<r>-*` by UID. |
+| 2 | Revert the ACL PR, re-reconcile registry-origin, remove the htpasswd entry after no consumer remains, remove `zot-push-<r>` from the estate-ci secrets bundle. |
+| 3 | Revert the estate-ci PR and move the pin back. Argo CD leaves the set (prune is off): delete the Application `estate-ci-runner-<r>-*` and its `AutoscalingRunnerSet` by name. |
 | 4 | Delete the workflow files. |
 | 5 | Re-PUT the saved ruleset/protection JSON. |
-| 6 | Re-enable the native catalog row (agents PR) and set `push: false`. |
+| 6 | Set `push: false`. |

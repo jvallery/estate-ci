@@ -2,7 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": [
     "estate-ci#261: estate-wide Renovate policy (self-hosted global config, RENOVATE_CONFIG_FILE in scripts/renovate-run.sh). Repository options here are defaults for every covered repository; each repository's renovate.json chooses its managers and may add packageRules.",
-    "Renovate proposes PRs only. It never merges, adds digest pins, rewrites first-party or mirrored zot digests (pin-bump.yml and mirrors.txt own those), moves estate-ci reusable-workflow pins or Argo git revisions (L4), and never rebases a PR unless it conflicts (L1)."
+    "Renovate proposes PRs only. It never merges, adds digest pins, rewrites first-party or mirrored zot digests (pin-bump.yml and mirrors.txt own those), moves estate-ci reusable-workflow pins or Argo git revisions, and never rebases a PR unless it conflicts."
   ],
   "platform": "github",
   "onboarding": false,
@@ -26,7 +26,7 @@
   "prConcurrentLimit": 3,
   "prHourlyLimit": 2,
   "prBodyNotes": [
-    "Proposed by the estate version detector (jvallery/estate-ci renovate.yml, STD-OPS-02). It merges only through this repository's normal path: CI, the merge train and any COORD GO or pin rule still apply. Renovate never merges or syncs."
+    "Proposed by the estate version detector (jvallery/estate-ci renovate.yml, STD-OPS-02). It merges like any other pull request in this repository: when the required checks are green. Renovate never merges or syncs."
   ],
   "packageRules": [
     {
@@ -47,7 +47,7 @@
       "enabled": false
     },
     {
-      "description": "Argo Application git revisions are SHA pins moved by the consolidated pin PR (L4). Helm chart versions in Applications stay proposable.",
+      "description": "Argo Application git revisions are SHA pins moved by whoever delivers the change. Helm chart versions in Applications stay proposable.",
       "matchManagers": ["argocd"],
       "matchDatasources": ["git-tags", "git-refs"],
       "enabled": false

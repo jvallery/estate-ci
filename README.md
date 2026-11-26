@@ -6,10 +6,9 @@ the `vallery` k3s cluster, in-cluster image builds pushed to
 no dependency on the jvallery/agents fleet code (native-ci controller, repo
 cells, brokers, repo-auth, the fleet registry or its ARC renderer).
 
-Migrating a repo: [`docs/MIGRATION-RUNBOOK.md`](docs/MIGRATION-RUNBOOK.md).
-Tracking: jvallery/agents#6092 (FLEET-DECOM epic), jvallery/agents#6094 (this foundation).
+Onboarding a repo: [`docs/MIGRATION-RUNBOOK.md`](docs/MIGRATION-RUNBOOK.md).
 Decisions and exceptions: [`docs/adr/`](docs/adr/README.md); the one Actions-secret
-exception (D-52, `PIN_BOT_PRIVATE_KEY`) is E-2 in ADR-0011.
+exception (`PIN_BOT_PRIVATE_KEY`) is E-2 in ADR-0011.
 Image tags and registry retention classes: [`docs/image-tags-and-retention.md`](docs/image-tags-and-retention.md).
 
 ## What is here
@@ -36,14 +35,14 @@ Image tags and registry retention classes: [`docs/image-tags-and-retention.md`](
 ## Design
 
 **Runners.** The ARC controller (`arc-systems/arc-gha-rs-controller`,
-gha-runner-scale-set-controller 0.14.2, two replicas with leader election,
+gha-runner-scale-set-controller, two replicas with leader election,
 cluster-wide) serves scale sets in namespace `ci-runners`. It is the
 `controller` block of `runners.yaml`, rendered as Application `arc-controller`
 (chart version shared with the scale sets through `defaults.chart_version`),
 with its `arc-systems` support objects in `deploy/arc-systems/` (estate-ci#192). Each set is an Argo Application of the upstream chart with
 values rendered from `runners.yaml`; sets scale from 0. `jvallery` is a user
-account, so its sets are per repository. Only jvallery repositories get sets
-(D19); VerdifyConsultancy repositories move to jvallery before they use CI. The scale-set name is the
+account, so its sets are per repository. Only jvallery repositories get sets;
+VerdifyConsultancy repositories move to jvallery before they use CI. The scale-set name is the
 `runs-on` label: `<repo>-ci`, `<repo>-pg`, `<repo>-build`.
 
 | Profile | Pod | Use |
@@ -70,7 +69,7 @@ jobs from another repository, fork pull requests, `pull_request_target` and
 `build` runner.
 
 **Network.** Runner Pods accept no ingress. Egress: DNS, public 80/443 (private
-ranges excluded), the split-horizon apps ingress `192.168.7.10:443` (how
+ranges excluded), the split-horizon apps ingress on 443 (how
 `registry.vallery.net` resolves in-cluster), and the zot origin on 5000.
 
 **Capacity.** The gate is node allocatable CPU plus the per-node
@@ -80,8 +79,7 @@ in `deploy/foundation/quota.yaml` are sized to every set at `maxRunners`:
 `estate-ci-runner-pods` is the compute envelope for runner Pods,
 `estate-ci-runners` holds the namespace object and ephemeral caps, and
 `estate-ci-ops` budgets the hot guard. A `maxRunners` raise raises the
-envelope in the same PR, only with live headroom on the workers. Native CI is
-retired (jvallery/agents#6254), so there is no native budget to move.
+envelope in the same PR, only with live headroom on the workers.
 
 **Builds and the registry.** `image-build.sh` drives Kaniko to build a
 tarball with `--no-push`; Kaniko holds only the cluster pull credential. With
@@ -89,7 +87,7 @@ tarball with `--no-push`; Kaniko holds only the cluster pull credential. With
 the tarball with crane to the zot origin as `<image>:gha-<sha12>`, reads the
 digest back and outputs `registry.vallery.net/<image>@sha256:…`. The push
 credential is that repo's own zot principal (write to only its image paths, in
-storage-infra's zot ACL), delivered by central KSOPS as
+storage-infra's zot ACL), delivered from jvallery/estate-platform `secrets/estate-ci/` as
 `ci-runners/zot-push-<repo>` and mounted only into that repo's `build` runner
 container. PR jobs (other sets) never have it and Dockerfile `RUN` steps never
 see it. No GitHub Environments, OIDC, Actions cache or artifact service.
@@ -111,8 +109,8 @@ unpinned one.
 
 **Pins.** `pin-bump.sh` rewrites digests (kustomize `images:` entries or
 inline `<image>@sha256:` references), pushes a branch and opens a PR. The PR is
-opened with an installation token of the GitHub App `vallery-pin-bot` (D-52;
-contents + pull_requests write, scoped per run to the calling repo), minted by
+opened with an installation token of the GitHub App `vallery-pin-bot`
+(contents + pull_requests write, scoped per run to the calling repo), minted by
 `app-token.py` (stdlib, no third-party action) from the caller-passed secret `PIN_BOT_PRIVATE_KEY` and repo
 variable `PIN_BOT_CLIENT_ID`, so `pull_request` workflows run and required
 checks attach. Without them it falls back to `GITHUB_TOKEN`, which starts no
@@ -124,27 +122,29 @@ implemented against the Gitea/Forgejo API). Merging the PR is the deploy;
 Argo CD syncs it.
 
 **Registration.** Runners register with the dedicated least-privilege GitHub App
-`vallery-ci-runners` (J-10; App ID 5636090, installation 179108157 on `jvallery`,
-selected repositories, Administration RW + Metadata RO, no webhook). Its
-credential is `ci-runners/arc-github-app-jvallery` in central KSOPS. A repository
-joins by being added to the installation's selected repositories. ARC is jvallery
-only (D19): there is no VerdifyConsultancy installation or org-level set.
+`vallery-ci-runners` (App ID 5636090, installation 179108157 on `jvallery`,
+Administration RW + Metadata RO, no webhook). Its
+credential is `ci-runners/arc-github-app-jvallery` in jvallery/estate-platform
+`secrets/estate-ci/`. A repository must be covered by that installation. ARC is
+jvallery only: there is no VerdifyConsultancy installation or org-level set.
 
 **Delivery.** Argo CD Applications `estate-ci-foundation` (AppProject
 `estate-ci`), `estate-ci-runners` (app-of-apps over `deploy/runners/apps`,
 AppProject `estate-ci-apps`; the per-set `estate-ci-runner-*` Applications are
 in `estate-ci`, and `arc-controller` and `estate-ci-arc-systems` in
-`estate-ci-arc`, destination `arc-systems` only) and `estate-ci-secrets` (central KSOPS, AppProject
-`estate-ci-secrets`) are declared once in jvallery/agents (planned to move to
-jvallery/estate-platform).
-After that, onboarding a repo touches only this repository and the repo itself.
+`estate-ci-arc`, destination `arc-systems` only) and `estate-ci-secrets` (the runner Secrets, AppProject
+`estate-ci-secrets`) are declared in jvallery/estate-platform
+`gitops/applications/local-staging/estate-ci-applications.yaml`.
+`estate-ci-foundation` and `estate-ci-arc-systems` sync automatically from
+`main`. `estate-ci-runners` is pinned to an estate-ci commit and an explicit
+file list there, so a `runners.yaml` change is live only after that pin moves.
 
 **Concurrency.** Callers set
 `concurrency: {group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}, cancel-in-progress: ${{ github.event_name == 'pull_request' }}}`,
 so a new push to a PR cancels its superseded run, and runs on `main` queue
 instead of cancelling each other.
 
-## Estate CI rules (COORD CI DESIGN RULES, 2026-11-06)
+## Estate CI rules
 
 - **R1** Every job runs on an ARC set; no GitHub-hosted runner labels anywhere
   (this repo's own `self-test` runs on `estate-ci-ci`). `check-runner-labels.sh`

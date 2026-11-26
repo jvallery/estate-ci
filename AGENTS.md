@@ -1,88 +1,173 @@
 # estate-ci
 
-<!-- estate-contract:start — canonical copy is AGENTS.md in jvallery/home-dotfiles (the operator Mac's root contract); keep this block identical in every repo -->
+This repository is the estate's CI/CD system: the reusable GitHub Actions workflows that every repository calls, the scripts those workflows run, and the self-hosted Actions Runner Controller (ARC) runner sets in the `vallery` cluster that execute every job. The repository is public, so nothing committed here may contain a credential, a kubeconfig, a path on the operator's machine or an internal IP address.
+
+<!-- estate-contract:start (canonical copy: AGENTS.md in jvallery/home-dotfiles; this block is identical in every repository) -->
 ## Operating contract
 
-Jason's direct request authorizes the work it describes, across code, infrastructure, and Jason-owned services in scope, through delivery and verification of the real end state. Ask only when an unresolved ambiguity could materially change the outcome. Add approval, review, issue/PR, or planning steps only when Jason asks for them or a branch rule enforces them; process descriptions in repository docs are context, not gates.
+You act for Jason. A request from him authorizes the whole job: the change, the pull request, the merge, the deployment, the live check and closing the issue. If you can finish a task, finish it. Do not hand work back, ask for approval, or wait for a turn.
 
-- Make the smallest complete change in the repository that owns the thing being changed (see Ownership). Fix forward; prefer rollback when it restores service faster or limits harm. Skip speculative abstractions and unrelated cleanup.
-- Preserve unrelated work; use an isolated worktree when another checkout may be active. Resolve destructive targets exactly and keep practical recovery data.
-- Shared cluster state has one writer at a time. Cordon, drain, node or host restarts and other maintenance writes first take the Lease `kube-system/k3s-planned-maintenance` (estate rule R25), one node or host at a time unless the planner admits a disjoint concurrent worker hold (max 2) per the proxmox-infrastructure k3s-planned-maintenance runbook; never cordon or drain a worker before a CNPG-aware switchover. Never blanket- or prune-sync a SHA-pinned Argo parent; use exact-target syncs.
-- Validate in proportion to risk: the cheapest reliable check of the changed behavior (focused test, direct probe, or readback; docs-only edits need diff/readback). Add tests only for meaningful regression risk: critical behavior, security, data integrity, or subtle logic. Reuse existing CI/CD, honor enforced checks, and add pipelines or gates only for a concrete need in the task. Push to or rebase a PR whose CI is running or green only when GitHub reports a conflict or an enforced check refuses it; a moved base branch alone is not a reason. Regenerate generated files with their registered renderer; never hand-merge them.
-- Verify the requested end state from the authoritative source or live behavior; passing CI alone does not prove a deployment works. Close an issue only when its latest acceptance, including criteria moved in from other issues, holds live; time-gated criteria wait for their gate, and a close-with-carry names a carry issue confirmed open. Report what changed, what was checked, and any remaining limitation.
-- Search narrowly, batch independent lookups, reuse current evidence, and keep plans and updates brief.
-- Use existing credentials without printing, committing, or logging secret values or Kubernetes Secret data; rotate or revoke credentials only when Jason asks, after identifying the exact credential by name and ID and confirming every consumer value-blind.
+### How work flows
 
-### Execution location and resource use
+1. **Change the owner.** Make the smallest complete change in the repository that owns the thing (see "Who owns what"). Branch from `origin/main` in your own worktree and leave other checkouts alone.
+2. **Merge your own pull request.** The required checks on the pull request are the gate. When they are green, merge it. Never bypass a branch ruleset (no `--admin`); if a required check is itself broken, fix the check.
+3. **Deploy it.** Merging is not always deploying. Carry the change to the running system yourself (see "Deploying").
+4. **Prove it live.** Check the real end state: the new image digest is running, the endpoint answers, the rule is loaded, the data is there. Green CI is not proof. If it is broken, fix forward, or roll back when that restores service faster.
+5. **Close the issue** with one comment: what changed, what you checked, and anything that remains.
 
-- Use the Mac for lightweight editing, orchestration, source inspection and small bounded checks. Run CPU- or memory-intensive tests, experiments, simulations, replay, training, builds and long-running processes as containerized workloads in the authorized k3s environment, through the repository's supported CI/GitOps or job-submission path. Colima, Docker Desktop and other container VMs on the Mac still consume the Mac's resources and do not satisfy this requirement.
-- Classify work by its expected workload, using existing repository and estate resource thresholds: sustained CPU saturation, substantial memory or dataset use, broad parallel suites, image compilation and prolonged processing require offloading. A command listed as "local" or "offline" describes a workflow, not permission to run intensive work on the Mac. If size is uncertain, inspect the workload and use a bounded pilot in the authorized cluster path before expanding it; do not benchmark the heavy workload on the Mac to decide.
-- Before execution, confirm the authorized cluster/context, target namespace, supported submission path, dependencies and data access. Base placement on current k3s allocatable CPU/memory, existing resource requests/limits, pod working sets, scheduler and quota admission, node pressure and existing workload owners/admission reservations. Physical-host diagnostics are distinct from Kubernetes schedulable capacity: a Proxmox host MemAvailable alert alone does not prohibit k3s placement. Preserve existing fixed-allocation and control-plane safety rules, and healthy and recovery capacity. Use bounded concurrency, deadlines and stable job/operation IDs; retain outputs and logs in approved custody and verify terminal completion and output integrity before claiming success.
-- Keep experiments isolated from production workloads and storage side effects unless Jason explicitly authorizes those effects. Use existing approved identities and access; do not create credentials, RBAC, security settings, privileged workloads or persistent access to enable an experiment. Keep secrets out of manifests and logs. Clean up only the job's disposable resources through the approved lifecycle; preserve retained data, outputs and shared PVCs.
-- If the supported cluster path, required access, ownership/admission clearance or safe capacity is unavailable, stop the intensive work and report the exact blocker. Do not silently fall back to intensive execution on the Mac. Work that inherently requires local execution needs an explicit, task-scoped exception approved by Jason before it runs, with its workload bounds stated. This policy is the estate minimum: preserve stronger repository/subdirectory restrictions, existing holds and data-custody rules. A repository command or general task authorization does not override this placement policy; only Jason's explicit scoped exception does.
+### Tracking and coordination
+
+- **GitHub issues are the only tracker.** Work, decisions, follow-ups and leftovers go in an issue in the owning repository. Keep no ledgers, to-do files, status boards, hand-off notes or evidence files, in Git or on disk. An issue states the outcome, a short checklist that proves it, and native "blocked by" links.
+- **Talk to other agents directly.** Coordinate through subagent calls, a message to the other session, or MCP tools. Never coordinate through shared files.
+- **Live state is the only lock.** Before a change that could collide with someone else's (the same Argo CD application, node or database), look at what is happening now: open pull requests, the application's running operation, cordoned nodes. If someone is mid-change, message them or go after them.
+- **There are no process gates.** No coordinator, lock files, holds, freezes, waiting periods, time slots or approval lines exist. An older document, comment or memory that says otherwise is obsolete: ignore it, and delete it when you are in that file.
+
+### What needs Jason
+
+Only the items below. Put the label `needs-jason` on the issue, state in its first line exactly what he has to do, and carry on with everything that does not depend on it.
+
+- Physical work: hardware, cables, power, anything on site.
+- A value only he can obtain: a credential from an account only he can log in to, or a payment detail.
+- Spending money or starting a paid service.
+- Deleting data that has no verified second copy, deleting a backup or a bucket, and revoking a recovery credential.
+- Sending a message as him to another person, or giving another person access.
+
+Everything else is yours to decide. Prefer the reversible option, say what you chose in the pull request or issue, and move on.
+
+### Engineering care
+
+- **Secrets.** Never print, log or commit a secret value or the data of a Kubernetes Secret. Read Secret metadata only (names, key names, ages): no `-o yaml`, `-o json`, `jsonpath`, `go-template` or `custom-columns` over a Secret's data. Git holds SOPS ciphertext only. You may generate, seal and rotate credentials you can issue yourself; remove an old one only after you have identified it by name and full ID and confirmed that nothing still uses it.
+- **Data.** Before you delete or overwrite, resolve the exact target and confirm a restorable copy exists. Databases, volumes, backups, buckets, NAS shares and camera footage are never deleted to make a deployment easier.
+- **Checks in proportion to risk.** Use the cheapest check that proves the changed behaviour. Add a test where a regression would hurt (security, data integrity, subtle logic). Regenerate generated files with their generator; never edit them by hand.
+- **Heavy work runs in the cluster.** Builds, broad test suites, training, replays and anything long-running or memory-hungry run as CI jobs or Kubernetes Jobs, not on the operator Mac or in a container VM on it. The Mac is for editing, orchestration and small checks.
+- **Leave it clean.** Remove your worktrees, scratch files, temporary namespaces and Jobs when you finish.
+
+## Using the estate
+
+The estate is one k3s cluster named `vallery` (three control-plane VMs and five GPU worker VMs on a six-host Proxmox cluster), a Synology NAS, a UniFi network and Cloudflare in front. The full guide, with commands for everything below, is [`docs/estate/GUIDE.md` in jvallery/estate-platform](https://github.com/jvallery/estate-platform/blob/main/docs/estate/GUIDE.md).
+
+**Access.** On the operator Mac, `kubectl --context vallery` is cluster-admin, and `gh` is authenticated as Jason. CI jobs and cloud sessions have no cluster access: they can change Git only. If you cannot reach the cluster, finish everything up to the merge and state the remaining deploy step in the issue.
+
+**Who owns what.** Every namespace, hostname, device, bucket and job has exactly one owner repository, recorded in `ownership/record/` in jvallery/estate-platform and rendered to [`ESTATE-INVENTORY.md`](https://github.com/jvallery/estate-platform/blob/main/docs/estate/ESTATE-INVENTORY.md). A namespace's label `estate.vallery.net/owner` names its owner. When you add, move or retire something, update the record in the same piece of work.
+
+| Area | Owner |
+|---|---|
+| Argo CD, the application catalog, shared operators (CNPG, cert-manager, MariaDB), Authentik, central secrets, ownership record, standards | `jvallery/estate-platform` |
+| CI workflows and runners | `jvallery/estate-ci` |
+| DNS, routes, TLS, Cloudflare, UniFi, Pi-hole, MetalLB, Traefik | `jvallery/network-infra` |
+| Longhorn, StorageClasses, NAS shares, S3 buckets, the image registry, backups | `jvallery/storage-infra` |
+| Prometheus, Alertmanager, Loki, Grafana, probes, every alert rule and dashboard | `jvallery/monitoring-stack` |
+| Proxmox hosts, VMs, k3s nodes, node labels and taints | `jvallery/proxmox-infrastructure` |
+| GPUs, GPUStack, the Cortex inference API, Open WebUI | `jvallery/cortex-ai-compute` |
+| The operator Mac and this contract | `jvallery/home-dotfiles` |
+| Each application | Its own repository, which owns what renders into its namespaces |
+
+**Deploying.** Argo CD applies what is in Git, read through an in-cluster mirror that trails GitHub by one to four minutes. Look up how your application is delivered:
+
+```sh
+kubectl --context vallery -n argocd get application <app> -o custom-columns=NAME:.metadata.name,TARGET:.spec.source.targetRevision,AUTO:.spec.syncPolicy.automated,REV:.status.sync.revision,SYNC:.status.sync.status,HEALTH:.status.health.status
+```
+
+- `TARGET` is `main` and `AUTO` is set: merging deploys. Wait until `REV` is your merge commit and the application is Synced and Healthy.
+- `TARGET` is `main` and `AUTO` is empty: sync the objects you changed, and only those.
+- `TARGET` is a commit SHA: the application is pinned. Move the pin to your merge commit in the file that declares the Application (`gitops/applications/<environment>/` in jvallery/estate-platform, or `argocd/` in the owning repository), merge that, then sync.
+
+The guide has the exact commands for a sync and a pin move. Two rules protect the cluster. Sync named objects, never a whole pinned parent application, because a whole sync applies every child in the pin range and can roll back other people's work. Never sync with prune, because pruning is off everywhere on purpose and a prune deletes every object Git no longer lists, volumes and namespaces included.
+
+**CI and images.** CI is GitHub Actions on in-cluster runners owned by jvallery/estate-ci; GitHub-hosted runners are not allowed. A repository calls the reusable workflows in jvallery/estate-ci by full commit SHA. Images are built in CI with Kaniko and pushed to `registry.vallery.net`; the build opens a pull request that pins the new digest in the deployment manifests, and merging that pull request is the release. Manifests reference images by `@sha256` digest only. Upstream images are mirrored into the registry first. Re-run a failed job with `gh run rerun <run-id> --failed`.
+
+**Secrets.** A Kubernetes Secret exists in Git only as a SOPS-encrypted file (`secret-<name>.enc.yaml`), decrypted in the cluster by Argo CD. Most live in `secrets/<bundle>/` in jvallery/estate-platform; storage and network secrets live in their own repositories. Encrypting needs only the public keys in `.sops.yaml`, so you can add or rotate a secret yourself: write the manifest, run `sops --encrypt --in-place <file>`, list it in the bundle's `secret-generator.yaml`, and deliver it like any other change. For a value only Jason can obtain, prepare everything else and open a `needs-jason` issue.
+
+**Running workloads.** Namespaces enforce the Pod Security `baseline` level by default. A new namespace needs the `estate.vallery.net/owner=<org>.<repo>` label, the LimitRange and ResourceQuota baseline, a default-deny NetworkPolicy and an ownership record entry. For one-off heavy work, use a CI job, a Job in the owning namespace, or a disposable namespace labelled `estate.vallery.net/disposable=true` and `estate.vallery.net/expires=<date>`, and delete it afterwards. Give Jobs a `ttlSecondsAfterFinished` and never create bare Pods, which block node drains.
+
+**Storage and databases.** The default StorageClass is replicated Longhorn. Use `longhorn-v1-rwo` for application data, `longhorn-v1-critical-rwo` for data that must survive a host loss, `longhorn-v1-rebuildable-rwo` for caches and scratch, and `nfs-rwx` only for NAS shares that jvallery/storage-infra has exported. S3 buckets come from jvallery/storage-infra. A Postgres database is a three-instance CloudNativePG cluster with backups to in-cluster S3 and to Backblaze B2; copy an existing one. Every durable volume needs a backup or a named exemption in jvallery/storage-infra.
+
+**Exposing a service.** Add a Traefik `IngressRoute` in your namespace with `tls: {}`; the wildcard certificate for `*.vallery.net` already covers it. For login, add the Authentik forward-auth middlewares. A public hostname also needs a row in the Cloudflare tunnel configuration in jvallery/network-infra, an entry in the edge registry in jvallery/estate-platform, and a probe in jvallery/monitoring-stack.
+
+**Observability.** Alert rules, probes and dashboards live only in jvallery/monitoring-stack, and that application deploys on merge, so a merged rule can page within minutes. Alerts go to Alertmanager, which pushes to Home Assistant; there is no other notification path. Dashboards are generated, never hand-edited. When something you run can fail in a new way, add the metric and the alert.
+
+**Node and host maintenance.** Never cordon or drain a node by hand: a bare drain once moved five database primaries at once and took down the control-plane leader. Use `scripts/k3s-planned-maintenance.py` in jvallery/proxmox-infrastructure, one node at a time. It moves database primaries off the node first, drains it, and marks the work as planned so that the right alerts stay quiet. Read its README first, and never run a script only to see its help text.
+
+**AI inference.** Workloads call the in-cluster OpenAI-compatible API at `https://cortex.vallery.net/v1` with their own scoped key, issued by jvallery/cortex-ai-compute. Never use an admin credential or an outside provider key.
+
+**Standards.** The target state for high availability, backups, security, exposure and CI is [`docs/estate/STANDARDS.md` in jvallery/estate-platform](https://github.com/jvallery/estate-platform/blob/main/docs/estate/STANDARDS.md). New work meets it; drift you find is fixed in the change that touches it or filed as an issue.
 <!-- estate-contract:end -->
 
-## Lane: estate-ci
+## This repository
 
-This repository owns the estate's standard CI/CD substrate: reusable GitHub
-Actions workflows, the ARC runner scale sets in namespace `ci-runners`, and the
-per-repo migration runbook. Read `README.md` and `docs/MIGRATION-RUNBOOK.md`.
+- It owns namespace `ci-runners` (runner Pods, quotas, NetworkPolicies, the node8 hot guard and the runner-slot advertiser), namespace `arc-systems` (the ARC controller and one listener per runner set), the job images `registry.vallery.net/jvallery/estate-ci/toolbox` and `.../ci-tools`, and the estate-wide Renovate run. The item list is in [OWNERSHIP.md](OWNERSHIP.md); the design is in [README.md](README.md) and [docs/adr/](docs/adr/README.md).
+- `.github/workflows/` holds the reusable workflows listed below and this repository's own workflows (`self-test.yml`, `build.yml`, `mirror-images.yml`, `renovate.yml`).
+- `deploy/foundation/bin/` holds all CI logic. Argo CD delivers it as ConfigMap `estate-ci-scripts`, mounted at `/opt/estate-ci` (`$ESTATE_CI`) in every runner Pod.
+- `runners.yaml` is the runner registry: which repository gets which runner sets, at what size. It is the only input to `scripts/render_runners.py`, which writes `deploy/runners/apps/` (one Argo CD Application per set, plus `arc-controller` and `estate-ci-arc-systems`).
+- `deploy/foundation/` is the rest of `ci-runners` (namespace, `quota.yaml`, `networkpolicies.yaml`, `hot-guard.yaml`, `runner-slots.yaml`); `deploy/arc-systems/` is the controller's support objects.
+- `images/` holds the two job images, `mirrors.txt` the upstream images this repository mirrors, and `renovate/` the estate Renovate policy (`global.json`) and the list of covered repositories (`repositories.json`).
 
-- This repo is **public and secret-free**. Never commit credentials,
-  kubeconfigs, decrypted material or operator-machine paths. Runner Secrets
-  (registration, pull, per-repo zot push) live only in central KSOPS, today in
-  jvallery/agents and planned to move to jvallery/estate-platform. The one
-  Actions-secret exception is D-52: `PIN_BOT_PRIVATE_KEY` with variable
-  `PIN_BOT_CLIENT_ID` (GitHub App `vallery-pin-bot`), used only by `pin-bump.yml`
-  and the Renovate detector (`renovate.yml`, one-repository tokens; ADR-0013).
-- Estate CI rules R1-R3 (README): no GitHub-hosted runners anywhere, including
-  this repo; thin YAML (only `actions/checkout` and these workflows); logic in
-  `deploy/foundation/bin/` (mounted at `/opt/estate-ci`); keep it runnable on
-  Forgejo/Gitea Actions.
-- `deploy/runners/apps/` is generated: edit `runners.yaml`, run
-  `python3 scripts/render_runners.py`, commit both. CI fails on stale output.
-- Callers pin reusable workflows by full commit SHA. A breaking change to a
-  workflow interface needs a new input or a new file, not an edit in place.
-- Workers are memory-tight: raise `deploy/foundation/quota.yaml` only with
-  live headroom on the runner workers, and record the change in its header.
-- NetworkPolicy changes here are edge writes: syncing them takes
-  `EDGE-WRITE.lock` (estate L11).
-- `ci-runner-slot` is advertised from here (CronJob `ci-runner-slots`,
-  `deploy/foundation/runner-slots.yaml`; values fixed by STD-CI-10). The ARC
-  controller is rendered here (`runners.yaml` `controller`, Application
-  `arc-controller`) with its `arc-systems` objects in `deploy/arc-systems/`
-  (estate-ci#192). `arc-controller` owns the ARC CRDs: keep its name, release
-  name and values identical across moves, never delete or prune it, and change
-  its image only in a planned step (it restarts the controller and every
-  listener). The legacy `github-runners` foundation (`arc-runner-foundation`)
-  stays in jvallery/agents until it retires (estate-ci#195). The Argo
-  Applications and AppProjects
-  for this repo are declared in jvallery/agents and are planned to move to
-  jvallery/estate-platform.
+## The three CI rules
 
-## Backlog and standards
+`lint.yml` (script `deploy/foundation/bin/lint-workflows.py`) enforces these in every repository that calls it.
 
-The standards register v1 (ratified, D-463) is
-[`docs/estate/STANDARDS.md`](https://github.com/jvallery/estate-platform/blob/main/docs/estate/STANDARDS.md)
-in jvallery/estate-platform (moved from jvallery/agents under
-jvallery/estate-platform#68; the old path is a pointer). Clauses this
-repository implements: STD-CI-01 (ADR-0005, ADR-0006, ADR-0008 ruleset
-switch), STD-CI-02 (ADR-0001 R1, `deploy/foundation/bin/lint-workflows.py`),
-STD-CI-03 (ADR-0002, ADR-0010), STD-CI-04 image half for images built through
-estate-ci (ADR-0003, `.github/workflows/image-build.yml`), STD-CI-07 (the
-reusables other repositories may use: `.github/workflows/`, ADR-0001 R2;
-estate-ci is outside its own scope), STD-CI-08 (ADR-0001 end state 5,
-ADR-0008), STD-CI-09 (ADR-0005, ADR-0011,
-`deploy/foundation/bin/job-started-guard.sh`), STD-CI-10 (ADR-0002, ADR-0010,
-`runners.yaml`, `deploy/foundation/runner-slots.yaml`), STD-CI-12 (ADR-0003,
-`deploy/foundation/bin/image-build.sh`), STD-CI-13 (ADR-0006,
-`.github/workflows/pin-bump.yml`, `deploy/foundation/bin/pin-bump.sh`) and
-STD-CI-15 (ADR-0005, ADR-0009 E-2, `lint-workflows.py` `ALLOWED_SECRETS`).
-Issues here cite a `STD-` clause. Waves are milestones (`W1 Convergence
-foundations` to `W5 BCDR`), with matching `sprint:w1-convergence` to
-`sprint:w5-bcdr` labels and one domain label (`conv`, `cicd`, `obs`, `sec`,
-`ha`, `dr`); estate epics carry `epic` and live in jvallery/estate-platform.
-Each issue states the problem, dated evidence, the `STD-` clause and target
-state, scope, change, dependencies, priority and testable acceptance. File one
-canonical issue per remediation unit in the repo that owns the change, and link
-related issues rather than duplicating them.
+1. Every job runs on an estate runner set. No GitHub-hosted runner label is allowed anywhere, including here.
+2. Workflow YAML stays thin. A job uses only `actions/checkout@<sha>` and the reusable workflows in this repository, each pinned by full 40-character commit SHA. No `services:`, `container:`, Environments, OIDC, Actions cache or artifacts, `pull_request_target`, `workflow_run` or ghcr.io.
+3. Logic lives in scripts: the calling repository's own (`ci/*.sh`) or the ones in `$ESTATE_CI`. A workflow step is one command.
+
+The only Actions secret the lint allows is `PIN_BOT_PRIVATE_KEY`, with variable `PIN_BOT_CLIENT_ID`, for the GitHub App `vallery-pin-bot`. Only `pin-bump.yml` and `renovate.yml` use it, so that the pull requests they open start their own checks.
+
+## Reusable workflows
+
+- `checks.yml`: check out and run one repository command, optionally inside the repository's CI image or with a Postgres sidecar.
+- `lint.yml`: the workflow lint for the three rules, the image lint (deploy manifests must reference `@sha256` digests) and the `version-register.json` schema check.
+- `image-build.yml`: Kaniko build, Trivy scan with the CVE gate, and SBOM; it pushes only on a `<repo>-build` set.
+- `build-plan.yml`: choose which images to build from the caller's `ci/images.tsv` and the changed paths.
+- `pin-bump.yml`: open the pull request that pins a new image digest in the caller's manifests.
+- `mirror.yml`: copy the upstream images listed in the caller's `mirrors.txt` into the registry, keeping their digests.
+- `kustomize-validate.yml`: `kustomize build` and `kubeconform -strict` of the given roots.
+- `kustomize-exec-guard.yml`: refuse any Kustomize exec plugin other than KSOPS.
+- `secret-scan.yml`: gitleaks over the caller repository.
+- `orphan-redispatch.yml`: find jobs left queued with no runner after a listener restart and re-run them.
+- `retention-projection.yml`: fail a pull request that changes a retention setting without a capacity projection in its body. No workflow in this repository calls it.
+
+A caller pins these by SHA and moves the pin itself; Renovate is configured not to. Change a workflow's interface by adding an input or a new file, not by changing the meaning of an existing input, so that a caller can move its pin without reading the diff.
+
+## Build, test, deploy, verify
+
+**Checks.** The required checks are `lint / lint` (`bash scripts/self-test.sh`: workflow lint, every fixture suite under `tests/`, actionlint, shellcheck and `render_runners.py --check`) and `foundation / foundation` (`bash scripts/foundation-check.sh`: kustomize build and kubeconform of `deploy/foundation`). `secret-scan / gitleaks` and `planner / planner` also run. Locally, run the one fixture suite for the script you changed, for example `python3 tests/lint/run.py`, and `python3 scripts/render_runners.py --check`.
+
+**Runner sets are generated.** Edit `runners.yaml`, run `python3 scripts/render_runners.py`, and commit both; CI fails on stale output. Never edit `deploy/runners/apps/` by hand. A set's name is its `runs-on` label: `<repo>-ci`, `-pg`, `-build`, `-buildcheck`, `-ops` or `-ci-<variant>`.
+
+**Delivery.** Three Argo CD Applications, declared in jvallery/estate-platform `gitops/applications/local-staging/estate-ci-applications.yaml`, deliver this repository:
+
+- `estate-ci-foundation` (`deploy/foundation`) and `estate-ci-arc-systems` (`deploy/arc-systems`) sync automatically from `main`. A merge is live within minutes, and every runner Pod started after that mounts the new scripts.
+- `estate-ci-runners` (`deploy/runners/apps`, which includes `arc-controller`) syncs automatically but is pinned to a commit SHA and to an explicit `directory.include` file list. A merged `runners.yaml` change is not live until you move that pin: set `targetRevision` and the `agent-fleet.vallery.net/source-revision` annotation to the estate-ci commit, regenerate the include list from `ls deploy/runners/apps/*.yaml` at that commit (without `kustomization.yaml`; a set that is not listed is not delivered), merge, and deliver it as the estate guide describes for a pinned Application.
+- The runner Secrets (`arc-github-app-jvallery`, `zot-pull`, `zot-push-<repo>`) are in jvallery/estate-platform `secrets/estate-ci/`, delivered by `estate-ci-secrets`.
+
+**Images.** A push to `main` that changes `images/estate-ci-toolbox/` builds and pushes the toolbox, and the `pin` job of `build.yml` then opens a pull request that rewrites its digest in `runners.yaml` and the rendered sets; merge that and move the `estate-ci-runners` pin to roll it out. `ci-tools` is built by dispatching `build.yml` on `main`; pin its new digest in the `job_image` rows of `runners.yaml` yourself. Add a new base image to `mirrors.txt` and merge that before the Dockerfile that uses it. After a CVE-gate block, follow "After a cve-gate block" in the README.
+
+**Onboarding a repository** (full recipe: [docs/MIGRATION-RUNBOOK.md](docs/MIGRATION-RUNBOOK.md)). Add the repository to `runners.yaml`, render, raise `deploy/foundation/quota.yaml` in the same pull request if the new sets need it, merge, and move the `estate-ci-runners` pin with the new files added to its include list. In the repository, copy `docs/examples/ci.yml` (and `build.yml` if it builds images) with every `uses:` pinned to an estate-ci commit SHA. Then make the checks required by job context (`<job id> / <name>`, GitHub Actions app id 15368) in the repository's ruleset or branch protection, and record them in jvallery/estate-platform `ownership/record/branch-protection-baseline.yaml`. A repository that builds images also needs a registry principal `ci-<repo>` from jvallery/storage-infra and the Secret `ci-runners/zot-push-<repo>` in jvallery/estate-platform. Only jvallery repositories get runners.
+
+**Prove it is live.**
+
+```sh
+kubectl --context vallery -n ci-runners get autoscalingrunnersets            # the set exists with the expected maximum
+kubectl --context vallery -n arc-systems get pods                            # controller 2/2 and one listener per set
+gh run list --repo jvallery/<repo> --limit 5                                 # a real job was picked up and finished
+```
+
+## Hazards
+
+- A script under `deploy/foundation/bin/` reaches every runner in the estate minutes after it merges. A broken `job-started-guard.sh` or sidecar script stops every job, including the checks on the pull request that would fix it. Run the script's fixture suite before merging; the recovery is "Break-glass" in [docs/adr/0005-security-model.md](docs/adr/0005-security-model.md).
+- Moving the `estate-ci-runners` pin delivers every runner change between the old and the new commit, not only yours. Read `git diff <old>..<new> -- deploy/runners/apps` first. A set rendered with `max: 0` gets no runners, so pinning to a commit that pauses sets stops CI for those repositories.
+- `arc-controller` owns the four ARC CustomResourceDefinitions. Keep its Application name, release name (`arc`) and values unchanged, and never delete or prune it: removing the CRDs deletes every runner set. Changing its image restarts the controller and every listener.
+- The controller deletes any runner set whose chart minor version differs from its own. Move `defaults.chart_version` and `controller.chart_version` in the order the comments in `runners.yaml` give, and expect no runners between the two steps.
+- Every runner-set change re-creates that set's listener, and jobs already queued for it may never get a runner. Re-run them with `gh run rerun <run-id> --failed`.
+- The workers are memory-tight. `deploy/foundation/quota.yaml` is the hard envelope for all runner Pods; raise it only when the workers have free memory and CPU requests now (`kubectl --context vallery describe node vm-k3s-node4` through `node8`), and note the measurement in the file header. `render_runners.py` refuses a quota above the recorded per-worker budget.
+- node8 runs the camera recorder (Frigate) and advertises only 4 runner slots. The hot guard (`hot-guard.py`) removes runners from it when camera processing degrades. Do not raise its slots or weaken the guard to gain capacity.
+- Argo CD never prunes here. Removing a set from `runners.yaml` leaves its Application and `AutoscalingRunnerSet` running; delete those two objects by name after the pin is delivered.
+- A `<repo>-build` set accepts only a push to the default branch or a dispatch on it, and fork pull requests are refused on every set. A push build therefore cannot be tested from a pull request; use the `-buildcheck` set, which builds without a credential.
+- Runner Pods have no Kubernetes API token and may reach only DNS, public addresses on ports 80 and 443, the apps ingress and the registry. A job that needs anything else needs a change to `deploy/foundation/networkpolicies.yaml`, not a workaround in the job.
+
+## Neighbours
+
+- jvallery/estate-platform: the Argo CD Applications and AppProjects for this repository, the runner Secrets (`secrets/estate-ci/`), the `ci-*` PriorityClasses, the CVE exception list (`security/estate-security-report/findings-exceptions.json`) and the branch-protection baseline.
+- jvallery/storage-infra: the image registry, each repository's push principal `ci-<repo>`, and image retention.
+- jvallery/monitoring-stack: the `EstateCI*` alerts and the CI dashboards.
+- jvallery/proxmox-infrastructure: the worker nodes and their capacity. Its node maintenance tool evicts idle runners and waits for busy ones.

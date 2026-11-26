@@ -68,12 +68,12 @@ defaults for every covered repository:
 | Setting | Value | Why |
 |---|---|---|
 | `requireConfig` / `onboarding` | `required` / `false` | A repository is scanned only after its own `renovate.json` lands; listing it early is harmless. No onboarding PRs. |
-| `automerge`, `platformAutomerge` | `false` | Renovate proposes; merges keep the train, COORD GO and pin rules. |
-| `rebaseWhen` | `conflicted` | L1: no pushes to a green or running PR for a moved base. |
+| `automerge`, `platformAutomerge` | `false` | Renovate proposes; a pull request merges only through the repository's required checks. |
+| `rebaseWhen` | `conflicted` | No pushes to a green or running PR for a moved base: each push restarts its checks. |
 | `pinDigests`; update types `digest`, `pinDigest`, `pin` | off | No new digest pins and no digest-only churn. An existing `tag@digest` or `@sha # vX` pin moves only with a version update, so SHA and digest pinning is preserved. |
 | docker `registry.vallery.net/**` | disabled | First-party and mirrored zot digests belong to `pin-bump.yml` and `mirrors.txt`. |
 | github-actions `jvallery/estate-ci` | disabled | Reusable-workflow SHA pins move with estate-ci changes (ADR-0006). |
-| argocd git revisions | disabled | Argo SHA pins move only in the consolidated pin PR (L4). Helm chart versions in Applications stay proposable. |
+| argocd git revisions | disabled | An Argo SHA pin is moved by whoever delivers the change, after reading the whole pin range. Helm chart versions in Applications stay proposable. |
 | `minimumReleaseAge` + `internalChecksFilter: strict` | 7 days | Unchanged from the pilot. |
 | `prConcurrentLimit` / `prHourlyLimit` | 3 / 2 per repository | Keeps the CI load and the review load small. |
 | Grouping | all GitHub Actions in one PR; non-major pip/npm tool pins in one PR; each image, chart and major on its own | Images and charts are separate delivery decisions. |

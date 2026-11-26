@@ -74,7 +74,7 @@ decision under STD-CI-14.
 ## Rollout
 
 1. This ADR (plan PR). Review against STD-CI-04 and D-455.
-2. Jason seals the signing key (a JASON-TODO step); the public key PR follows.
+2. The signing key is sealed into the estate-ci secrets bundle; the public key PR follows.
 3. image-build.sh change in warn mode, proven on one builder (docs or
    estate-ci's own images). A digest from that builder must verify, and its SBOM
    must be retrievable from zot.
