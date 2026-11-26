@@ -19,7 +19,7 @@ spec:
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: cortex-ai-compute-buildcheck
         minRunners: 0
-        maxRunners: 0
+        maxRunners: 1
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller

@@ -18,8 +18,8 @@ spec:
         githubConfigUrl: https://github.com/jvallery/estate-platform
         githubConfigSecret: arc-github-app-jvallery
         runnerScaleSetName: estate-platform-ci-gate
-        minRunners: 0
-        maxRunners: 0
+        minRunners: 1
+        maxRunners: 4
         controllerServiceAccount:
           namespace: arc-systems
           name: arc-gha-rs-controller
