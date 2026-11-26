@@ -341,8 +341,10 @@ sets:
   - repo: jvallery/options-tracker
     profiles:
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # estate-ci#101 set 2 (COORD 2026-11-17T13:10:56Z, after the tictactoe-ci canary): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -383,8 +385,10 @@ sets:
   - repo: jvallery/sunshine_club
     profiles:
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -612,7 +616,9 @@ sets:
   - repo: jvallery/estate-ci
     profiles:
       ci:
-        max: 2
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # estate-ci#101 set 3 (COORD 2026-11-17T13:10:56Z, after set 2): work and exchange on
         # ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -624,22 +630,29 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # estate-ci#101 set 3 (COORD 2026-11-17T13:10:56Z, after set 2): work and exchange on
         # ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.89 CPU, 2026-11-06T12Z..11-10T00Z (1300m -> 900m); limits unchanged.
         kaniko_resources: {cpu: 900m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
       buildcheck:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # estate-ci#101 set 3 (COORD 2026-11-17T13:10:56Z, after set 2): work and exchange on
         # ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
         # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.74 CPU, 2026-11-06T12Z..11-10T00Z (1200m -> 750m); limits unchanged.
         kaniko_resources: {cpu: 750m, memory: 1Gi, limit_cpu: "8", limit_memory: 8Gi}
       ci-toolbox:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # estate-ci#111: the deploy/foundation render check (kustomize build +
         # kubeconform). The estate-ci-ci job sidecar does get both tools, copied
         # by its estate-ci-tools initContainer and put on PATH by sidecar-agent.sh,
@@ -648,7 +661,6 @@ sets:
         # kubeconform v0.8.0), no job sidecar, so a broken sidecar script cannot
         # stop the check on the PR that fixes it. Quota: +1 pod,
         # +100m / +256Mi requests (live ci-runners pods 41/272 on 2026-11-09).
-        max: 1
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -660,7 +672,9 @@ sets:
       # user 12021). No credential is mounted: the workflow mints a one-repo
       # vallery-pin-bot token per run (D-52) and revokes it at the end.
       ci-renovate:
-        max: 1
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -856,8 +870,10 @@ sets:
   - repo: jvallery/proxmox-infrastructure
     profiles:
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -868,8 +884,10 @@ sets:
   - repo: jvallery/home-dotfiles
     profiles:
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -879,9 +897,11 @@ sets:
   - repo: jvallery/tictactoe
     profiles:
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-648 a (Jason first-hand 2026-11-15): static site checks (kustomize render, kubeconform,
         # node --check, gitleaks) as bare run: steps in the toolbox runner; no job sidecar.
-        max: 1
         # estate-ci#101 canary (D-372): work and exchange on ephemeral PVCs on
         # longhorn-v1-disposable-cache-rwo instead of boot-disk emptyDirs. Measure attach latency,
         # volume churn and orphan cleanup here before any other set flips.
@@ -891,8 +911,10 @@ sets:
   - repo: jvallery/AI_presentation
     profiles:
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -901,11 +923,13 @@ sets:
   - repo: jvallery/vallery-family
     profiles:
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # vallery-family#6 (W1): advisory archive-integrity check
         # (node vallery-family/tools/verify-archive.mjs, pointer mode, no LFS
         # download) re-homed from the retiring agents registry row. Bare run:
         # step in the toolbox runner (Node is in the toolbox); no job sidecar.
-        max: 1
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -914,10 +938,12 @@ sets:
   - repo: jvallery/ImagineProposals
     profiles:
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # estate-ci#126 (COORD-W2 decision B, 2026-11-17T06:40:30Z): minimal set for the
         # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
         # scales to zero. Registered on the existing jvallery App installation.
-        max: 1
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -926,10 +952,12 @@ sets:
   - repo: jvallery/radio
     profiles:
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # estate-ci#126 (COORD-W2 decision B, 2026-11-17T06:40:30Z): minimal set for the
         # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
         # scales to zero. Registered on the existing jvallery App installation.
-        max: 1
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -938,10 +966,12 @@ sets:
   - repo: jvallery/sunshine-research
     profiles:
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # estate-ci#126 (COORD-W2 decision B, 2026-11-17T06:40:30Z): minimal set for the
         # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
         # scales to zero. Registered on the existing jvallery App installation.
-        max: 1
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -950,10 +980,12 @@ sets:
   - repo: jvallery/vault-personal
     profiles:
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # estate-ci#126 (COORD-W2 decision B, 2026-11-17T06:40:30Z): minimal set for the
         # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
         # scales to zero. Registered on the existing jvallery App installation.
-        max: 1
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -962,8 +994,10 @@ sets:
   - repo: jvallery/immich-config
     profiles:
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -984,8 +1018,10 @@ sets:
   - repo: jvallery/orbit
     profiles:
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -997,8 +1033,10 @@ sets:
   - repo: jvallery/wordpress
     profiles:
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -1027,7 +1065,9 @@ sets:
   - repo: jvallery/crm
     profiles:
       ci:
-        max: 2
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -1045,7 +1085,9 @@ sets:
       # kubectl kustomize, both in the toolbox) moves off ubuntu-latest as bare run: steps
       # in the toolbox runner, no job sidecar. Required by ruleset 26894408 (estate-ci#112).
       ci:
-        max: 2
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -1064,8 +1106,10 @@ sets:
       # BUILD-APPS (verdify-www#57): release gate npm ci && npm run qa:ci-local
       # (node + kustomize from the toolbox), the plan step and the pin step.
       ci:
+        # CI-09 r3 P1 (walk hop 1, D-1379): claim set paused from stage A to step 11; restored only by the revert PR to M0 content.
+        max: 0
+        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
