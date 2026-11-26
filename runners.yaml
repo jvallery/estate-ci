@@ -260,7 +260,8 @@ sets:
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.74 CPU, 2026-11-06T12Z..11-10T00Z (800m -> 750m); limits unchanged.
-        job_resources: {cpu: 750m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.48 GiB, prometheus 0.48 / replica 0.46, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 750m, memory: 512Mi, limit_cpu: "8", limit_memory: 4Gi}
         postgres_image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-b67681006859e657@sha256:09109f553eafc0ed17dccf0c8b3af77a6e1293707a2a14d8d6458a2de3a964eb
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = postgres active p50 0.28 CPU, 2026-11-06T12Z..11-10T00Z (350m -> 300m); limits unchanged.
@@ -288,7 +289,8 @@ sets:
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 250m); limits unchanged.
-        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.14 GiB, prometheus 0.14 / replica 0.14, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
       buildcheck:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
@@ -309,7 +311,8 @@ sets:
         job_image: *toolbox
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.15 CPU, 2026-11-06T12Z..11-10T00Z (200m -> 250m); limits unchanged.
-        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.98 GiB, prometheus 0.98 / replica 0.98, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.12 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       # BUILD-APPS (D-22): docs-portal, docs-ingest, docs-kiwix with zot principal
@@ -333,7 +336,8 @@ sets:
         scratch: pvc
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: "1", memory: 1Gi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.37 GiB, prometheus 1.37 / replica 1.37, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: "1", memory: 1Gi, limit_cpu: "8", limit_memory: 4Gi}
       # BUILD-APPS (D-22): jvallery/options-tracker with zot principal
       # ci-options-tracker (ACL storage-infra#1387) via Secret ci-runners/zot-push-options-tracker.
       build:
@@ -348,7 +352,8 @@ sets:
         job_image: *toolbox
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        job_resources: {cpu: 250m, memory: 384Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.10 GiB, prometheus 1.10 / replica 1.10, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 250m, memory: 384Mi, limit_cpu: "8", limit_memory: 4Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       # AGENTS-RUNS-ON (R1): the jobs that ran on GitHub-hosted ubuntu-24.04
@@ -414,7 +419,8 @@ sets:
         job_image: registry.vallery.net/jvallery/homeassistant-ci-esphome@sha256:568a8a6ab1c6a038fe92a0a9d9a0a826a069cfeecd93c5717ee52db94e321464
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 1.73 CPU, 2026-11-06T12Z..11-10T00Z (2150m -> 1750m); limits unchanged.
-        job_resources: {cpu: 1750m, memory: 1536Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.41 GiB, prometheus 1.34 / replica 1.41, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 1750m, memory: 1536Mi, limit_cpu: "8", limit_memory: 4Gi}
       # BUILD-APPS (D-22): the homeassistant-* images listed in homeassistant
       # scripts/ci/build/images.tsv (2026-11-10: the two CI images, teslamate and
       # mosquitto) with zot principal ci-homeassistant (ACL storage-infra#1387)
@@ -481,7 +487,8 @@ sets:
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.76 CPU, 2026-11-06T12Z..11-10T00Z (950m -> 800m); limits unchanged.
-        job_resources: {cpu: 800m, memory: 768Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.80 GiB, prometheus 0.80 / replica 0.80, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 800m, memory: 768Mi, limit_cpu: "8", limit_memory: 4Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.12 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-tools:
@@ -495,7 +502,8 @@ sets:
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (500m -> 350m); limits unchanged.
-        job_resources: {cpu: 350m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.28 GiB, prometheus 1.28 / replica 0.97, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 350m, memory: 512Mi, limit_cpu: "8", limit_memory: 4Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.14 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-esphome:
@@ -508,7 +516,8 @@ sets:
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 1.90 CPU, 2026-11-06T12Z..11-10T00Z (2000m -> 1950m); limits unchanged.
-        job_resources: {cpu: 1950m, memory: 1408Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.56 GiB, prometheus 1.56 / replica 1.47, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 1950m, memory: 1408Mi, limit_cpu: "8", limit_memory: 4Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-dashboard:
@@ -571,7 +580,8 @@ sets:
         job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:678da404b6d73239d341bf0c6bd72c7c09c661587cdb2367a3edccabc5d5a66d
         job_uid: 1001
         # proxmox-infrastructure#868: job 7-day max working set 0.161 GiB across 12 runners; request 512Mi -> 256Mi, limit unchanged.
-        job_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.16 GiB, prometheus 0.16 / replica 0.15, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       # BUILD-AGENTS (D-22): the 12 images native event-ci built on push to main
       # (agents .github/workflows/build.yml, ci/images.tsv). Mounts
@@ -597,7 +607,8 @@ sets:
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.14 CPU, 2026-11-06T12Z..11-10T00Z (150m -> 250m); limits unchanged.
-        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.10 GiB, prometheus 0.10 / replica 0.10, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
@@ -723,7 +734,8 @@ sets:
         # AMC-CI (D-902, 04:50Z): 4 -> 2.5, limit 6 unchanged. 50 min of 58 Pods at 4/6: per-Pod average p50 3.09,
         # p75 3.46, p90 3.75 CPU; peak 6.0 (the limit). Request sits under the average on purpose so 16 fit the
         # same requests as 10; the 6-CPU limit still bounds a stack (node8 stays at 4 ci-runner-slot, STD-CI-10).
-        job_resources: {cpu: "2.5", memory: 640Mi, limit_cpu: "6", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.76 GiB, prometheus 1.76 / replica 1.61, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: "2.5", memory: 640Mi, limit_cpu: "6", limit_memory: 4Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.18 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
         runner_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
@@ -761,7 +773,8 @@ sets:
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.14 CPU, 2026-11-06T12Z..11-10T00Z (150m -> 250m); limits unchanged.
-        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.84 GiB, prometheus 0.84 / replica 0.84, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.14 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
@@ -790,7 +803,8 @@ sets:
         # D-488 (Jason 2026-11-09): CPU request = job active p50 1.08 CPU, 2026-11-06T12Z..11-10T00Z (2250m -> 1100m); limits unchanged.
         # EXEC-W2-CI-CAP (COORD-W2 2026-11-17T20:31:17Z, TRIAGE 20:31:05Z): CPU request -> 3 cores, the observed
         # per-job use (node7 at 104% CPU with 1-1.5 CPU requests under limit 8, so the scheduler stacked them); limit unchanged.
-        job_resources: {cpu: "3", memory: 1280Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.95 GiB, prometheus 0.95 / replica 0.95, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: "3", memory: 1280Mi, limit_cpu: "8", limit_memory: 4Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.11 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
@@ -813,7 +827,8 @@ sets:
         job_uid: 1001
         # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.30 CPU, 2026-11-06T12Z..11-10T00Z (600m -> 350m); limits unchanged.
-        job_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.72 GiB, prometheus 0.72 / replica 0.60, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.12 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
@@ -942,7 +957,8 @@ sets:
         scratch: pvc
         job_image: *toolbox
         job_uid: 1001
-        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.09 GiB, prometheus 0.09 / replica 0.09, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
   - repo: jvallery/orbit
     profiles:
       ci:
@@ -954,7 +970,8 @@ sets:
         job_image: *toolbox
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (250m -> 350m); limits unchanged.
-        job_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.08 GiB, prometheus 0.02 / replica 0.08, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
   - repo: jvallery/wordpress
     profiles:
       ci:
@@ -966,7 +983,8 @@ sets:
         job_image: *toolbox
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.24 CPU, 2026-11-06T12Z..11-10T00Z (350m -> 250m); limits unchanged.
-        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.08 GiB, prometheus 0.08 / replica 0.08, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
         # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       # D-841 (Jason 2026-11-17, wordpress#288/#259/#306): WordPress builds its own patched
@@ -1032,7 +1050,8 @@ sets:
         job_image: *toolbox
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 0.59 CPU, 2026-11-06T12Z..11-10T00Z (750m -> 600m); limits unchanged.
-        job_resources: {cpu: 600m, memory: 640Mi, limit_cpu: "8", limit_memory: 8Gi}
+        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.79 GiB, prometheus 0.79 / replica 0.79, read 2026-11-21T02:15Z); request unchanged.
+        job_resources: {cpu: 600m, memory: 640Mi, limit_cpu: "8", limit_memory: 4Gi}
       build:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2

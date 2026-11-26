@@ -187,7 +187,7 @@ spec:
                   ephemeral-storage: 2Gi
                 limits:
                   cpu: '6'
-                  memory: 8Gi
+                  memory: 4Gi
                   ephemeral-storage: 16Gi
               securityContext:
                 allowPrivilegeEscalation: false
