@@ -16,9 +16,9 @@
 #               need several CI images (e.g. homeassistant)                suffix -ci-<v>
 # ci options: runner_image (a runner image built FROM the stock actions-runner,
 # so bare run: steps get the repo's tools) and runner_resources override the defaults.
-# Sizes are requests -> limits per Pod. CPU limits are at most 8 (ADR-0010,
-# D-87; the renderer refuses more). D-488 (Jason 2026-11-09: no more cores, use
-# the idle CPU on the existing ones): runners are the elastic class, so CPU
+# Sizes are requests -> limits per Pod. CPU limits are at most 8 (ADR-0010;
+# the renderer refuses more). No more cores are coming, so runners use the idle
+# CPU on the existing ones: runners are the elastic class, so CPU
 # requests follow measured active use, not a high percentile: job, kaniko and
 # postgres containers (and a runner container that runs the job steps itself)
 # request the p50 of their active CPU (rate > 0.05), floor 250m; a runner
@@ -33,12 +33,12 @@
 defaults:
   # estate-ci-toolbox (ADR-0004, estate-ci#16; images/estate-ci-toolbox), built
   # in-cluster by build.yml on every push to main that changes it. build.yml's pin
-  # job is the only writer of this digest (STD-CI-13, D-273): it opens the pin PR
+  # job is the only writer of this digest (STD-CI-13): it opens the pin PR
   # (commit trailer Estate-CI-Source names the built commit). FROM the stock
   # runner (uid 1001), so it serves as runner_image and as job_image.
   toolbox: &toolbox registry.vallery.net/jvallery/estate-ci/toolbox@sha256:ace184aa4dd2ae25159ab7e3ef1d17c02243bc2589c99787309ab5d305554a89
   # gha-runner-scale-set chart of every scale set. The controller chart is controller.chart_version.
-  # ARC 0.14 -> 0.15 (AMC-CI T18) moves in two pins, scale sets first while the 0.14.2 controller
+  # ARC 0.14 -> 0.15 moves in two pins, scale sets first while the 0.14.2 controller
   # cleans up its own sets, then the controller (upstream #4706: one pin for both strands the
   # 0.14-era EphemeralRunnerSets in Terminating). Both versions delete a set whose major.minor
   # label differs from the controller's, so between the pins no scale set exists.
@@ -47,45 +47,43 @@ defaults:
   # controller.chart_version is 0.14.x; the 0.15 listener applies the same qps 50 / burst 100 without it.
   suppress_listener_config: true
   # scratch: pvc sets never schedule to these workers (required nodeAffinity; render_runners.py
-  # scratch_pvc_exclusion). vm-k3s-node4 (COORD-W2 GO 2026-11-18T05:32:04Z): its plane-longhorn disks
+  # scratch_pvc_exclusion). vm-k3s-node4 (2026-11-18): its plane-longhorn disks
   # are both unschedulable. Disk 01267A is allowScheduling=false (the garage guard for the garage
-  # ha-0 volumes, pi#983/pi#993, EXEC-W4-B 04:42:21Z) and disk 16865A is under DiskPressure (below
+  # ha-0 volumes, pi#983/pi#993) and disk 16865A is under DiskPressure (below
   # the 25% minimal-available floor). Five scratch-pvc runners hung in ContainerCreating on node4 at
   # 05:30Z. REMOVE node4 from this list when the garage guard lifts (01267A allowScheduling=true)
   # or 16865A is Schedulable=True again; read the Longhorn Node CR first.
   scratch_pvc_exclude_nodes: [vm-k3s-node4]
   controller_service_account: {namespace: arc-systems, name: arc-gha-rs-controller}
-  # Stock actions-runner 2.338.2, upstream re-push 6d0b2d80 mirrored by mirrors.txt (same index digest as upstream; AMC-SEC-A2-10).
+  # Stock actions-runner 2.338.2, upstream re-push 6d0b2d80 mirrored by mirrors.txt (same index digest as upstream).
   runner_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner@sha256:6d0b2d80d80f143f77dcb676e50920100bbb547e39e883454d57f45ab8c31300
   # ghcr.io/osscontainertools/kaniko:v1.29.1-debug (maintained fork, linux/amd64 child), mirrored by mirrors.txt.
-  # estate-ci#236 / D-825: pilot 2026-11-18 showed 0 fixable Critical and config/history-equivalent builds
+  # estate-ci#236: pilot 2026-11-18 showed 0 fixable Critical and config/history-equivalent builds
   # against v1.23.2 on ci-tools and estate-ci-toolbox. Rollback: restore the v1.23.2 line below.
   # was: registry.vallery.net/jvallery/estate-ci/mirror/gcr.io/kaniko-project/executor@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e
   kaniko_image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/osscontainertools/kaniko@sha256:9585e0a789d698ae5755e190fb8f75e04ee793ec542929bf706d862144f44a97
   # CloudNativePG PostgreSQL (includes pgvector), mirrored in zot.
   postgres_image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-777ad6774e00fff6@sha256:d66df406385b9f3c43c47e94fe3a0002278ef56d21b82a8c9d3a22f91aa9c3f0
-  # D-87 fair share (COORD/Jason P0 2026-11-07): pending Pods schedule by
+  # Fair share: pending Pods schedule by
   # priority, so these repos' runners use ci-preemptible-infra (-900) and
   # schedule ahead of app-repo runners (ci-preemptible, -1000). Neither preempts
   # anything; every production tier preempts both.
   infra_priority_class: ci-preemptible-infra
-  # Jason 2026-11-10 (RV2 OCR critical path: "CI is stuck again for cortex/RV2. Help those lanes"):
-  # cortex-ai-compute and research-vault join the infra tier.
-  # estate-ci#249 (COORD 2026-11-17T08:42Z): estate-platform joins the infra tier; its
-  # gitops/ catalog gates the merge train and its runners waited ~74 min at -1000.
+  # 2026-11-10: cortex-ai-compute and research-vault join the infra tier (the OCR
+  # release path was stuck behind app-repo runners).
+  # estate-ci#249 (2026-11-17): estate-platform joins the infra tier; every
+  # delivery needs its gitops/ catalog and its runners waited ~74 min at -1000.
   infra_repos: [jvallery/agents, jvallery/estate-platform, jvallery/monitoring-stack, jvallery/storage-infra, jvallery/network-infra, jvallery/proxmox-infrastructure, jvallery/estate-ci, jvallery/sentinel, jvallery/homeassistant, jvallery/cortex-ai-compute, jvallery/research-vault]
-  # D-528 (Jason first-hand 2026-11-12, estate-ci#179; changes D-87 for these sets
-  # only): incident-critical scale sets use ci-incident (-800,
+  # estate-ci#179: incident-critical scale sets use ci-incident (-800,
   # preemptionPolicy PreemptLowerPriority; PriorityClass in jvallery/agents
   # platform/kubernetes/estate-scheduling). When ci-runner-slot is saturated the
   # scheduler evicts lower-priority runner Pods (ci-preemptible-infra -900,
   # ci-preemptible -1000) to place them; production tiers still preempt them.
   # The list is explicit scale-set names (the renderer refuses an unknown name).
-  # COORD (or Jason) adds or removes a set by PR, delivered by the
-  # estate-ci-runners pin (ADR-0010 point 3). Initial set: research-vault, the
-  # sets that waited 7-20 min during the 2026-11-10 RV production incident.
-  # D-610 a (Jason first-hand 2026-11-13): ci-incident is set only for a declared
-  # incident with an end time, added by one PR and removed by another.
+  # Add or remove a set by PR, delivered by the estate-ci-runners pin (ADR-0010
+  # point 3). Initial set: research-vault, the sets that waited 7-20 min during
+  # the 2026-11-10 RV production incident. Use ci-incident only during an
+  # incident, added by one PR and removed by another when it ends.
   # Every research-vault set (-ci, -pg, then -build) returns to
   # ci-preemptible-infra (their 25 live Pods preempted agents-ci runners,
   # PreemptionByScheduler, 2026-11-13T01:01Z). No incident is declared, so the
@@ -96,18 +94,18 @@ defaults:
   # ci-gate (-850, preemptionPolicy Never; PriorityClass in jvallery/agents
   # platform/kubernetes/estate-scheduling) never evicts a running runner, but when a
   # ci-runner-slot frees, its Pending runners schedule ahead of ci-preemptible-infra
-  # (-900) and ci-preemptible (-1000) runners. Use it for sets that gate the merge
-  # train during CI saturation (2026-11-17: estate-platform-ci waited ~74 min behind
-  # 28 infra-tier runners). Explicit scale-set names; the renderer refuses an unknown
-  # name and a set listed in both gate_sets and incident_sets. COORD adds or removes
-  # a set by PR, delivered by the estate-ci-runners pin.
+  # (-900) and ci-preemptible (-1000) runners. Use it for sets whose checks every
+  # other merge waits on during CI saturation (2026-11-17: estate-platform-ci waited
+  # ~74 min behind 28 infra-tier runners). Explicit scale-set names; the renderer
+  # refuses an unknown name and a set listed in both gate_sets and incident_sets.
+  # Add or remove a set by PR, delivered by the estate-ci-runners pin.
   gate_priority_class: ci-gate
-  # COORD 2026-11-17T08:50:48Z: monitoring-stack-ci runs the 7 jobs of the required
+  # 2026-11-17: monitoring-stack-ci runs the 7 jobs of the required
   # 'static' check (about 2.5 h queue on 11-17); gate tier until the slot budget grows.
-  # COORD-W2 2026-11-17T21:20:43Z tier 0 (Jason Verdify priority): verdify-platform-ci and
+  # 2026-11-17: verdify-platform-ci and
   # verdify-platform-ci-dashboard were preempted mid-job (exit 130) by estate-production Pods;
   # at ci-gate the scheduler picks ci-preemptible and ci-preemptible-infra victims first.
-  # COORD-W2 2026-11-18 (vp#1819, TSDB slot): verdify-platform-ci-tools runs campaign-qualification and
+  # 2026-11-18 (vp#1819): verdify-platform-ci-tools runs campaign-qualification and
   # was preempted twice at ci-preemptible during the node4 drain; at ci-gate it is chosen after the
   # ci-preemptible and ci-preemptible-infra victims.
   gate_sets: [monitoring-stack-ci, verdify-platform-ci, verdify-platform-ci-dashboard, verdify-platform-ci-tools]
@@ -118,7 +116,7 @@ defaults:
     buildcheck: 1
     ops: 1
 
-# ARC controller (estate-ci#192, D-542): render_runners.py renders it as Application
+# ARC controller (estate-ci#192): render_runners.py renders it as Application
 # arc-controller (chart gha-runner-scale-set-controller at defaults.chart_version, so the
 # controller and every scale set stay on one ARC release) and Application
 # estate-ci-arc-systems (deploy/arc-systems: LimitRange, ResourceQuota, PDB and the two
@@ -145,7 +143,7 @@ controller:
   namespace: arc-systems
   # gha-runner-scale-set-controller chart; it installs the four actions.github.com CRDs. Move it only
   # after the scale sets (defaults.chart_version) are on the same minor and no
-  # EphemeralRunnerSet, EphemeralRunner or AutoscalingListener is left (AMC-CI T18).
+  # EphemeralRunnerSet, EphemeralRunner or AutoscalingListener is left.
   chart_version: 0.15.1
   image: registry.vallery.net/jvallery/estate-ci/mirror/ghcr.io/actions/gha-runner-scale-set-controller:pinned-4b51a20db717@sha256:4b51a20db717b194e2f3fa96cfe2ddcb21602811f79053c75fd1a383517b9f90
   replicas: 2
@@ -153,15 +151,15 @@ controller:
   circuit_topology_key: vallery.net/power-circuit
   metrics_addr: ":8080"
 
-# Per-worker CPU budget (estate-ci#69, ADR-0010, STD-CI-10, D-87). render_runners.py
+# Per-worker CPU budget (estate-ci#69, ADR-0010, STD-CI-10). render_runners.py
 # checks it on every render: per worker, runner ceiling = slots x the largest
 # rendered Pod CPU request (bounded by the runner quota); headroom = allocatable
 # - reserve_cpu - non_runner_cpu (recorded requests of every non-ci-runners Pod).
-# reserve_cpu is D-486's basis (Jason 2026-11-09): runners may fill workers to
+# reserve_cpu (2026-11-09): runners may fill workers to
 # 95% of allocatable, so 2.35 of 47 CPU per worker (was 7, the 85% target, which
 # capped runners at 79 CPU against a 48 h runner-request p95 of 76.4).
 # bound: quota. No slot value STD-CI-10 allows fits: 20 slots x 3.9 CPU (largest
-# Pod, verdify-platform-ci-dashboard since D-488; 2.8 monitoring-stack-ci before)
+# Pod, verdify-platform-ci-dashboard since 2026-11-09; 2.8 monitoring-stack-ci before)
 # = 78 CPU against 12-25 CPU of headroom on node4-7,
 # so the slot count cannot be the budget. The budget is the runner ResourceQuota
 # instead: estate-ci-runner-pods requests.cpu must not exceed the sum over
@@ -176,13 +174,13 @@ controller:
 # when platform requests move. EstateCIWorkerCPUSaturated is the live signal.
 # Measured 2026-11-13T14:32:51Z (kubectl --context vallery: node allocatable cpu,
 # ci-runner-slot, Running Pods outside ci-runners, effective request per Pod;
-# estate-ci#193, D-575 (c): budget 82.7, quota 82). Re-measured the same way at
-# 2026-11-18T05:01:27Z (EXEC-W2-CI-CAP, D-848 capacity lever): 138.1 CPU of
+# estate-ci#193: budget 82.7, quota 82). Re-measured the same way at
+# 2026-11-18T05:01:27Z: 138.1 CPU of
 # non-runner requests in total (node4 23.0, node5 27.9, node6 31.7, node7 28.1,
 # node8 27.4). Load moved from node7 to node4 and node5, but the budget is still
 # 82.7, so the quota stays at 82. More runner CPU has to come from trimming
-# platform requests (RIGHTSIZE), not from the reserve (D-486). The per-node 0.95 line is
-# not an instantaneous maximum at D-502 (b) widths; the proof is no sustained
+# platform requests, not from the reserve. The per-node 0.95 line is
+# not an instantaneous maximum at these Pod widths; the proof is no sustained
 # EstateCIWorkerCPUSaturated and no harm to non-CI Pods (ADR-0010 point 7).
 capacity:
   reserve_cpu: "2.35"
@@ -206,28 +204,24 @@ sets:
   - repo: jvallery/weather
     profiles:
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
         max: 9
-        # estate-ci#80 / weather#293 (EXEC-W2-CS 2026-11-18): 6c10ebd4 -> 128f86e1, openexr CVE-2026-42216/42217
+        # estate-ci#80 / weather#293 (2026-11-18): 6c10ebd4 -> 128f86e1, openexr CVE-2026-42216/42217
         # fixed (cve-gate verdict=pass, no-fix-only). Revert: 6c10ebd4ddb8326727fb0f7d2bf6bcfea9bf1dec4a356f82a74dd8a7537a3baa.
         job_image: registry.vallery.net/jvallery/weather-ci@sha256:128f86e1a25b2cb3a8ea4a1a0f4341dc0bc469c6f2e0e88fd9b9cf798390ea32
         job_uid: 1001
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 0.99 CPU, 2026-11-06T12Z..11-10T00Z (1600m -> 1000m); limits unchanged.
+        # 2026-11-09: CPU request = job active p50 0.99 CPU, 2026-11-06T12Z..11-10T00Z (1600m -> 1000m); limits unchanged.
         job_resources: {cpu: 1000m, memory: 1664Mi, limit_cpu: "8", limit_memory: 8Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.10 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.10 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
-        # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 6 -> 4 (donor: 24 h peak 1 runner).
+        # rebalance (2026-11-06 23:36Z, zero-sum): 6 -> 4 (donor: 24 h peak 1 runner).
         max: 4
-        # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.90 CPU, 2026-11-06T12Z..11-10T00Z (2000m -> 900m); limits unchanged.
+        # 2026-11-09: CPU request = kaniko active p50 0.90 CPU, 2026-11-06T12Z..11-10T00Z (2000m -> 900m); limits unchanged.
         kaniko_resources: {cpu: 900m, memory: 512Mi, limit_cpu: "8", limit_memory: 12Gi}
       buildcheck:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "8", limit_memory: 12Gi}
-  # Research Vault v2 (research-vault#200, second pilot; COORD 2026-11-06).
+  # Research Vault v2 (research-vault#200, second pilot; 2026-11-06).
   # Native steps -> profiles: lint-unit and manifests -> research-vault-ci,
   # postgres -> research-vault-pg (2 shards, run one at a time), vault-server and
   # vault-ci images -> research-vault-build. Every job runs in the vault-ci job
@@ -245,44 +239,35 @@ sets:
   - repo: jvallery/research-vault
     profiles:
       ci:
-        # COORD GO-FAST 2026-11-06 ~18:0xZ (Jason first-hand: "Drive FAST"): 3 -> 4.
-        # D-39 (Jason 2026-11-06 ~21:15Z): 4 -> 12.
-        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 12 -> 16 (queue p90 7.5 min, busy hit 12).
-        # D-87 hold absorb (CI-BALANCE, COORD 2026-11-07): node6 hold +4 vCPU -> 16 -> 18.
-        # TEMPORARY (COORD 2026-11-17T19:36:11Z): 18 -> 6 until release 8a ends (22:00Z); node7/node5 CPU starvation (Longhorn RWX false failover, Argo repo-server lag) and 8a runner slots. Revert PR follows.
+        # 2026-11-06 ~22:43Z: 12 -> 16 (queue p90 7.5 min, busy hit 12).
+        # 2026-11-07: +4 vCPU on node6 -> 16 -> 18.
+        # 2026-11-17: 18 -> 6 for node7/node5 CPU starvation (Longhorn RWX false failover, Argo repo-server lag); never raised back.
         max: 6
         job_image: registry.vallery.net/jvallery/vault-ci@sha256:5aa9ce134834104c594e2dd0883c3a8443534eee9659b3cb59022a153be14412
         job_uid: 1001
-        # COORD 2026-11-06 ~20:0xZ (Jason: accelerate RV2 CI): 'unit' took 30-36 min
+        # 2026-11-06 ~20:0xZ (accelerate RV2 CI): 'unit' took 30-36 min
         # pinned at ~1 core under limit 2 / 4Gi. Was 500m / 768Mi req, 2 / 4Gi lim.
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 1.01 CPU, 2026-11-06T12Z..11-10T00Z (2100m -> 1050m); limits unchanged.
-        # EXEC-W2-CI-CAP (COORD-W2 2026-11-17T20:31:17Z, TRIAGE 20:31:05Z): CPU request -> 3 cores, the observed
+        # 2026-11-09: CPU request = job active p50 1.01 CPU, 2026-11-06T12Z..11-10T00Z (2100m -> 1050m); limits unchanged.
+        # 2026-11-17T20:31:17Z: CPU request -> 3 cores, the observed
         # per-job use (node7 at 104% CPU with 1-1.5 CPU requests under limit 8, so the scheduler stacked them); limit unchanged.
         job_resources: {cpu: "3", memory: 5760Mi, limit_cpu: "8", limit_memory: 8Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.11 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.11 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       pg:
-        # COORD 2026-11-06 ~18:4xZ (D5 critical path, Jason GO): 1 -> 3.
-        # D-39 (Jason 2026-11-06 ~21:15Z): 3 -> 9.
-        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 9 -> 12 (running+pending hit 9; queue p90 7.5 min).
-        # TEMPORARY (COORD 2026-11-17T19:36:11Z): 12 -> 4, same reason and revert.
+        # 2026-11-06 ~22:43Z: 9 -> 12 (running+pending hit 9; queue p90 7.5 min).
+        # 2026-11-17: 12 -> 4, same reason as research-vault-ci; never raised back.
         max: 4
         job_image: registry.vallery.net/jvallery/vault-ci@sha256:5aa9ce134834104c594e2dd0883c3a8443534eee9659b3cb59022a153be14412
         job_uid: 1001
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 0.74 CPU, 2026-11-06T12Z..11-10T00Z (800m -> 750m); limits unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.48 GiB, prometheus 0.48 / replica 0.46, read 2026-11-21T02:15Z); request unchanged.
+        # 2026-11-09: CPU request = job active p50 0.74 CPU, 2026-11-06T12Z..11-10T00Z (800m -> 750m); limits unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.48 GiB, prometheus 0.48 / replica 0.46, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 750m, memory: 512Mi, limit_cpu: "8", limit_memory: 4Gi}
         postgres_image: registry.vallery.net/jvallery/mirror-ghcr-io-cloudnative-pg-postgresql-b67681006859e657@sha256:09109f553eafc0ed17dccf0c8b3af77a6e1293707a2a14d8d6458a2de3a964eb
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # D-488 (Jason 2026-11-09): CPU request = postgres active p50 0.28 CPU, 2026-11-06T12Z..11-10T00Z (350m -> 300m); limits unchanged.
+        # 2026-11-09: CPU request = postgres active p50 0.28 CPU, 2026-11-06T12Z..11-10T00Z (350m -> 300m); limits unchanged.
         postgres_resources: {cpu: 300m, memory: 1Gi, limit_cpu: "1", limit_memory: 2Gi}
       build:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        # D-55 (Jason via COORD 2026-11-07 ~01:0xZ: RV2 needs more research-vault runners): 2 -> 3.
         max: 3
-        # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.44 CPU, 2026-11-06T12Z..11-10T00Z (500m -> 450m); limits unchanged.
+        # 2026-11-09: CPU request = kaniko active p50 0.44 CPU, 2026-11-06T12Z..11-10T00Z (500m -> 450m); limits unchanged.
         kaniko_resources: {cpu: 450m, memory: 384Mi, limit_cpu: "8", limit_memory: 12Gi}
   # kepler (jvallery/agents#6092, kepler#34). Job image = the python base the
   # app ships on (app/Dockerfile), for unit (hash-locked pip). static, render and
@@ -292,25 +277,22 @@ sets:
   - repo: jvallery/kepler
     profiles:
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
-        # ARC-RAISE rebalance (Jason via COORD 2026-11-06 23:36Z, zero-sum): 6 -> 5 (donor: 24 h peak busy 1, peak pods 2-3).
-        # COORD-W2 2026-11-18T10:54:59Z rebalance: 5 -> 3, donor to estate-platform-ci 4 -> 6
+        # rebalance (2026-11-06 23:36Z, zero-sum): 6 -> 5 (donor: 24 h peak busy 1, peak pods 2-3).
+        # 2026-11-18T10:54:59Z rebalance: 5 -> 3, donor to estate-platform-ci 4 -> 6
         # (gha_busy_runners 24 h p95 0, 7 d peak 3; requests freed 2 x 250m job >= 2 x 200m added).
         max: 3
         runner_image: *toolbox
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:4766d8b510c428e595d74b9cc5bbb2fae8e26316fffb4adc89908d79aacd58a2
         job_uid: 1001
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 250m); limits unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.14 GiB, prometheus 0.14 / replica 0.14, read 2026-11-21T02:15Z); request unchanged.
+        # 2026-11-09: CPU request = job active p50 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 250m); limits unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.14 GiB, prometheus 0.14 / replica 0.14, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
       buildcheck:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       # Pushes jvallery/kepler-estate-mcp with zot principal ci-kepler
       # (storage-infra si#1395) via the KSOPS Secret ci-runners/zot-push-kepler.
       build:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         kaniko_resources: {cpu: 250m, memory: 1Gi, limit_cpu: "8", limit_memory: 8Gi}
   # MIGRATE-APPS repos (jvallery/agents#6092). Checks run in the estate-ci
@@ -322,17 +304,16 @@ sets:
         max: 3
         job_image: *toolbox
         job_uid: 1001
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 0.15 CPU, 2026-11-06T12Z..11-10T00Z (200m -> 250m); limits unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.98 GiB, prometheus 0.98 / replica 0.98, read 2026-11-21T02:15Z); request unchanged.
+        # 2026-11-09: CPU request = job active p50 0.15 CPU, 2026-11-06T12Z..11-10T00Z (200m -> 250m); limits unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.98 GiB, prometheus 0.98 / replica 0.98, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.12 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.12 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
-      # BUILD-APPS (D-22): docs-portal, docs-ingest, docs-kiwix with zot principal
+      # docs-portal, docs-ingest, docs-kiwix with zot principal
       # ci-docs (ACL storage-infra#1387) via KSOPS Secret ci-runners/zot-push-docs.
       build:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (250m -> 350m); limits unchanged.
+        # 2026-11-09: CPU request = kaniko active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (250m -> 350m); limits unchanged.
         kaniko_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
       # docs#114: PR image builds (push: false, no zot credential) for docs-portal,
       # docs-kiwix and docs-kolibri; same Kaniko size as docs-build, default max 1.
@@ -341,49 +322,44 @@ sets:
   - repo: jvallery/options-tracker
     profiles:
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        # estate-ci#101 set 2 (COORD 2026-11-17T13:10:56Z, after the tictactoe-ci canary): work and
+        # estate-ci#101 set 2 (2026-11-17T13:10:56Z, after the tictactoe-ci canary): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
         job_image: *toolbox
         job_uid: 1001
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.37 GiB, prometheus 1.37 / replica 1.37, read 2026-11-21T02:15Z); request unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.37 GiB, prometheus 1.37 / replica 1.37, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: "1", memory: 1Gi, limit_cpu: "8", limit_memory: 4Gi}
-      # BUILD-APPS (D-22): jvallery/options-tracker with zot principal
+      # jvallery/options-tracker with zot principal
       # ci-options-tracker (ACL storage-infra#1387) via Secret ci-runners/zot-push-options-tracker.
       build:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         kaniko_resources: {cpu: 450m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/sentinel
     profiles:
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         max: 6
         job_image: *toolbox
         job_uid: 1001
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.10 GiB, prometheus 1.10 / replica 1.10, read 2026-11-21T02:15Z); request unchanged.
+        # 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.10 GiB, prometheus 1.10 / replica 1.10, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 250m, memory: 384Mi, limit_cpu: "8", limit_memory: 4Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
-      # AGENTS-RUNS-ON (R1): the jobs that ran on GitHub-hosted ubuntu-24.04
+      # The jobs that ran on GitHub-hosted ubuntu-24.04
       # (ring-mqtt-dependency-intake; frigate-promotion verify-release and
       # prepare-promotion). Label swap: their bare run: steps execute in the
       # toolbox (python3, ruby, jq, git, gh for ADR-0009 E-1) as the runner image.
       ci-tools:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
-  # sunshine_club (moved from VerdifyConsultancy 2026-11-06, REPO-MOVE). Its one
+  # sunshine_club (moved from VerdifyConsultancy 2026-11-06). Its one
   # dispatch-only workflow (bash + git path classifier) ran on the legacy
   # verdifyconsultancy validation-standard set; label swap onto the toolbox.
   - repo: jvallery/sunshine_club
     profiles:
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
@@ -392,9 +368,9 @@ sets:
         runner_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/homeassistant
     profiles:
-      # AGENTS-RUNS-ON (2026-11-06): replaces the legacy github-runners
+      # 2026-11-06: replaces the legacy github-runners
       # homeassistant-haos-deploy set for haos-deploy.yml and pool-firmware-deploy.yml.
-      # KSOPS Secret ci-runners/ops-homeassistant (sealed by Jason in agents
+      # KSOPS Secret ci-runners/ops-homeassistant (sealed in agents
       # platform/gitops/secrets-ksops/estate-ci; keys: ssh_key, known_hosts). Egress:
       # TCP/22 to HAOS 192.168.30.107 only (network-infra ipam/management-cidrs.yaml
       # consumer row: separate network-infra PR). Until the Secret exists a
@@ -405,24 +381,21 @@ sets:
         egress:
           - {cidr: 192.168.30.107/32, tcp: [22]}
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
         max: 6
         job_image: *toolbox
         job_uid: 1001
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
+        # 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         job_resources: {cpu: 450m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.17 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.17 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
         runner_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-ha:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (at max 65%; queue p50 28 min / 24h).
+        # 2026-11-06 ~22:43Z: 2 -> 3 (at max 65%; queue p50 28 min / 24h).
         max: 3
         job_image: registry.vallery.net/jvallery/homeassistant-ci-homeassistant@sha256:11e774f58c81ff1c2b53fb89d8391033c3cce78952b01ed0b9ad7c3eef4b67e5
         job_uid: 1001
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 0.55 CPU, 2026-11-06T12Z..11-10T00Z (700m -> 550m); limits unchanged.
+        # 2026-11-09: CPU request = job active p50 0.55 CPU, 2026-11-06T12Z..11-10T00Z (700m -> 550m); limits unchanged.
         job_resources: {cpu: 550m, memory: 1792Mi, limit_cpu: "8", limit_memory: 8Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.17 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.17 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
         runner_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-esphome:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
@@ -438,16 +411,15 @@ sets:
       # mosquitto) with zot principal ci-homeassistant (ACL storage-infra#1387)
       # via Secret ci-runners/zot-push-homeassistant.
       build:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.11 CPU, 2026-11-06T12Z..11-10T00Z (350m -> 250m); limits unchanged.
+        # 2026-11-09: CPU request = kaniko active p50 0.11 CPU, 2026-11-06T12Z..11-10T00Z (350m -> 250m); limits unchanged.
         kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "8", limit_memory: 12Gi}
       # homeassistant#1137: PR build check for changed images (image-build.yml
       # push: false), credential-free (pull-only zot-pull). Kaniko sized like -build.
       buildcheck:
         kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "8", limit_memory: 12Gi}
-  # verdify-platform (DASH, verdify-platform#1397/#1402). It transfers to jvallery
-  # first (D19), hence the jvallery URL. Sets follow #1402's job map, all uid 1001
+  # verdify-platform (verdify-platform#1397/#1402). It moved to jvallery
+  # first (only jvallery repositories get runners), hence the jvallery URL. Sets follow #1402's job map, all uid 1001
   # (ci/gha/lib.sh makes a private writable HOME):
   #   -ci            python:3.13-bookworm (native validate image): trusted-precheck,
   #                  path-impact, validate, lint, build.yml impact
@@ -458,7 +430,7 @@ sets:
   #   -ci-dashboard  weather-ci (node, pnpm, Playwright): dashboard
   #   -build         Kaniko; mounts zot-push-verdify-platform (ci-verdify-platform,
   #                  writes verdifyconsultancy/verdify-* only; registry paths unchanged)
-  #   (-ci-pg removed, estate-ci#115, D-407/D-451: no workflow selected it; the
+  #   (-ci-pg removed, estate-ci#115: no workflow selected it; the
   #                  private-Postgres campaign tests run on -ci-tools with its private PG16)
   #   -buildcheck    Kaniko, no push credential: ci.yml PR build-check of the
   #                  path-impacted images (verdify-platform#1534, STD-CI-12).
@@ -466,8 +438,7 @@ sets:
   - repo: jvallery/verdify-platform
     profiles:
       ci-gate:
-        # estate-ci#229 C3 (D-709, Jason 2026-11-16 "make CI reliable and fast"; COORD
-        # 19:16:54Z): warm, tiny, slot-free runners for verdify-platform's gate and
+        # estate-ci#229 (2026-11-16): warm, tiny, slot-free runners for verdify-platform's gate and
         # aggregate jobs (require-success, buildcheck-result, trusted-precheck,
         # path-impact: bash, git, python3 stdlib), which waited 12-22 min p90 behind
         # 8-minute ci-tools shards. Same shape as the agents/monitoring-stack/
@@ -480,16 +451,15 @@ sets:
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
       ci:
-        # COORD 2026-11-06 ~18:1xZ (verdify#1402 waiting on capacity): 2 -> 3.
-        # COORD 2026-11-06 ~19:1xZ (9 runs queued; #1437 migration 303 critical path): 3 -> 5.
-        # D-39 (Jason 2026-11-06 ~21:15Z): 5 -> 15.
-        # ARC-RAISE rebalance 2 (Jason via COORD 2026-11-07 00:35Z, zero-sum): 15 -> 12 (donor: listener busy peak 6 since 21:46Z).
-        # COORD P0 fair share 2026-11-07 05:08Z (CI-BALANCE): 12 -> 6 until the infra backlog drains, then back to 12.
-        # COORD-W2 2026-11-16T17:26:30Z (Verdify CI capacity): 6 -> 12. +6 pods x (job 800m/768Mi + runner
+        # 2026-11-06 ~18:1xZ (verdify#1402 waiting on capacity): 2 -> 3.
+        # 2026-11-06 ~19:1xZ (9 runs queued; #1437 migration 303 critical path): 3 -> 5.
+        # rebalance 2 (2026-11-07 00:35Z, zero-sum): 15 -> 12 (donor: listener busy peak 6 since 21:46Z).
+        # fair share 2026-11-07 05:08Z: 12 -> 6 until the infra backlog drains, then back to 12.
+        # 2026-11-16T17:26:30Z (Verdify CI capacity): 6 -> 12. +6 pods x (job 800m/768Mi + runner
         # 150m/256Mi + tools/nss 100m) = +6.3 CPU / +6.1Gi requests, +6 ci-runner-slots. Quota
         # estate-ci-runner-pods read 63.25/82 CPU at 17:3xZ. Goes live after the opal window (drain reserve).
         max: 12
-        # verdify-platform#1542 (STD-EXP-13, D-242): the toolbox runner image, as
+        # verdify-platform#1542 (STD-EXP-13): the toolbox runner image, as
         # kepler/sentinel/sunshine_club use, so the bare-run "ci / secret-scan" job has
         # gitleaks; the python job sidecar is unchanged.
         runner_image: *toolbox
@@ -497,75 +467,69 @@ sets:
         # mirrored by mirrors.txt (same index digest as docker.io/library/python).
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:cc55e4ded9c95f6ce2133b3d096db43f214d280c2a8af65d83e246c8fa7d168c
         job_uid: 1001
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 0.76 CPU, 2026-11-06T12Z..11-10T00Z (950m -> 800m); limits unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.80 GiB, prometheus 0.80 / replica 0.80, read 2026-11-21T02:15Z); request unchanged.
+        # 2026-11-09: CPU request = job active p50 0.76 CPU, 2026-11-06T12Z..11-10T00Z (950m -> 800m); limits unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.80 GiB, prometheus 0.80 / replica 0.80, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 800m, memory: 768Mi, limit_cpu: "8", limit_memory: 4Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.12 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.12 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-tools:
-        # COORD/DASH 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 2 -> 6.
-        # D-39 (Jason 2026-11-06 ~21:15Z): 6 -> 18.
-        # COORD P0 fair share 2026-11-07 05:08Z (CI-BALANCE): 18 -> 6 until the infra backlog drains, then back to 18.
-        # COORD-W2 2026-11-16T17:26:30Z (Verdify CI capacity): 6 -> 12. +6 pods x (job 350m/512Mi + runner
+        # 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 2 -> 6.
+        # fair share 2026-11-07 05:08Z: 18 -> 6 until the infra backlog drains, then back to 18.
+        # 2026-11-16T17:26:30Z (Verdify CI capacity): 6 -> 12. +6 pods x (job 350m/512Mi + runner
         # 150m/256Mi) = +3.0 CPU / +4.5Gi requests, +6 ci-runner-slots (both sets: +9.3 CPU, quota 72.6/82).
         max: 12
         job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:678da404b6d73239d341bf0c6bd72c7c09c661587cdb2367a3edccabc5d5a66d
         job_uid: 1001
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (500m -> 350m); limits unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.28 GiB, prometheus 1.28 / replica 0.97, read 2026-11-21T02:15Z); request unchanged.
+        # 2026-11-09: CPU request = job active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (500m -> 350m); limits unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.28 GiB, prometheus 1.28 / replica 0.97, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 350m, memory: 512Mi, limit_cpu: "8", limit_memory: 4Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.14 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.14 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-esphome:
-        # COORD/DASH 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 1 -> 2.
-        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (at max 89%; queue p90 65 min / 24h).
+        # 2026-11-06 ~20:2xZ (release-4 critical path, run 42283030452 queued): 1 -> 2.
+        # 2026-11-06 ~22:43Z: 2 -> 3 (at max 89%; queue p90 65 min / 24h).
         max: 3
         # verdify-platform#1535: baked ESPHome CI image (PlatformIO core + toolchain inside, built by
         # verdify-platform build.yml esphome-ci profile, gha-c962f188dad8, run 42838703363).
         job_image: registry.vallery.net/verdifyconsultancy/verdify-esphome-ci@sha256:288643bd5b25a534ba22205062c5c87b2acec6c8913806e6768f09111d54cc70
         job_uid: 1001
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 1.90 CPU, 2026-11-06T12Z..11-10T00Z (2000m -> 1950m); limits unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.56 GiB, prometheus 1.56 / replica 1.47, read 2026-11-21T02:15Z); request unchanged.
+        # 2026-11-09: CPU request = job active p50 1.90 CPU, 2026-11-06T12Z..11-10T00Z (2000m -> 1950m); limits unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.56 GiB, prometheus 1.56 / replica 1.47, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 1950m, memory: 1408Mi, limit_cpu: "8", limit_memory: 4Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       ci-dashboard:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        # estate-ci#80 / weather#293 (EXEC-W2-CS 2026-11-18): 6c10ebd4 -> 128f86e1, openexr CVE-2026-42216/42217
+        # estate-ci#80 / weather#293 (2026-11-18): 6c10ebd4 -> 128f86e1, openexr CVE-2026-42216/42217
         # fixed (cve-gate verdict=pass, no-fix-only). Revert: 6c10ebd4ddb8326727fb0f7d2bf6bcfea9bf1dec4a356f82a74dd8a7537a3baa.
         job_image: registry.vallery.net/jvallery/weather-ci@sha256:128f86e1a25b2cb3a8ea4a1a0f4341dc0bc469c6f2e0e88fd9b9cf798390ea32
         job_uid: 1001
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 3.72 CPU, 2026-11-06T12Z..11-10T00Z (1050m -> 3750m); limits unchanged.
+        # 2026-11-09: CPU request = job active p50 3.72 CPU, 2026-11-06T12Z..11-10T00Z (1050m -> 3750m); limits unchanged.
         job_resources: {cpu: 3750m, memory: 3200Mi, limit_cpu: "8", limit_memory: 8Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.15 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.15 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
-        # COORD-W2 2026-11-17T11:59:42Z (estate-ci#229): 2 -> 3. Release 6 (ce2a6e51) fans out 3 Kaniko
+        # 2026-11-17T11:59:42Z (estate-ci#229): 2 -> 3. Release 6 (ce2a6e51) fans out 3 Kaniko
         # builds; with 2 slots one waited 18 min. Not 4.
         max: 3
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
+        # 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
         kaniko_resources: {cpu: 450m, memory: 640Mi, limit_cpu: "8", limit_memory: 12Gi}
       # PR image builds without a push credential (verdify-platform#1534, STD-CI-12):
       # ci.yml builds only the images whose Dockerfile inputs a PR changes, push false.
       # Same Kaniko size as build; max 1 (default) so PR builds never crowd the build set.
       buildcheck:
         kaniko_resources: {cpu: 450m, memory: 640Mi, limit_cpu: "8", limit_memory: 12Gi}
-  # jvallery/agents on ARC (D19, Jason first-hand). The job image is native CI's own
+  # jvallery/agents on ARC. The job image is native CI's own
   # source-check image (native_ci_controller_deployment.IMAGE): Python 3.11-3.13,
   # Node 24, Ruby, kubectl, gitleaks, the prebaked wheelhouse and the PG16 +
   # pgvector rootfs that daemon_free_pg16.py starts in-process, so PostgreSQL
   # checks need no sidecar. agents' .github/workflows/estate-ci.yml runs the
   # native catalog through the same runner scripts (ci/estate-ci/native_parity.py).
-  # It shares the namespace quota until the native agents slots move in (COORD).
+  # It shares the namespace quota.
   - repo: jvallery/agents
     profiles:
       ci-gate:
-        # COORD P0 2026-11-07: warm, tiny, slot-free runners for gate/aggregator
+        # 2026-11-07: warm, tiny, slot-free runners for gate/aggregator
         # jobs only (the required "all"/"static"/"networking-required" checks),
         # so a green PR does not wait 10-20 min for a runner just to aggregate.
         max: 4
@@ -592,19 +556,18 @@ sets:
         job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:678da404b6d73239d341bf0c6bd72c7c09c661587cdb2367a3edccabc5d5a66d
         job_uid: 1001
         # proxmox-infrastructure#868: job 7-day max working set 0.161 GiB across 12 runners; request 512Mi -> 256Mi, limit unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.16 GiB, prometheus 0.16 / replica 0.15, read 2026-11-21T02:15Z); request unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.16 GiB, prometheus 0.16 / replica 0.15, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
-      # BUILD-AGENTS (D-22): the 12 images native event-ci built on push to main
+      # The 12 images native event-ci built on push to main
       # (agents .github/workflows/build.yml, ci/images.tsv). Mounts
       # ci-runners/zot-push-agents (principal ci-agents, exact jvallery/agents-* paths
       # in storage-infra). Native's standard build profile was 2Gi -> 10Gi Kaniko
       # memory; 12Gi limit adds headroom for the research-runtime and argocd images.
       # No buildcheck set: native never built agents images on PRs.
       build:
-        # COORD GO-FAST 2026-11-06 ~18:0xZ: 2 -> 4.
         max: 4
-        # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.62 CPU, 2026-11-06T12Z..11-10T00Z (1400m -> 650m); limits unchanged.
+        # 2026-11-09: CPU request = kaniko active p50 0.62 CPU, 2026-11-06T12Z..11-10T00Z (1400m -> 650m); limits unchanged.
         kaniko_resources: {cpu: 650m, memory: 2304Mi, limit_cpu: "8", limit_memory: 12Gi}
   # estate-ci's own self-test (R1: no GitHub-hosted runners, even here), image
   # mirrors (mirrors.txt, crane copy) and the estate-ci-toolbox build. The build
@@ -613,31 +576,29 @@ sets:
     profiles:
       ci:
         max: 2
-        # estate-ci#101 set 3 (COORD 2026-11-17T13:10:56Z, after set 2): work and exchange on
+        # estate-ci#101 set 3 (2026-11-17T13:10:56Z, after set 2): work and exchange on
         # ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
         job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:09a17cad02668ae61ece136b4fd36ac3849e14f670ebedb637ea3e15580525bc
         job_uid: 1001
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 0.14 CPU, 2026-11-06T12Z..11-10T00Z (150m -> 250m); limits unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.10 GiB, prometheus 0.10 / replica 0.10, read 2026-11-21T02:15Z); request unchanged.
+        # 2026-11-09: CPU request = job active p50 0.14 CPU, 2026-11-06T12Z..11-10T00Z (150m -> 250m); limits unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.10 GiB, prometheus 0.10 / replica 0.10, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        # estate-ci#101 set 3 (COORD 2026-11-17T13:10:56Z, after set 2): work and exchange on
+        # estate-ci#101 set 3 (2026-11-17T13:10:56Z, after set 2): work and exchange on
         # ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
-        # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.89 CPU, 2026-11-06T12Z..11-10T00Z (1300m -> 900m); limits unchanged.
+        # 2026-11-09: CPU request = kaniko active p50 0.89 CPU, 2026-11-06T12Z..11-10T00Z (1300m -> 900m); limits unchanged.
         kaniko_resources: {cpu: 900m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
       buildcheck:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        # estate-ci#101 set 3 (COORD 2026-11-17T13:10:56Z, after set 2): work and exchange on
+        # estate-ci#101 set 3 (2026-11-17T13:10:56Z, after set 2): work and exchange on
         # ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
-        # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.74 CPU, 2026-11-06T12Z..11-10T00Z (1200m -> 750m); limits unchanged.
+        # 2026-11-09: CPU request = kaniko active p50 0.74 CPU, 2026-11-06T12Z..11-10T00Z (1200m -> 750m); limits unchanged.
         kaniko_resources: {cpu: 750m, memory: 1Gi, limit_cpu: "8", limit_memory: 8Gi}
       ci-toolbox:
         # estate-ci#111: the deploy/foundation render check (kustomize build +
@@ -658,7 +619,7 @@ sets:
       # Renovate, run by .github/workflows/renovate.yml in this job image
       # (renovate/renovate 44.200.0 linux/amd64, mirrored by mirrors.txt; image
       # user 12021). No credential is mounted: the workflow mints a one-repo
-      # vallery-pin-bot token per run (D-52) and revokes it at the end.
+      # vallery-pin-bot token per run and revokes it at the end.
       ci-renovate:
         max: 1
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
@@ -676,7 +637,7 @@ sets:
   # build mounts ci-runners/zot-push-<repo>. No buildcheck sets: native
   # never built images on PRs (pr_validation: false), so neither do these,
   # except storage-infra (storage-infra#1579).
-  # Label-swap repos (COORD ruling 2026-11-06 03:07Z: do not rewrite steps):
+  # Label-swap repos (2026-11-06 03:07Z: do not rewrite steps):
   # proxmox-infrastructure, home-dotfiles and AI_presentation run their
   # existing bare `run:` steps in the runner container, so their ci set uses
   # the estate-ci toolbox (built FROM the stock actions-runner image; adds
@@ -687,7 +648,7 @@ sets:
   - repo: jvallery/monitoring-stack
     profiles:
       ci-gate:
-        # COORD P0 2026-11-07: warm, tiny, slot-free runners for gate/aggregator
+        # 2026-11-07: warm, tiny, slot-free runners for gate/aggregator
         # jobs only (the required "all"/"static"/"networking-required" checks),
         # so a green PR does not wait 10-20 min for a runner just to aggregate.
         max: 4
@@ -696,34 +657,33 @@ sets:
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
-        # ARC-RAISE rebalance 2 (Jason via COORD 2026-11-07 00:35Z, zero-sum): 6 -> 9 (+3 from verdify-platform-ci; at max, ~20 jobs queued incl. fleet-CI exit PRs ms#1444/#1446/#1449).
-        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 9 -> 11 (+2 on top of rebalance 2; was at max 79%, queue p50 12 min).
-        # D-87 hold absorb (CI-BALANCE, COORD 2026-11-07): node6 hold +4 vCPU -> 11 -> 13.
-        # D-488 (Jason 2026-11-09): 13 -> 14. 48 h to 2026-11-10T00:35Z: assigned jobs above max
+        # rebalance 2 (2026-11-07 00:35Z, zero-sum): 6 -> 9 (+3 from verdify-platform-ci; at max, ~20 jobs queued incl. fleet-CI exit PRs ms#1444/#1446/#1449).
+        # 2026-11-06 ~22:43Z: 9 -> 11 (+2 on top of rebalance 2; was at max 79%, queue p50 12 min).
+        # 2026-11-07: +4 vCPU on node6 -> 11 -> 13.
+        # 2026-11-09: 13 -> 14. 48 h to 2026-11-10T00:35Z: assigned jobs above max
         # for 8 min (up to +1; 30 min / 72 h). +1 runner x 1.75 CPU.
-        # TEMPORARY (COORD 2026-11-17T15:38:43Z, W4-D): 14 -> 20 while the merge train drains
+        # 2026-11-17T15:38:43Z: 14 -> 20 while the merge queue drains
         # (200 ms-ci jobs queued, p50 wait 32 min over 60 min). Revert to 14 at 2026-11-18T00:00Z
         # or when the queue drains, whichever is first. Runners are -900 preemptible.
-        # TEMPORARY (COORD 2026-11-17T18:4xZ, W4-D): 20 -> 24, same revert (to 14 at 2026-11-18T00:00Z):
+        # 2026-11-17T18:4xZ: 20 -> 24, same revert (to 14 at 2026-11-18T00:00Z):
         # 127 jobs queued at max 20 with 1 pending; quota estate-ci-runner-pods 66/82 CPU, +4 x 1.75 = 7 CPU
         # fits node7 (80% CPU / 57% memory requests, 4 free slots).
-        # TEMPORARY (COORD 2026-11-17T19:36:11Z): 24 -> 10, same reason; revert restores 24 (then the 14 revert at 2026-11-18T00:00Z still applies).
-        # EXEC-W2-CI-CAP (COORD-W2 2026-11-17T20:31:17Z): 10 -> 16 with the job request 1550m -> 3 (Pod 1.75 -> 3.2 CPU):
+        # 2026-11-17T19:36:11Z: 24 -> 10, same reason; revert restores 24 (then the 14 revert at 2026-11-18T00:00Z still applies).
+        # 2026-11-17T20:31:17Z: 10 -> 16 with the job request 1550m -> 3 (Pod 1.75 -> 3.2 CPU):
         # 16 x 3.2 = 51.2 CPU requests at max. About 55 runs queued at max 10. The 19:36Z revert to 24 and the
         # 00:00Z revert to 14 are superseded: at 3.2 CPU per Pod, 24 would be 76.8 of the 82-CPU runner quota. Revert: 16 -> 10.
-        # EXEC-W2-CI-CAP (COORD-W2 2026-11-18T05:39:34Z, D-848 raise CI capacity): 16 -> 20. At max 16, ms#2028's
+        # 2026-11-18T05:39:34Z: 16 -> 20. At max 16, ms#2028's
         # 6 jobs were queued while the runner quota was 62.5/82, so +4 x 3.2 = 12.8 CPU fits. Guard: if
         # estate-ci-runner-pods requests.cpu stays above 78/82 for 10 min after delivery, revert to 18.
-        # EXEC-W2-CS (COORD-W2 2026-11-18T07:11:04Z pre-GO): guard tripped, 20 -> 18.
-        # EXEC-W2-CS (COORD-W2 2026-11-18T09:00Z, pi#1036): 18 -> 9 with the job request 3 -> 6 (Pod 3.2 -> 6.2 CPU):
+        # 2026-11-18T07:11:04Z: guard tripped, 20 -> 18.
+        # 2026-11-18T09:00Z, pi#1036: 18 -> 9 with the job request 3 -> 6 (Pod 3.2 -> 6.2 CPU):
         # 9 x 6.2 = 55.8 CPU at max, inside the 57.6 CPU envelope that max 18 x 3.2 held. At 18 x 6.2 = 111.6
         # the set alone would exceed the 82-CPU quota, and quota-pending runners starve other repos (ep#966).
         # Revert: max 18, job cpu 3, drop set_spread.
-        # EXEC-W2-CS (COORD-W2 2026-11-18T10:03:52Z ruling): 9 -> 10 (10 x 6.2 = 62.0 CPU of the 82-CPU quota,
+        # 2026-11-18T10:03:52Z: 9 -> 10 (10 x 6.2 = 62.0 CPU of the 82-CPU quota,
         # 20 CPU left for every other set; they used 7-25 CPU on the morning of 11-18). Node5 fell from 48% to
         # 25-36% busy after ec#295. 11 (68.2) is held for a full morning of quota data. Revert: 10 -> 9.
-        # AMC-CI (COORD D-902, 2026-11-20T04:50Z): 10 -> 16 with the job request 4 -> 2.5 (Pod 4.2 -> 2.7 CPU):
+        # 2026-11-20T04:50Z: 10 -> 16 with the job request 4 -> 2.5 (Pod 4.2 -> 2.7 CPU):
         # 16 x 2.7 = 43.2 CPU at max vs 10 x 4.2 = 42.0 (+1.2 CPU of requests). After ec#328 the quota fell to
         # 43-60/82 and max 10 became the limiter (10 running, 27 runs queued). Revert: max 10, job cpu "4".
         max: 16
@@ -731,27 +691,25 @@ sets:
         set_spread: true
         job_image: *toolbox
         job_uid: 1001
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 1.51 CPU, 2026-11-06T12Z..11-10T00Z (2700m -> 1550m); limits unchanged.
-        # EXEC-W2-CI-CAP (COORD-W2 2026-11-17T20:31:17Z, TRIAGE 20:31:05Z): CPU request -> 3 cores, the observed
+        # 2026-11-09: CPU request = job active p50 1.51 CPU, 2026-11-06T12Z..11-10T00Z (2700m -> 1550m); limits unchanged.
+        # 2026-11-17T20:31:17Z: CPU request -> 3 cores, the observed
         # per-job use (node7 at 104% CPU with 1-1.5 CPU requests under limit 8, so the scheduler stacked them); limit unchanged.
-        # EXEC-W2-CS (COORD-W2 2026-11-18T09:00Z, pi#1036): 3 -> 6. HOSTEDGE traced the node5 D-state stall to
+        # 2026-11-18T09:00Z, pi#1036: 3 -> 6. The node5 D-state stall was traced to
         # ms-ci Pods bursting to the 8-CPU limit with up to 4 on one node at 3 CPU requested each.
-        # AMC-CI (COORD AM campaign 2026-11-20, asks/AMC-CI-01): 6 -> 4 request, 8 -> 6 limit (Pod 6.2 -> 4.2 CPU).
+        # 2026-11-20: 6 -> 4 request, 8 -> 6 limit (Pod 6.2 -> 4.2 CPU).
         # 02:20-03:20Z the runner quota sat at 70-81/82 CPU and 4 of 10 ms-ci EphemeralRunners could not get a
         # Pod (exceeded quota estate-ci-runner-pods, requested 6200m), so only 6 jobs ran while 70 waited (median 40 min).
         # 3 h job-sidecar use: per-Pod average p50 3.14 / p90 3.96 CPU, peak 8.0 (the limit). Request 4 covers the
         # p90 average; limit 6 caps a 4-Pod stack on one node at 24 CPU (was 32 at the pi#1036 stall). Same quota:
         # 10 x 4.2 = 42 CPU at max (was 10 x 6.2 = 62). Revert: cpu "6", limit_cpu "8".
-        # AMC-CI (D-902, 04:50Z): 4 -> 2.5, limit 6 unchanged. 50 min of 58 Pods at 4/6: per-Pod average p50 3.09,
+        # 04:50Z: 4 -> 2.5, limit 6 unchanged. 50 min of 58 Pods at 4/6: per-Pod average p50 3.09,
         # p75 3.46, p90 3.75 CPU; peak 6.0 (the limit). Request sits under the average on purpose so 16 fit the
         # same requests as 10; the 6-CPU limit still bounds a stack (node8 stays at 4 ci-runner-slot, STD-CI-10).
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.76 GiB, prometheus 1.76 / replica 1.61, read 2026-11-21T02:15Z); request unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.76 GiB, prometheus 1.76 / replica 1.61, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: "2.5", memory: 640Mi, limit_cpu: "6", limit_memory: 4Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.18 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.18 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 200m); limits unchanged.
         runner_resources: {cpu: 200m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         kaniko_resources: {cpu: "1", memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
       buildcheck:
@@ -764,7 +722,7 @@ sets:
   - repo: jvallery/network-infra
     profiles:
       ci-gate:
-        # COORD P0 2026-11-07: warm, tiny, slot-free runners for gate/aggregator
+        # 2026-11-07: warm, tiny, slot-free runners for gate/aggregator
         # jobs only (the required "all"/"static"/"networking-required" checks),
         # so a green PR does not wait 10-20 min for a runner just to aggregate.
         max: 4
@@ -773,26 +731,23 @@ sets:
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
-        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 6 -> 8 (at max 96%; queue p50 8 min, 136/197 jobs > 5 min).
-        # D-488 (Jason 2026-11-09): 8 -> 10. 48 h to 2026-11-10T00:35Z: GitHub assigned more jobs than
+        # 2026-11-06 ~22:43Z: 6 -> 8 (at max 96%; queue p50 8 min, 136/197 jobs > 5 min).
+        # 2026-11-09: 8 -> 10. 48 h to 2026-11-10T00:35Z: GitHub assigned more jobs than
         # max for 36 min (up to +2; 166 min / 72 h), the most of any set. +2 runners x 0.40 CPU.
-        # COORD-W2 2026-11-16T23:49:11Z (evening CI throughput): 10 -> 14. The only set at max (10/10,
+        # 2026-11-16T23:49:11Z (evening CI throughput): 10 -> 14. The only set at max (10/10,
         # 1 pending) at 23:5xZ; quota estate-ci-runner-pods read 30.15/82 CPU. +4 runners x 0.40 CPU.
         # Revert: 14 -> 10.
         max: 14
         job_image: *toolbox
         job_uid: 1001
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 0.14 CPU, 2026-11-06T12Z..11-10T00Z (150m -> 250m); limits unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.84 GiB, prometheus 0.84 / replica 0.84, read 2026-11-21T02:15Z); request unchanged.
+        # 2026-11-09: CPU request = job active p50 0.14 CPU, 2026-11-06T12Z..11-10T00Z (150m -> 250m); limits unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.84 GiB, prometheus 0.84 / replica 0.84, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.14 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.14 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
-        # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 1.43 CPU, 2026-11-06T12Z..11-10T00Z (2400m -> 1450m); limits unchanged.
+        # 2026-11-09: CPU request = kaniko active p50 1.43 CPU, 2026-11-06T12Z..11-10T00Z (2400m -> 1450m); limits unchanged.
         kaniko_resources: {cpu: 1450m, memory: 512Mi, limit_cpu: "8", limit_memory: 8Gi}
       buildcheck:
         # network-infra#1091: PR builds of the patched kube-vip image (build.yml
@@ -804,25 +759,22 @@ sets:
   - repo: jvallery/storage-infra
     profiles:
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 2 -> 6.
-        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 6 -> 8 (at max 100%; queue p50 28 min).
-        # D-87 hold absorb (CI-BALANCE, COORD 2026-11-07): node6 hold +4 vCPU -> 8 -> 10.
+        # 2026-11-06 ~22:43Z: 6 -> 8 (at max 100%; queue p50 28 min).
+        # 2026-11-07: +4 vCPU on node6 -> 8 -> 10.
         max: 10
         job_image: *toolbox
         job_uid: 1001
-        # D-103 B: request = 6 h sample p95 where it exceeds p90 materially, else p90 (04:10Z); limit unchanged.
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 1.08 CPU, 2026-11-06T12Z..11-10T00Z (2250m -> 1100m); limits unchanged.
-        # EXEC-W2-CI-CAP (COORD-W2 2026-11-17T20:31:17Z, TRIAGE 20:31:05Z): CPU request -> 3 cores, the observed
+        # Request = 6 h sample p95 where it exceeds p90 materially, else p90 (04:10Z); limit unchanged.
+        # 2026-11-09: CPU request = job active p50 1.08 CPU, 2026-11-06T12Z..11-10T00Z (2250m -> 1100m); limits unchanged.
+        # 2026-11-17T20:31:17Z: CPU request -> 3 cores, the observed
         # per-job use (node7 at 104% CPU with 1-1.5 CPU requests under limit 8, so the scheduler stacked them); limit unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.95 GiB, prometheus 0.95 / replica 0.95, read 2026-11-21T02:15Z); request unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.95 GiB, prometheus 0.95 / replica 0.95, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: "3", memory: 1280Mi, limit_cpu: "8", limit_memory: 4Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.11 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.11 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 3.
         max: 3
-        # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.30 CPU, 2026-11-06T12Z..11-10T00Z (2650m -> 350m); limits unchanged.
+        # 2026-11-09: CPU request = kaniko active p50 0.30 CPU, 2026-11-06T12Z..11-10T00Z (2650m -> 350m); limits unchanged.
         kaniko_resources: {cpu: 350m, memory: 5Gi, limit_cpu: "8", limit_memory: 8Gi}
       # PR image builds without a push credential (storage-infra#1579, STD-CI-12):
       # build.yml builds only the images a PR changes, push false. Same Kaniko
@@ -832,21 +784,20 @@ sets:
   - repo: jvallery/cortex-ai-compute
     profiles:
       ci:
-        # D-55 (Jason first-hand 2026-11-06 ~22:43Z, ARC-RAISE): 2 -> 3 (queue p50 3.5 min, p90 7.5 min).
-        # Jason first-hand 2026-11-10 ~20:00Z (cortex/RV/OCR health first): 3 -> 8; per-node slot caps still bound node load.
+        # 2026-11-06 ~22:43Z: 2 -> 3 (queue p50 3.5 min, p90 7.5 min).
+        # 2026-11-10 ~20:00Z (cortex/RV/OCR health first): 3 -> 8; per-node slot caps still bound node load.
         max: 8
         job_image: *toolbox
         job_uid: 1001
-        # COORD P0 2026-11-07 05:27Z: CPU request = 6 h p75 of active use (was p90/p95); limits unchanged so bursts still get CPU.
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 0.30 CPU, 2026-11-06T12Z..11-10T00Z (600m -> 350m); limits unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.72 GiB, prometheus 0.72 / replica 0.60, read 2026-11-21T02:15Z); request unchanged.
+        # 2026-11-09: CPU request = job active p50 0.30 CPU, 2026-11-06T12Z..11-10T00Z (600m -> 350m); limits unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.72 GiB, prometheus 0.72 / replica 0.60, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.12 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.12 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
       build:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2. 2026-11-10 ~20:00Z cortex release queue (5 images): 2 -> 3.
+        # 2026-11-06 ~21:15Z: 1 -> 2. 2026-11-10 ~20:00Z cortex release queue (5 images): 2 -> 3.
         max: 3
-        # D-488 (Jason 2026-11-09): CPU request = kaniko active p50 0.17 CPU, 2026-11-06T12Z..11-10T00Z (700m -> 250m); limits unchanged.
+        # 2026-11-09: CPU request = kaniko active p50 0.17 CPU, 2026-11-06T12Z..11-10T00Z (700m -> 250m); limits unchanged.
         kaniko_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 12Gi}
       # PR image builds without a push credential (cortex-ai-compute#552, STD-CI-12):
       # build.yml builds only the first-party contexts a PR changes, push false.
@@ -856,33 +807,31 @@ sets:
   - repo: jvallery/proxmox-infrastructure
     profiles:
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
         runner_image: *toolbox
-        # EXEC-W2-CI-CAP (COORD-W2 2026-11-17T20:31:17Z, TRIAGE 20:31:05Z): CPU request -> 3 cores, the observed
+        # 2026-11-17T20:31:17Z: CPU request -> 3 cores, the observed
         # per-job use of this runner-as-job container (node7 at 104% CPU with 1-1.5 CPU requests under limit 8, so the scheduler stacked them); limit unchanged.
         runner_resources: {cpu: "3", memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/home-dotfiles
     profiles:
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
         runner_image: *toolbox
-        # D-488 (Jason 2026-11-09): CPU request = runner (runs the job steps) active p50 0.43 CPU, 2026-11-06T12Z..11-10T00Z (150m -> 450m); limits unchanged.
+        # 2026-11-09: CPU request = runner (runs the job steps) active p50 0.43 CPU, 2026-11-06T12Z..11-10T00Z (150m -> 450m); limits unchanged.
         runner_resources: {cpu: 450m, memory: 256Mi, limit_cpu: "8", limit_memory: 8Gi}
   - repo: jvallery/tictactoe
     profiles:
       ci:
-        # D-648 a (Jason first-hand 2026-11-15): static site checks (kustomize render, kubeconform,
+        # 2026-11-15: static site checks (kustomize render, kubeconform,
         # node --check, gitleaks) as bare run: steps in the toolbox runner; no job sidecar.
         max: 1
-        # estate-ci#101 canary (D-372): work and exchange on ephemeral PVCs on
+        # estate-ci#101 canary: work and exchange on ephemeral PVCs on
         # longhorn-v1-disposable-cache-rwo instead of boot-disk emptyDirs. Measure attach latency,
         # volume churn and orphan cleanup here before any other set flips.
         scratch: pvc
@@ -891,7 +840,6 @@ sets:
   - repo: jvallery/AI_presentation
     profiles:
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
@@ -914,7 +862,7 @@ sets:
   - repo: jvallery/ImagineProposals
     profiles:
       ci:
-        # estate-ci#126 (COORD-W2 decision B, 2026-11-17T06:40:30Z): minimal set for the
+        # estate-ci#126 (2026-11-17T06:40:30Z): minimal set for the
         # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
         # scales to zero. Registered on the existing jvallery App installation.
         max: 1
@@ -926,7 +874,7 @@ sets:
   - repo: jvallery/radio
     profiles:
       ci:
-        # estate-ci#126 (COORD-W2 decision B, 2026-11-17T06:40:30Z): minimal set for the
+        # estate-ci#126 (2026-11-17T06:40:30Z): minimal set for the
         # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
         # scales to zero. Registered on the existing jvallery App installation.
         max: 1
@@ -938,7 +886,7 @@ sets:
   - repo: jvallery/sunshine-research
     profiles:
       ci:
-        # estate-ci#126 (COORD-W2 decision B, 2026-11-17T06:40:30Z): minimal set for the
+        # estate-ci#126 (2026-11-17T06:40:30Z): minimal set for the
         # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
         # scales to zero. Registered on the existing jvallery App installation.
         max: 1
@@ -950,7 +898,7 @@ sets:
   - repo: jvallery/vault-personal
     profiles:
       ci:
-        # estate-ci#126 (COORD-W2 decision B, 2026-11-17T06:40:30Z): minimal set for the
+        # estate-ci#126 (2026-11-17T06:40:30Z): minimal set for the
         # shared secret-scan.yml only (gitleaks in the toolbox runner, no job sidecar);
         # scales to zero. Registered on the existing jvallery App installation.
         max: 1
@@ -962,14 +910,13 @@ sets:
   - repo: jvallery/immich-config
     profiles:
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
         job_image: *toolbox
         job_uid: 1001
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.09 GiB, prometheus 0.09 / replica 0.09, read 2026-11-21T02:15Z); request unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.09 GiB, prometheus 0.09 / replica 0.09, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
       # One bounded Family Archive image qualification at a time. The
       # build-check profile mounts pull access only and cannot publish to zot.
@@ -984,32 +931,30 @@ sets:
   - repo: jvallery/orbit
     profiles:
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
         job_image: *toolbox
         job_uid: 1001
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (250m -> 350m); limits unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.08 GiB, prometheus 0.02 / replica 0.08, read 2026-11-21T02:15Z); request unchanged.
+        # 2026-11-09: CPU request = job active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (250m -> 350m); limits unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.08 GiB, prometheus 0.02 / replica 0.08, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 350m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
   - repo: jvallery/wordpress
     profiles:
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
         job_image: *toolbox
         job_uid: 1001
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 0.24 CPU, 2026-11-06T12Z..11-10T00Z (350m -> 250m); limits unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.08 GiB, prometheus 0.08 / replica 0.08, read 2026-11-21T02:15Z); request unchanged.
+        # 2026-11-09: CPU request = job active p50 0.24 CPU, 2026-11-06T12Z..11-10T00Z (350m -> 250m); limits unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.08 GiB, prometheus 0.08 / replica 0.08, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
-        # D-488 (Jason 2026-11-09): CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
+        # 2026-11-09: CPU request = runner active p75 0.13 CPU, 2026-11-06T12Z..11-10T00Z (100m -> 150m); limits unchanged.
         runner_resources: {cpu: 150m, memory: 256Mi, limit_cpu: "2", limit_memory: 2Gi}
-      # D-841 (Jason 2026-11-17, wordpress#288/#259/#306): WordPress builds its own patched
+      # 2026-11-17, wordpress#288/#259/#306: WordPress builds its own patched
       # MariaDB/MaxScale images. build pushes with zot-push-wordpress (ci-wordpress, jvallery/wordpress-*
       # only); buildcheck has no push credential. Max 1 each: rare, attended builds. MaxScale is a
       # C++ source build, so kaniko keeps the 8-CPU / 12Gi limit; requests follow the weather sets.
@@ -1019,10 +964,10 @@ sets:
       buildcheck:
         max: 1
         kaniko_resources: {cpu: 250m, memory: 3Gi, limit_cpu: "8", limit_memory: 12Gi}
-  # crm (moved from VerdifyConsultancy 2026-11-06, REPO-MOVE; jvallery/crm#142):
+  # crm (moved from VerdifyConsultancy 2026-11-06; jvallery/crm#142):
   # offline check ci/check.sh (python unittest allowlist, kustomize render with
   # KSOPS stubbed, gitleaks) as bare run: steps in the toolbox runner, no job
-  # sidecar. Advisory checks (no ruleset yet, D-186). Registers once jvallery/crm
+  # sidecar. Advisory checks (no ruleset yet). Registers once jvallery/crm
   # is in runner App installation 179108157.
   - repo: jvallery/crm
     profiles:
@@ -1033,15 +978,15 @@ sets:
         scratch: pvc
         runner_image: *toolbox
         runner_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "4", limit_memory: 4Gi}
-  # memoryos moved to jvallery on 2026-11-06 (REPO-MOVE, D19). The build and
-  # buildcheck sets were removed (estate-ci#115; COORD 2026-11-10T17:30Z, D-407/D-451)
-  # because zot-push-memoryos was never sealed. D-637 a (Jason first-hand
-  # 2026-11-14): cred-batch S8 seals principal ci-memoryos (ACL on storage-infra
-  # main) and the KSOPS Secret ci-runners/zot-push-memoryos; memoryos#16 step 3
-  # re-adds build here. Merge only after that Secret is live (the set mounts it).
+  # memoryos moved to jvallery on 2026-11-06. The build and
+  # buildcheck sets were removed (estate-ci#115, 2026-11-10)
+  # because zot-push-memoryos was never sealed. 2026-11-14: principal
+  # ci-memoryos (ACL on storage-infra main) and the KSOPS Secret
+  # ci-runners/zot-push-memoryos were sealed, and memoryos#16 step 3
+  # re-added build here. The set mounts that Secret, so it must be live first.
   - repo: jvallery/memoryos
     profiles:
-      # estate-ci#5 / D-186: ci.yml "Kubernetes manifest validation" (ruby validators and
+      # estate-ci#5: ci.yml "Kubernetes manifest validation" (ruby validators and
       # kubectl kustomize, both in the toolbox) moves off ubuntu-latest as bare run: steps
       # in the toolbox runner, no job sidecar. Required by ruleset 26894408 (estate-ci#112).
       ci:
@@ -1055,39 +1000,37 @@ sets:
       # jvallery/memoryos:gha-<sha12> with principal ci-memoryos via
       # ci-runners/zot-push-memoryos. Default Kaniko size, max 1.
       build: {}
-  # verdify-www image build (BUILD-APPS, D-22; COORD 2026-11-06). Registers once
-  # jvallery/verdify-www is in runner App installation 179108157 (Jason). build
+  # verdify-www image build (2026-11-06). Registers once
+  # jvallery/verdify-www is in runner App installation 179108157. build
   # needs the KSOPS Secret zot-push-verdify-www (zot principal ci-verdify-www,
-  # MIGRATE-INFRA agents#6165 batch; ACL verdifyconsultancy/verdify-www).
+  # agents#6165; ACL verdifyconsultancy/verdify-www).
   - repo: jvallery/verdify-www
     profiles:
-      # BUILD-APPS (verdify-www#57): release gate npm ci && npm run qa:ci-local
+      # verdify-www#57: release gate npm ci && npm run qa:ci-local
       # (node + kustomize from the toolbox), the plan step and the pin step.
       ci:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
         job_image: *toolbox
         job_uid: 1001
-        # D-488 (Jason 2026-11-09): CPU request = job active p50 0.59 CPU, 2026-11-06T12Z..11-10T00Z (750m -> 600m); limits unchanged.
-        # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.79 GiB, prometheus 0.79 / replica 0.79, read 2026-11-21T02:15Z); request unchanged.
+        # 2026-11-09: CPU request = job active p50 0.59 CPU, 2026-11-06T12Z..11-10T00Z (750m -> 600m); limits unchanged.
+        # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.79 GiB, prometheus 0.79 / replica 0.79, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 600m, memory: 640Mi, limit_cpu: "8", limit_memory: 4Gi}
       build:
-        # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
       # PR image build check without a push credential (verdify-www#65, STD-CI-12,
       # STD-CI-09): ci.yml builds only when a PR changes Dockerfile or package
       # files, push false. Default size and max 1.
       buildcheck: {}
-  # estate-platform gates (SPRINT-X E0, D-78 Jason 2026-11-07; home-dotfiles#77).
+  # estate-platform gates (home-dotfiles#77).
   # Registers once jvallery/estate-platform is in runner App installation
-  # 179108157 (Jason). Offline gates only: gitleaks, YAML/SOPS, kustomize build.
+  # 179108157. Offline gates only: gitleaks, YAML/SOPS, kustomize build.
   - repo: jvallery/estate-platform
     profiles:
       ci-gate:
-        # COORD-W2 2026-11-18T11:05:02Z demand cut: warm, tiny, slot-free runners for the
+        # 2026-11-18T11:05:02Z demand cut: warm, tiny, slot-free runners for the
         # two light reusable checks of every CI run ("lint / lint" and
         # "kustomize-exec-guard / exec-guard", stdlib Python + PyYAML in the toolbox runner
         # image), so estate-platform-ci slots serve only estate-platform-gates. Same shape as
@@ -1098,10 +1041,10 @@ sets:
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
       ci:
-        # COORD-W2 2026-11-16T17:39:49Z (11 runs queued; the estate-platform train's bottleneck): 2 -> 4.
+        # 2026-11-16 (11 runs queued; every estate delivery waited on this set): 2 -> 4.
         # +2 pods x (runner 100m/256Mi + job 100m/256Mi; init tools/nss 50m) = +0.4 CPU / +1Gi requests,
         # +2 ci-runner-slots. Quota estate-ci-runner-pods read 63.25/82 CPU at 17:3xZ.
-        # COORD-W2 2026-11-18T10:54:59Z rebalance, no quota raise: 4 -> 6, donor kepler-ci 5 -> 3.
+        # 2026-11-18T10:54:59Z rebalance, no quota raise: 4 -> 6, donor kepler-ci 5 -> 3.
         # 24 h p95 busy 4.0 of 4 (saturated; lint jobs starved 10+ min, ec#296 comment 6976446761).
         max: 6
         job_image: *toolbox

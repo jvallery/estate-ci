@@ -6,9 +6,9 @@ Status: Accepted (2026-11-06). Owner: CI-ARCH; built by CI-PLATFORM.
 
 - **Argo CD delivery is unchanged.** CI never applies to the cluster. Merged
   digest pins in Git are the deploy; Argo CD syncs them (automatically, or
-  through the coordinator's exact sync for manual and SHA-pinned Applications).
-  CI never edits an Argo `targetRevision`; SHA-pinned parents keep moving only
-  through the consolidated pin PR (L4).
+  through a sync of the named objects for manual and SHA-pinned Applications).
+  CI never edits an Argo `targetRevision`; a SHA-pinned parent moves only
+  by a pull request that changes its pin.
 - **Pin flow.** `build.yml` (on `build`) outputs digests; a separate `pin` job on
   the `ci` profile runs `ci/pin-bump.sh`, which edits the pin files with plain
   text/YAML tools (kustomize `images:`, inline `image@sha256:` references) or
@@ -41,8 +41,8 @@ Status: Accepted (2026-11-06). Owner: CI-ARCH; built by CI-PLATFORM.
 
 ## Consequences
 
-- Pin PRs from CI appear in the merge flow like any other PR; lanes merge them
-  under the usual compare-check.
+- Pin PRs from CI appear in the merge flow like any other PR and merge on
+  green required checks.
 - Pins of manual or SHA-pinned Applications (for example cortex, kepler, the
-  Home Assistant ops app) still need a coordinator exact sync; the migration
+  Home Assistant ops app) still need a sync of the named objects after the pin merges; the migration
   issue says which.

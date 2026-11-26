@@ -6,8 +6,8 @@
 #
 # Runs on estate-ci-ci-renovate (runners.yaml: job image renovate/renovate,
 # mirrored). Identity: scripts/renovate-run.sh mints a vallery-pin-bot
-# installation token for ONE repository per Renovate pass (D-52,
-# $ESTATE_CI/app-token.py: contents and pull_requests write, 1 h) and revokes
+# installation token for ONE repository per Renovate pass
+# ($ESTATE_CI/app-token.py: contents and pull_requests write, 1 h) and revokes
 # it when that pass ends, so Renovate's PRs start pull_request workflows and
 # their required checks attach. The App key stays in the runner container; the
 # Renovate sidecar only sees the one-repo token. Renovate only opens PRs: it

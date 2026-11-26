@@ -1,8 +1,7 @@
 # ADR-0011: Accepted phase-1 exceptions to the portability and secrets rules
 
-Status: Accepted (2026-11-09). Owner: CI-ARCH. Decisions: D-52 (Jason
-first-hand, 2026-11-06) for E-2; D-373 (2026-11-09 sweep, accepted) for E-1's
-STD-CI-07 exception row.
+Status: Accepted (2026-11-09). Owner: CI-ARCH. E-2 was decided on 2026-11-06; E-1's
+STD-CI-07 exception row was accepted on 2026-11-09.
 
 ## Context
 
@@ -20,7 +19,7 @@ the E-2 secret name.
 
 ## Exceptions
 
-- **E-1 (2026-11-06, COORD; accepted under D-373, 2026-11-09): upstream
+- **E-1 (2026-11-06; accepted 2026-11-09): upstream
   supply-chain attestation verification.** Rules affected: ADR-0009 rule 7 (all
   forge API calls through the `forge` wrapper) and STD-CI-07.
   The estate-ci-toolbox image ships the `gh` CLI (pinned, sha256-checked) so
@@ -33,7 +32,7 @@ the E-2 secret name.
   the public Sigstore/GitHub endpoints); if a token-free path is required,
   replace it with `cosign verify-blob-attestation` against the same bundles.
   Review: with the STD-CI-07 exception row's review date.
-- **E-2 (2026-11-06, D-52, Jason first-hand): the vallery-pin-bot App key.**
+- **E-2 (2026-11-06): the vallery-pin-bot App key.**
   Rules affected: ADR-0005 "no repository Actions secrets in the build path",
   ADR-0009 rule 4 (no Apps tokens) and rule 8 (no forge secrets beyond the
   per-job token), STD-CI-09.
@@ -48,8 +47,8 @@ the E-2 secret name.
   only Actions secret the estate-ci path permits (D-296 removes the others
   after value-blind consumer checks).
   Custody: storage-infra `inventory/recovery-key-custody/pin-pr-app-20261106/`.
-  Non-owner-writer rule (2026-11-16, options-tracker#176; accepted under
-  D-696 (1) b, Jason first-hand, which amends D-52): a repository with any
+  Non-owner-writer rule (2026-11-16, options-tracker#176; which amends
+  the original decision): a repository with any
   write, maintain or admin collaborator besides the owner does not receive
   the secret or the variable. Any writer can add a workflow that reads the
   secret, and the installation token it mints is not limited to the calling

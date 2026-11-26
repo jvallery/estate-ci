@@ -1,13 +1,13 @@
-# node8 hot guard (D-67, Jason first-hand 2026-11-07): estate-ci runners may use
+# node8 hot guard (2026-11-07): estate-ci runners may use
 # vm-k3s-node8 (Frigate's node) as overflow, and always lose to Frigate.
 #
 # Every estate-ci runner Pod requests one agentfleet.vallery.net/ci-runner-slot
 # (advertised per node by CronJob ci-runner-slots from ConfigMap
-# ci-runners/ci-runner-slots, runner-slots.yaml; STD-CI-10: node4-7 20 (D-141),
-# node8 4 (D-168); ADR-0010 item 5 holds the current values). Every
+# ci-runners/ci-runner-slots, runner-slots.yaml; STD-CI-10: node4-7 20,
+# node8 4; ADR-0010 item 5 holds the current values). Every
 # minute this CronJob reads node8 and Frigate signals from Prometheus
-# (bin/hot-guard.py, thresholds in hot-guard-config.json). Two tiers (COORD
-# 2026-11-07T03:49Z, after a CPU-only trip killed in-flight jobs):
+# (bin/hot-guard.py, thresholds in hot-guard-config.json). Two tiers (since
+# 2026-11-07, after a CPU-only trip killed in-flight jobs):
 #   HARD (Frigate skipped/decode deficit, a frigate restart, node memory): write a
 #     reason under node8 in ConfigMap ci-runner-slot-hold (the advertiser sets
 #     0 slots within about a minute) and evict node8 runner Pods newest-first
@@ -18,8 +18,8 @@
 # A missing signal or an unreachable Prometheus holds node8 at 0 (fail closed)
 # without evicting, and the run exits 1.
 #
-# Per-node reserve (estate-ci#69, D-486): for each of node4-7, when CPU busy /
-# allocatable stays above 0.92 for 2 min (D-502 (b) trip-threshold half), the guard
+# Per-node reserve (estate-ci#69): for each of node4-7, when CPU busy /
+# allocatable stays above 0.92 for 2 min, the guard
 # writes "cap=10 ... reserve:..." under that node (the advertiser offers
 # min(desired, 10)), so no new runner lands
 # there; nothing is evicted. The cap drops once the max over 30 min is below 0.75.
@@ -36,7 +36,7 @@
 #   log:           kubectl -n ci-runners logs job/<latest ci-runner-hot-guard job>
 #   state:         kubectl -n ci-runners get cm ci-runner-slot-hold -o yaml
 #   pause guard:   set "mode": "dry-run" in hot-guard-config.json (PR); every write becomes dryRun=All
-#   forced trip:   docs/adr/0002-runner-topology-and-capacity.md "node8 overflow (D-67)"
+#   forced trip:   docs/adr/0002-runner-topology-and-capacity.md "node8 overflow"
 # Alerts (jvallery/monitoring-stack): EstateCINode8GuardTripped, EstateCINode8GuardFailing.
 apiVersion: v1
 kind: ServiceAccount

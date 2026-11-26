@@ -13,7 +13,7 @@ spec.loader.exec_module(g)
 cfg = json.loads((ROOT / "deploy/foundation/hot-guard-config.json").read_text())
 SHIPPED = json.loads(json.dumps(cfg))
 # The memory-tier cases below were written against the dry-run reference values (reserve 6 GiB,
-# mode dry-run); pin them here so the shipped values can move (COORD-W2 2026-11-18T10:10:29Z:
+# mode dry-run); pin them here so the shipped values can move (2026-11-18T10:10:29Z:
 # enforce at 4 GiB) without rewriting the arithmetic. SHIPPED is checked separately.
 cfg["reserve"]["memory"]["mode"] = "dry-run"
 cfg["reserve"]["memory"]["reserve_gib"] = 6
@@ -55,7 +55,7 @@ check("cooling", g.decide(NOW, [], [], held, 900)["hold"], "keep")
 held["last_trip"] = NOW - dt.timedelta(minutes=15)
 check("restore after 15 clean", g.decide(NOW, [], [], held, 900)["hold"], "clear")
 check("trip while held re-sets", g.decide(NOW, ["x"], [], held, 900)["hold"], "set")
-# Two tiers (COORD 2026-11-07T03:49Z).
+# Two tiers (2026-11-07T03:49Z).
 check("hold_cap", [g.hold_cap(x) for x in ("", "  ", "2026 trip:x", "cap=4 2026 soft:x", "cap=x y")], [None, None, 0, 4, 0])
 d = g.decide(NOW, [], [], None, 900, ["node_cpu_busy_4m"])
 check("soft trip caps, no evict", (d["hold"], d["evict"]), ("soft", False))
@@ -87,7 +87,7 @@ check("reserve recover below 0.75 over 30 min", (RES["recover"]["threshold"], "[
 check("reserve held, 0.8 is not calm", rd(0.5, 0.8, RHELD), "keep")
 check("reserve held, calm clears", rd(0.5, 0.7, RHELD), "clear")
 check("reserve empty signal is hot", (rd(None, 0.5, RHELD), rd(0.5, None), rd(None, 0.5)), ("keep", "set", "set"))
-# Per-node reserve caps (COORD-W2 2026-11-17T20:36:50Z): node4-7 all cap 13 (52 slots, evenly spread).
+# Per-node reserve caps (2026-11-17T20:36:50Z): node4-7 all cap 13 (52 slots, evenly spread).
 check("reserve per-node caps", [g.reserve_cap(RES, n) for n in RES["nodes"]], [13, 13, 13, 13])
 check("reserve per-node caps stay below 20", all(0 < g.reserve_cap(RES, n) < 20 for n in RES["nodes"]), True)
 check("reserve recap a held node to its cap", g.reserve_recap(RHELD, 16), "cap=16 2026-11-10T00:00:00Z reserve:busy>0.92")
@@ -264,10 +264,10 @@ with open(cfgfile.name, "w") as _f:
 check("memory enforce rc", g.main(), 0)
 check("memory enforce: node4 capped at its 1 runner, tagged", state["cm"]["data"].get("vm-k3s-node4", "").split()[0::2][:2],
       ["cap=1", "reserve:mem<6GiB"])
-state["cm"]["data"]["vm-k3s-node6"] = "cap=8 operator: COORD-W2 06:09:54Z"
+state["cm"]["data"]["vm-k3s-node6"] = "cap=8 operator: manual 06:09:54Z"
 VALUES["reserve_memfree:vm-k3s-node6"] = 1.0 * 2 ** 30
 check("memory enforce operator rc", g.main(), 0)
-check("memory enforce: operator hold untouched", state["cm"]["data"]["vm-k3s-node6"], "cap=8 operator: COORD-W2 06:09:54Z")
+check("memory enforce: operator hold untouched", state["cm"]["data"]["vm-k3s-node6"], "cap=8 operator: manual 06:09:54Z")
 VALUES["reserve_memfree:vm-k3s-node4"] = 38.0 * 2 ** 30
 check("memory raise rc", g.main(), 0)
 check("memory enforce: node4 raised to 1 + (38-10)//2 at 50/88", state["cm"]["data"]["vm-k3s-node4"].split()[0], "cap=15")
@@ -362,7 +362,7 @@ check("kube HTTP status is not retried", (_got, _n[0]), ("raised", 1))
 
 # estate-ci#248: memory-headroom cap (pure logic; fake node allocatable 88 GiB, 20 slots)
 MEM = cfg["reserve"]["memory"]
-check("memory config ships enforce (COORD-W2 2026-11-18T10:10:29Z)", SHIPPED["reserve"]["memory"]["mode"], "enforce")
+check("memory config ships enforce", SHIPPED["reserve"]["memory"]["mode"], "enforce")
 check("memory config ships reserve 4 GiB", SHIPPED["reserve"]["memory"]["reserve_gib"], 4)
 check("memory free_query excludes Terminating pods", "unless on(namespace,pod) kube_pod_deletion_timestamp"
       in SHIPPED["reserve"]["memory"]["free_query"], True)
@@ -375,7 +375,7 @@ check("50/88 lifts once margin holds", g.memory_decide(88 - 50, 7, held, MEM, 20
 check("hysteresis: just above reserve does not lift", g.memory_decide(12.5, 7, held, MEM, 20)[0], "set")
 check("hysteresis re-cap uses recover margin", g.memory_decide(12.5, 7, held, MEM, 20)[1], 8)
 check("unheld with room: keep", g.memory_decide(60, 3, None, MEM, 20), ("keep", None))
-check("operator hold never rewritten", g.memory_decide(1.0, 9, "cap=8 operator: COORD 06:09Z", MEM, 20), ("foreign", None))
+check("operator hold never rewritten", g.memory_decide(1.0, 9, "cap=8 operator: manual 06:09Z", MEM, 20), ("foreign", None))
 check("hard hold (no tag) never rewritten", g.memory_decide(1.0, 9, "2026-11-17T00:00:00Z trip:frigate", MEM, 20), ("foreign", None))
 check("failed read changes nothing", g.memory_decide(1.0, 9, None, MEM, 20, failed=True), ("keep", None))
 check("empty read changes nothing", g.memory_decide(None, 9, held, MEM, 20), ("keep", None))

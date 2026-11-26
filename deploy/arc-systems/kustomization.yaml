@@ -1,4 +1,4 @@
-# estate-ci#192 (D-542): the arc-systems support objects for the ARC controller,
+# estate-ci#192: the arc-systems support objects for the ARC controller,
 # moved value for value from jvallery/agents platform/kubernetes/github-runners/foundation
 # (Application arc-runner-foundation). Delivered by Application estate-ci-arc-systems
 # (rendered into deploy/runners/apps/ by scripts/render_runners.py), auto-sync from main,

@@ -4,7 +4,7 @@
 #   image-build.sh --image jvallery/weather-app [--dockerfile Dockerfile] [--context .]
 #                  [--target stage] [--build-arg NAME=value ...] [--push [--rescore sha256:...]]
 #
-# --rescore (D-1344, after a cve-gate block): build nothing; re-score a digest this repository already
+# --rescore (after a cve-gate block): build nothing; re-score a digest this repository already
 # pushed. The digest must exist in zot under --image and its image config must carry this checkout's
 # org.opencontainers.image.source label (set by every build here), or the run refuses. Then the same
 # Trivy scan and cve-gate.sh run against the current R26 rows, and the digest is output only on pass.
@@ -47,7 +47,7 @@ ORAS_SHA256=66fb0ad7206f3f6fa77ed5b552049d364ccf4b50b1684554f731f76302b52ca0
 TRIVY_DB_REPOSITORIES="${ESTATE_CI_TRIVY_DB:-mirror.gcr.io/aquasec/trivy-db:2,ghcr.io/aquasecurity/trivy-db:2}"
 TRIVY_JAVA_DB_REPOSITORIES="${ESTATE_CI_TRIVY_JAVA_DB:-mirror.gcr.io/aquasec/trivy-java-db:1,ghcr.io/aquasecurity/trivy-java-db:1}"
 # R26 findings exceptions, read anonymously from the in-cluster git mirror (no credential, STD-CI-15): the
-# register the estate image scan reads (estate-platform, moved from agents under ep#693; D-1344 M1).
+# register the estate image scan reads (estate-platform, moved from agents under ep#693).
 EXCEPTIONS_GIT="${ESTATE_CI_EXCEPTIONS_GIT:-http://git-mirror.git-mirror.svc.cluster.local/jvallery/estate-platform.git}"
 EXCEPTIONS_PATH="${ESTATE_CI_EXCEPTIONS_PATH:-security/estate-security-report/findings-exceptions.json}"
 # The repo's zot principal, mounted by the <repo>-build set (the override exists for tests/image_rescore).

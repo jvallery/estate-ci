@@ -10,7 +10,7 @@
 # Runs in the runner container of estate-ci-ci-renovate; Renovate itself runs in
 # the job sidecar (renovate/renovate image) through $ESTATE_CI/sidecar-run.sh.
 # Each pass mints a vallery-pin-bot installation token for that ONE repository
-# (D-52, $ESTATE_CI/app-token.py: contents + pull_requests write, 1 h) and revokes
+# ($ESTATE_CI/app-token.py: contents + pull_requests write, 1 h) and revokes
 # it when the pass ends. Needs APP_CLIENT_ID and APP_PRIVATE_KEY in the env; the
 # App key never enters the sidecar. Renovate only opens PRs: it never merges,
 # pins digests or touches Argo (renovate/global.json).

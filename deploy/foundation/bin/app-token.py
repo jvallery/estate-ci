@@ -4,7 +4,7 @@
   APP_CLIENT_ID=... APP_PRIVATE_KEY="$(pem)" app-token.py <owner/repo>   -> token on stdout
   APP_TOKEN=... app-token.py --revoke
 
-Used by pin-bump.yml (D-52, vallery-pin-bot) so pin PRs are opened by an App
+Used by pin-bump.yml (vallery-pin-bot) so pin PRs are opened by an App
 and start pull_request workflows. The token is limited to the named repository
 and to contents + pull_requests write (plus issues:read when the caller sets
 APP_TOKEN_EXTRA_PERMISSIONS=issues=read, as renovate-run.sh does); it expires

@@ -7,7 +7,7 @@
 #
 # ARC runner (image index, as pinned in runners.yaml defaults.runner_image).
 ghcr.io/actions/actions-runner:2.338.2@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232  jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner
-# AMC-SEC-A2 T08: the upstream 2.338.2 re-push of 2026-11-11 (Ubuntu base 2026-11-09, full rebuild; amd64 4037925f).
+# The upstream 2.338.2 re-push of 2026-11-11 (Ubuntu base 2026-11-09, full rebuild; amd64 4037925f).
 # The base for the toolbox rebuild and the next runners.yaml runner_image; 759a1d94 stays until both have moved.
 ghcr.io/actions/actions-runner:2.338.2@sha256:6d0b2d80d80f143f77dcb676e50920100bbb547e39e883454d57f45ab8c31300  jvallery/estate-ci/mirror/ghcr.io/actions/actions-runner
 # Kaniko executor v1.23.2-debug (image index; same digest as the fleet-named jvallery/agents-kaniko-executor copy).
@@ -62,12 +62,12 @@ ghcr.io/kiwix/kiwix-serve@sha256:e478554a9920412eeb5ce1d73f24e4b28445ebed233187c
 # arc-systems container resolved live on 2026-11-10 (pod imageID). The chart
 # values in jvallery/agents github-runners-arc.yaml pin it from the origin next.
 ghcr.io/actions/gha-runner-scale-set-controller:0.14.2@sha256:1b4c7f62e971ab259a4b8798e48e2adaad4af747f45990f474ea5feefa03531d  jvallery/estate-ci/mirror/ghcr.io/actions/gha-runner-scale-set-controller
-# ARC 0.15.1 (2026-10-23, Go 1.27.3; AMC-CI T18): image index for the controller and listeners. Keep 0.14.2 above for rollback.
+# ARC 0.15.1 (2026-10-23, Go 1.27.3): image index for the controller and listeners. Keep 0.14.2 above for rollback.
 ghcr.io/actions/gha-runner-scale-set-controller:0.15.1@sha256:4b51a20db717b194e2f3fa96cfe2ddcb21602811f79053c75fd1a383517b9f90  jvallery/estate-ci/mirror/ghcr.io/actions/gha-runner-scale-set-controller
 # verdify-www Dockerfile build and runtime stages (verdify-www#64): node 22.23.4 alpine
 # index, the digest node:22-alpine resolved to on 2026-11-09.
 docker.io/library/node:22.23.4-alpine@sha256:0e1754758c2df4cfa3e68d59e2e1b7374bb7fd9ea6328eaaacf15cc934af8202  jvallery/estate-ci/mirror/docker.io/library/node
-# crm twenty-redis (AMC campaign T-crm, COORD WORK-ORDERS-0642): Docker Official redis 7.2.17 on
+# crm twenty-redis: Docker Official redis 7.2.17 on
 # Alpine 3.22 (image index, the digest redis:7.2-alpine resolved to via mirror.gcr.io on 2026-11-20),
 # replacing jvallery/verdify-crm-redis-recovery@84bab713 (redis:7.2-alpine on Alpine 3.21, end of support).
 docker.io/library/redis:7.2.17-alpine3.22@sha256:2f66de68111e64c3927859f158f8e666066dae2b97d9f82770a6f37a5aa1c335  jvallery/estate-ci/mirror/docker.io/library/redis

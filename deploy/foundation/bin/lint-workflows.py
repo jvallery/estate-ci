@@ -28,7 +28,7 @@ Warnings (exit 0 unless --strict):
                       pin-bot key (ADR-0009 rule 8)
   R2-inline-shell     a run: block longer than 15 lines (keep logic in scripts)
 
-Recorded exceptions (estate-ci#5, D-373): `.estate-ci/workflow-lint-allow.txt` in a
+Recorded exceptions (estate-ci#5): `.estate-ci/workflow-lint-allow.txt` in a
 linted repository root, one row per exception,
 `<path glob> <rule> <YYYY-MM-DD expiry> <issue URL>`; `#` starts a comment. A row
 covers a finding when its repo-relative path matches the glob and its rule is the
@@ -366,10 +366,10 @@ CACHE_ARTIFACT = re.compile(r"^actions/(cache|upload-artifact|download-artifact)
 ALLOWED_CONTEXTS = {
     "github.repository", "github.ref", "github.ref_name", "github.sha", "github.event_name",
     "github.event.pull_request.number", "github.event.pull_request.head.sha",
-    "github.event.repository.name",  # ADR-0009 rule 5 (COORD 2026-11-06): runs-on label
+    "github.event.repository.name",  # ADR-0009 rule 5: runs-on label
     "github.workflow", "github.token",
 }
-# ADR-0009 rule 8 exceptions: the per-job token and E-2 (D-52) the vallery-pin-bot
+# ADR-0009 rule 8 exceptions: the per-job token and E-2 the vallery-pin-bot
 # key, which pin-bump.yml takes as a workflow_call secret.
 ALLOWED_SECRETS = {"secrets.GITHUB_TOKEN", "secrets.PIN_BOT_PRIVATE_KEY", "secrets.pin-bot-private-key"}
 ALLOWED_CONTEXT_ROOTS = ("inputs.", "needs.", "matrix.", "steps.", "env.", "jobs.", "vars.", "runner.")

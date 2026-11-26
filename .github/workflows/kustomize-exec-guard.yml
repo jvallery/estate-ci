@@ -3,7 +3,7 @@
 # Kustomize Application with --enable-alpha-plugins --enable-exec and the
 # repo-server holds the age identity, so an exec generator, transformer or
 # validator in a delivered repo could read it. This is the interim control
-# until KSOPS moves to a ConfigManagementPlugin sidecar (stage 2, D-682).
+# until KSOPS moves to a ConfigManagementPlugin sidecar (stage 2).
 #
 #   jobs:
 #     kustomize-exec-guard:
