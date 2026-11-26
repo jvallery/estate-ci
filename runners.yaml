@@ -984,10 +984,8 @@ sets:
   - repo: jvallery/orbit
     profiles:
       ci:
-        # CI-09 r3 section 9 canary cP2 (walk hop 1, D-1379/D-1396): orbit-ci paused for the canary only; the canary revert PR restores cM0 content.
-        max: 0
-        min: 0
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
+        max: 2
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
@@ -1089,14 +1087,13 @@ sets:
   - repo: jvallery/estate-platform
     profiles:
       ci-gate:
-        # CI-09 r3 section 9 canary cP1 (walk hop 1, D-1379/D-1396): warm gate set paused for the canary only; the canary revert PR restores cM0 content.
-        max: 0
-        min: 0
         # COORD-W2 2026-11-18T11:05:02Z demand cut: warm, tiny, slot-free runners for the
         # two light reusable checks of every CI run ("lint / lint" and
         # "kustomize-exec-guard / exec-guard", stdlib Python + PyYAML in the toolbox runner
         # image), so estate-platform-ci slots serve only estate-platform-gates. Same shape as
         # the agents and network-infra ci-gate sets.
+        max: 4
+        min: 1
         slot: false
         runner_image: *toolbox
         runner_resources: {cpu: 100m, memory: 128Mi, limit_cpu: "1", limit_memory: 512Mi}
