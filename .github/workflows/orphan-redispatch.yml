@@ -14,7 +14,7 @@
 #       uses: jvallery/estate-ci/.github/workflows/orphan-redispatch.yml@<sha>
 #       with:
 #         runner: <repo>-ci-gate   # a warm set, so this job is not stuck behind the queue it fixes
-#         mode: dry-run            # enforce after a dry-run review (COORD GO)
+#         mode: dry-run            # switch to enforce after reading one dry-run report
 #         max-runners: <set>=<maxRunners>   # saturation guard; required for enforce to act
 #       permissions:
 #         actions: write

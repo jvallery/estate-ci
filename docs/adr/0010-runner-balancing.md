@@ -63,7 +63,7 @@ the same.
    so node CPU safety is as before. When that quota itself is exhausted the Pod
    is refused at admission and preemption cannot help; that case is not covered.
    The list holds explicit scale-set names and the renderer refuses an unknown
-   one. COORD designates a set (or Jason directly) by a PR to `runners.yaml`,
+   one. A set is designated by a PR to `runners.yaml`,
    delivered through the `estate-ci-runners` pin, and removes it the same way
    once the set no longer needs incident priority. The first set is
    research-vault (`-build`, `-ci`, `-pg`), the sets that waited 7-20 minutes in
@@ -81,7 +81,7 @@ the same.
    `preemptionPolicy: Never`). It sits between the infra tier and
    `ci-incident`. It evicts nothing, but when a `ci-runner-slot` frees, its
    Pending runners schedule before every -900 and -1000 runner. That is the lever
-   for sets that gate the merge train during saturation; on 2026-11-17
+   for sets whose checks gate merges during saturation; on 2026-11-17
    `estate-platform-ci` waited about 74 minutes behind infra-tier runners. A set
    may not be in both `gate_sets` and `incident_sets`, and the renderer refuses
    an unknown name. It is changed by a `runners.yaml` PR plus the

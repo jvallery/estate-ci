@@ -6,9 +6,6 @@ deployment moves off the jvallery/agents native CI (Argo Workflows/Events,
 ARC runners in the estate cluster. The design is meant to make a later move to a
 self-hosted forge (phase 2) mechanical.
 
-Program owner: lane CI-ARCH. Program epic and issue tree: jvallery/agents
-(see ADR-0001). The foundation is built by lane CI-PLATFORM in this repository.
-
 | ADR | Title | Status |
 |---|---|---|
 | [0001](0001-program-scope-and-rules.md) | Program scope, binding rules (R1-R3) and decisions (J-1..J-7) | Accepted |

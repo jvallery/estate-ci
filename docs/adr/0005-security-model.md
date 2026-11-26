@@ -47,23 +47,20 @@ request can run arbitrary code on them.
 Ruleset `main-pr-only-v1` requires `lint / lint` and `foundation / foundation`
 (GitHub Actions, app 15368; not up to date) and has no bypass actor
 (estate-ci#111, STD-CI-01). If the runners are down, the foundation is repaired
-through Argo CD from jvallery/agents (which does not depend on estate-ci
-checks). No GitHub-hosted fallback exists.
+from the operator machine with kubectl and Argo CD, which do not depend on
+estate-ci checks. No GitHub-hosted fallback exists.
 
 **Break-glass: a time-boxed ruleset edit, not a bypass.** A bad script in
 `deploy/foundation/bin` can fail the required check on the very PR that fixes
-it. Then the coordinator executor, on Jason's first-hand decision line:
+it, because runner Pods mount the scripts that `main` delivers. When no pull
+request can pass, and only for the one pull request that repairs the check:
 
-1. writes a steer line naming the PR, the context to relax and the UTC start;
-2. saves `gh api repos/jvallery/estate-ci/rulesets/26661683` to a receipt;
-3. PUTs the ruleset with only the failing context removed (never the
+1. save `gh api repos/jvallery/estate-ci/rulesets/26661683` to a file;
+2. PUT the ruleset with only the failing context removed (never the
    `pull_request`, `deletion` or `non_fast_forward` rules, never a bypass actor);
-4. merges that one PR;
-5. re-PUTs the saved JSON within 60 minutes of step 3, reads it back equal, and
-   writes the closing steer line.
-
-The edit is recorded as an enumerated STD-CI-01 exception use; a standing path
-needs its own exception row.
+3. merge that one PR;
+4. re-PUT the saved JSON within 60 minutes of step 2 and read it back equal;
+5. say what was relaxed, and for how long, in the PR.
 
 **Advisory repositories (J-2).** Where protection cannot be enforced, the same
 guard and credential split apply; only the merge gate is advisory.
