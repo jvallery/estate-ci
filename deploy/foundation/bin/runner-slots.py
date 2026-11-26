@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""estate-ci runner-slot advertiser (estate-ci#76, D-67/D-87/D-168, STD-CI-10).
+"""estate-ci runner-slot advertiser (estate-ci#76, STD-CI-10).
 
 Every estate-ci runner Pod requests one agentfleet.vallery.net/ci-runner-slot, the
 per-node runner cap. Extended resources on node status are not durable (a kubelet

@@ -13,7 +13,7 @@
 #
 # Plain git for the branch and commit; forge-api.sh for the PR, the checks
 # dispatch and auto-merge (the only forge-specific part). With APP_CLIENT_ID and
-# APP_PRIVATE_KEY (vallery-pin-bot, D-52) app-token.py mints a repo-scoped App
+# APP_PRIVATE_KEY (vallery-pin-bot) app-token.py mints a repo-scoped App
 # token into FORGE_TOKEN, so the PR starts pull_request workflows normally. A
 # job-token PR starts none, so --checks-workflow (fallback only) dispatches the
 # checks on the pin branch.
@@ -34,7 +34,7 @@ while (($#)); do
 done
 [[ -n "$pins" ]] || { echo "no --pin given" >&2; exit 2; }
 
-# D-52: open the PR as the vallery-pin-bot App when its key is provided, so the
+# Open the PR as the vallery-pin-bot App when its key is provided, so the
 # PR starts pull_request workflows; the token is repo-scoped and revoked on exit.
 if [[ -n "${APP_CLIENT_ID:-}" && -n "${APP_PRIVATE_KEY:-}" ]]; then
   FORGE_TOKEN="$(python3 "$here/app-token.py" "$GITHUB_REPOSITORY")"

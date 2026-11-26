@@ -9,7 +9,7 @@ this ADR is now a record of how it ran:
 - **D-15 (Jason, 2026-11-06 ~15:3xZ):** jvallery/agents counted as at parity
   after 3 agreeing PRs instead of the Tier A 5, then switched its ruleset to
   the Actions contexts and turned native PR checks off.
-- **D-22 (Jason first-hand, 2026-11-06T16:51:05Z, "Cut over now"):** a hard
+- **D-22 (2026-11-06T16:51:05Z):** a hard
   cut-over replaced parity counting for every repository. Once one Actions run
   was green per repository, its required checks switched to Actions and native
   was refused for it. The parity table, the 7-day soak before step 5 and the

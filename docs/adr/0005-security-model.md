@@ -26,7 +26,7 @@ request can run arbitrary code on them.
 
 **Superseding notes (2026-11-09, estate-ci#105).**
 
-- **D-52 (Jason first-hand, 2026-11-06) changes "no Actions secrets" and "Apps
+- **D-52 (2026-11-06) changes "no Actions secrets" and "Apps
   tokens".** One Actions secret is allowed: `PIN_BOT_PRIVATE_KEY`, with the
   variable `PIN_BOT_CLIENT_ID`, for the GitHub App `vallery-pin-bot` (contents
   and pull_requests write). Only `pin-bump.yml` reads it, and `app-token.py`

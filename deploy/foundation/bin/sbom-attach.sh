@@ -7,7 +7,7 @@
 #
 # Warn mode: every failure logs "sbom: warn ..." and exits 0, so no build fails on this step until
 # ADR-0012 step 5 commits an enforce date. Signing (cosign, key-based) is a later step: it needs the
-# estate image-signing key, which Jason seals.
+# estate image-signing key (keys/README.md).
 set -uo pipefail
 
 trivy="" oras="" cache="" regcfg="" ref=""

@@ -15,7 +15,7 @@
 # (image not rebuilt) are skipped. Rewrites kustomize images entries and inline
 # <image>@sha256: references.
 #
-# PR identity (D-52): with the pin-bot-private-key secret and the repo variable
+# PR identity: with the pin-bot-private-key secret and the repo variable
 # PIN_BOT_CLIENT_ID (GitHub App vallery-pin-bot), $ESTATE_CI/app-token.py mints
 # an installation token scoped to the calling repo only (revoked at step end)
 # and the PR is opened with it, so pull_request workflows

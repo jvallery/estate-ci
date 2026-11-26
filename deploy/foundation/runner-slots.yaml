@@ -1,4 +1,4 @@
-# Runner-slot advertiser (estate-ci#76; D-67, D-87, D-168; STD-CI-10, ADR-0010).
+# Runner-slot advertiser (estate-ci#76; STD-CI-10, ADR-0010).
 #
 # Every estate-ci runner Pod requests one agentfleet.vallery.net/ci-runner-slot, the
 # per-node runner cap. This CronJob (bin/runner-slots.py) applies the values in
@@ -12,7 +12,7 @@
 # Cutover (estate-ci#76): this file goes live with the same values the agents
 # ConfigMap holds, so the first run only takes field ownership (server-side apply,
 # fieldManager estate-ci-runner-slots) and the advertised slot never changes. The
-# agents writer is removed afterwards through the agents merge train.
+# agents writer is removed afterwards.
 #
 # Least privilege: the ClusterRole grants nodes get/list and nodes/status patch only
 # (no nodes update/patch, no labels, no Pods). It needs AppProject estate-ci to allow
@@ -39,7 +39,7 @@ data:
   vm-k3s-node5: "20"
   vm-k3s-node6: "20"
   vm-k3s-node7: "20"
-  # node8 is the Frigate node (dedicated=frigate): 4 (D-168, COORD 2026-11-08T14:54:45Z).
+  # node8 is the Frigate node (dedicated=frigate): 4.
   vm-k3s-node8: "4"
 ---
 # Written only by the node8 hot guard (bin/hot-guard.py, merge patch of data and

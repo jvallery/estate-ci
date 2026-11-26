@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""estate-ci node8 hot guard (D-67). Runners always lose to Frigate.
+"""estate-ci node8 hot guard. Runners always lose to Frigate.
 
 Runs every minute as CronJob ci-runner-hot-guard in ci-runners. stdlib only.
 
 Each run reads trip signals from Prometheus (the queries are in the config
-ConfigMap). Signals have a tier (COORD ruling 2026-11-07T03:49Z: runners always
+ConfigMap). Signals have a tier (runners always
 lose to Frigate, but node CPU alone must not kill in-flight jobs):
 
   HARD trip      -> (Frigate degraded or restarted, node memory) write a reason
@@ -24,7 +24,7 @@ lose to Frigate, but node CPU alone must not kill in-flight jobs):
   soft + calm    -> drop the cap once soft_recover holds (CPU max over 10 min
                     below 0.75). The advertiser then restores the desired slots.
 
-Per-node reserve (estate-ci#69, D-486: runners may fill a worker to 95% of
+Per-node reserve (estate-ci#69: runners may fill a worker to 95% of
 allocatable). The quota bounds runner requests only in aggregate, so for each
 node in config `reserve.nodes` (node4-7) the guard also reads that node's CPU
 busy ratio. Above `reserve.trip` it writes "cap=<reserve.cap> ... reserve:..."
@@ -137,7 +137,7 @@ def decide(now: dt.datetime, tripped: list[str], missing: list[str], hold: dict 
     soft = soft or []
     if tripped:
         # Close slots on the first HARD run; evict only when the previous run had
-        # already confirmed a HARD trip (COORD 2026-11-07T04:08Z: delete runners only
+        # already confirmed a HARD trip (delete runners only
         # on a confirmed Frigate signal).
         confirmed = bool(hold) and not hold.get("cap") and " trip:" in (hold.get("reason") or "")
         return {"hold": "set", "evict": confirmed, "reason": "trip:" + ",".join(sorted(tripped))}

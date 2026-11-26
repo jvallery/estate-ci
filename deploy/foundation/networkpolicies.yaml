@@ -81,7 +81,7 @@ spec:
 # private history of every mirrored repo without auth, so only the build sets of owner-only
 # jvallery repos are listed (a new set is excluded until added here and in the matching
 # ingress in jvallery/estate-platform gitops/git-mirror/networkpolicy.yaml). Excluded:
-# options-tracker-build (non-owner writers). D-1344 (2026-11-24): memoryos-build and wordpress-build
+# options-tracker-build (non-owner writers). 2026-11-24: memoryos-build and wordpress-build
 # (sets created after this list) and verdify-platform-build and verdify-www-build (owner-only since)
 # added; collaborators with write read 2026-11-24: jvallery only.
 # Only the git-mirror Pods, only 8080 (Service git-mirror:80 -> http).

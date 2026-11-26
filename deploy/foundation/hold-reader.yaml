@@ -1,4 +1,4 @@
-# D-67: the slot advertisers read ConfigMap ci-runner-slot-hold (written by the
+# The slot advertisers read ConfigMap ci-runner-slot-hold (written by the
 # ci-runner-hot-guard CronJob) and advertise 0 (or the "cap=N" value)
 # agentfleet.vallery.net/ci-runner-slot on a held node. They may get only that
 # ConfigMap. A 404 (no hold yet) is "no holds"; a 403 would freeze ci-runner-slot.

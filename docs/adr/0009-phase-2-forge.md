@@ -44,7 +44,7 @@ its workflows run unmodified) that confirms the version-specific items marked
    `github.ref_name`, `github.sha`, `github.event_name`, `github.event.pull_request.number`,
    `github.event.pull_request.head.sha`, `github.event.repository.name`, `inputs.*`,
    `needs.*`, `matrix.*`. Scripts read the equivalent env vars.
-   `github.event.repository.name` was added by COORD ruling on 2026-11-06. It selects
+   `github.event.repository.name` was added on 2026-11-06. It selects
    the `<repo>-<profile>` runner label in `runs-on`, where no script can run.
    Forgejo/Gitea event payloads carry `repository.name` too.
 6. Do not depend on job-level `permissions` for safety (Forgejo ignores them);

@@ -137,7 +137,7 @@ for name in sorted(flipped):
     check_pvc_scratch(name, vols, postgres=flipped[name])
 
 # 5. set_spread (pi#1036): a per-set soft hostname spread on top of the all-runner one, keyed on
-#    the set label; sets without it keep the single D-87 spread and no set label.
+#    the set label; sets without it keep the single all-runner spread and no set label.
 D = yaml.safe_load((root / "runners.yaml").read_text())["defaults"]
 sp = rr.pod_template(D, "ci", {"set_spread": True}, "o/x", "x", "ci", set_name="x-ci")
 tsc = sp["spec"]["topologySpreadConstraints"]

@@ -2,7 +2,7 @@
 
 Status: Accepted (2026-11-07, D-87). Supersedes ADR-0002 capacity-model points
 2 (request sizes) and 4 (spread selector), and the node8 slot value in the
-ADR-0002 D-67 addendum.
+ADR-0002 node8 overflow addendum.
 
 ## Context
 
@@ -100,8 +100,8 @@ the same.
    advertise 0. No other node carries a runner-specific label, taint or cap.
    The slot is a backstop: with measured requests, CPU normally binds first.
 
-   *Superseding note (2026-11-09, estate-ci#105).* D-141 (Jason first-hand,
-   2026-11-07T21:06:45Z, "bump runner slots on all the worker nodes") raised
+   *Superseding note (2026-11-09, estate-ci#105).* D-141
+   (2026-11-07T21:06:45Z, "bump runner slots on all the worker nodes") raised
    vm-k3s-node4..7 to 20. D-168 corrected vm-k3s-node8 back to its live 4
    (Frigate node). Live `ci-runner-slot` allocatable read 2026-11-09:
    node4 20, node5 20, node6 20, node7 20, node8 4, node1-3 0 (84 in all).

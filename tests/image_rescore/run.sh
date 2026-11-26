@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# D-1344: image-build.sh --rescore re-scores an already pushed digest against the current R26 rows
+# image-build.sh --rescore re-scores an already pushed digest against the current R26 rows
 # after a cve-gate block. crane, trivy and oras are stubs; the rows come from a local git repo in
 # place of git-mirror. Controls (enforce forced, then warn):
 #   1 fixable Critical, no row                -> block, no digest output (no pin)

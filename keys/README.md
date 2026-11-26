@@ -2,7 +2,7 @@
 
 `estate-image-signing.pub` is the public half of the estate image-signing key pair (ADR-0012,
 `docs/adr/0012-image-signing-and-sbom.md`). The private key is the KSOPS Secret
-`ci-runners/estate-image-signing-key` (sealed 2026-11-17, cred-batch S15, D-727 a). Verifiers pin this file:
+`ci-runners/estate-image-signing-key` (sealed 2026-11-17). Verifiers pin this file:
 
     cosign verify --key keys/estate-image-signing.pub <image@digest>
 
