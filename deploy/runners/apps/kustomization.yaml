@@ -31,6 +31,7 @@ resources:
 - homeassistant-ci.yaml
 - homeassistant-ops.yaml
 - imagineproposals-ci.yaml
+- immich-config-buildcheck.yaml
 - immich-config-ci.yaml
 - kepler-build.yaml
 - kepler-buildcheck.yaml

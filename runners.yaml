@@ -971,6 +971,11 @@ sets:
         job_uid: 1001
         # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.09 GiB, prometheus 0.09 / replica 0.09, read 2026-11-21T02:15Z); request unchanged.
         job_resources: {cpu: 250m, memory: 256Mi, limit_cpu: "8", limit_memory: 4Gi}
+      # One bounded Family Archive image qualification at a time. The
+      # build-check profile mounts pull access only and cannot publish to zot.
+      buildcheck:
+        max: 1
+        kaniko_resources: {cpu: 250m, memory: 512Mi, limit_cpu: "2", limit_memory: 1Gi}
   - repo: jvallery/orbit
     profiles:
       ci:
