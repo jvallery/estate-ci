@@ -90,7 +90,7 @@ spec:
               - name: estate-ci-tools
                 mountPath: /tools
             - name: estate-ci-nss
-              image: registry.vallery.net/jvallery/homeassistant-ci-esphome@sha256:568a8a6ab1c6a038fe92a0a9d9a0a826a069cfeecd93c5717ee52db94e321464
+              image: registry.vallery.net/jvallery/homeassistant-ci-esphome@sha256:b16da928231322926b8a6ed9cea6e33f60ed8e7a5e3bd8cabf36b5260392de9c
               command:
               - /bin/sh
               - -ec
@@ -163,7 +163,7 @@ spec:
                 mountPath: /opt/estate-ci
                 readOnly: true
             - name: job
-              image: registry.vallery.net/jvallery/homeassistant-ci-esphome@sha256:568a8a6ab1c6a038fe92a0a9d9a0a826a069cfeecd93c5717ee52db94e321464
+              image: registry.vallery.net/jvallery/homeassistant-ci-esphome@sha256:b16da928231322926b8a6ed9cea6e33f60ed8e7a5e3bd8cabf36b5260392de9c
               command:
               - /bin/sh
               - /opt/estate-ci/sidecar-agent.sh
