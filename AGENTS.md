@@ -62,15 +62,15 @@ The estate is one k3s cluster named `vallery` (three control-plane VMs and five 
 | The operator Mac and this contract | `jvallery/home-dotfiles` |
 | Each application | Its own repository, which owns what renders into its namespaces |
 
-**Deploying.** Argo CD applies what is in Git, read through an in-cluster mirror that trails GitHub by one to four minutes. Look up how your application is delivered:
+**Deploying.** Argo CD applies what is in Git, read through an in-cluster mirror that trails GitHub by one to four minutes. For many Applications, including most secret bundles in jvallery/estate-platform, merging is the deploy event. An Application that is manual or pinned has its reason on its row in `gitops/rings.yaml` in jvallery/estate-platform. Look up how your application is delivered:
 
 ```sh
 kubectl --context vallery get applications.argoproj.io -A --field-selector metadata.name=<app> -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,TARGET:.spec.source.targetRevision,AUTO:.spec.syncPolicy.automated,REV:.status.sync.revision,SYNC:.status.sync.status,HEALTH:.status.health.status
 ```
 
-- `TARGET` is `main` and `AUTO` is on: merging deploys. Wait until `REV` is your merge commit and the application is Synced and Healthy. `AUTO` is off when it shows `<none>` or `enabled:false`.
-- `TARGET` is `main` and `AUTO` is off: sync the objects you changed, and only those, unless this repository's own section says its application must be synced whole.
-- `TARGET` is a commit SHA: the application is pinned. Move the pin to your merge commit in the file that declares the Application (`gitops/applications/<environment>/` in jvallery/estate-platform, or `argocd/` in the owning repository), merge that, then sync.
+- `TARGET` is `main` and `AUTO` is on: merging deploys. Wait until `REV` is your merge commit or a later one and the application is Synced and Healthy. `AUTO` is off when it shows `<none>` or `enabled:false`.
+- `TARGET` is `main` and `AUTO` is off: merge, then sync the objects you changed, and only those, unless this repository's own section says its application must be synced whole.
+- `TARGET` is a commit SHA: the application is pinned, and its `pin_reason` in `gitops/rings.yaml` says what the pin protects. Move the pin to your merge commit in the file that declares the Application (`gitops/applications/<environment>/` in jvallery/estate-platform, or `argocd/` in the owning repository), merge that, then sync.
 
 The guide has the exact commands for a sync and a pin move. Two rules protect the cluster. Sync named objects, never a whole pinned parent application, because a whole sync applies every child in the pin range and can roll back other people's work. Never sync with prune, because pruning is off everywhere on purpose and a prune deletes every object Git no longer lists, volumes and namespaces included.
 
