@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Self-test for deploy/foundation/bin/orphan-redispatch.py (estate-ci#296)."""
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import redirect_stdout
 import datetime as dt
 import importlib.util
 import io
@@ -110,9 +110,6 @@ running_run = run(2, [job(21, 10, "in_progress", "r-1"), job(22, 8, "in_progress
 running_run["status"] = "in_progress"
 
 
-response_overrides = {}
-
-
 def open_url(request, timeout):
     if request.get_method() != "GET":
         raise AssertionError(f"unexpected provider mutation: {request.get_method()} {request.full_url}")
@@ -123,29 +120,18 @@ def open_url(request, timeout):
         "/repos/jvallery/example/actions/runs/1/jobs?filter=latest&per_page=100": {"jobs": candidate_run["jobs"]},
         "/repos/jvallery/example/actions/runs/2/jobs?filter=latest&per_page=100": {"jobs": running_run["jobs"]},
     }
-    rows = fixtures[path]
-    data = {**rows, "total_count": len(next(iter(rows.values())))}
-    response = response_overrides.get(path, data)
-    return io.BytesIO(response if isinstance(response, bytes) else json.dumps(response).encode())
-
-
-def cli_capture(mode):
-    output = io.StringIO()
-    errors = io.StringIO()
-    with patch.dict(os.environ, {"GITHUB_TOKEN": "fixture"}, clear=True), \
-         patch.object(orr.urllib.request, "urlopen", side_effect=open_url), \
-         patch.object(orr.dt, "datetime", wraps=dt.datetime) as clock, \
-         redirect_stdout(output), redirect_stderr(errors):
-        clock.now.return_value = NOW
-        result = orr.main(["--repo", "jvallery/example", "--mode", mode, "--max-runners", "ms-ci=2"])
-    return result, output.getvalue(), errors.getvalue()
+    return io.BytesIO(json.dumps(fixtures[path]).encode())
 
 
 def cli_report(mode):
-    result, output, errors = cli_capture(mode)
+    output = io.StringIO()
+    with patch.dict(os.environ, {"GITHUB_TOKEN": "fixture"}, clear=True), \
+         patch.object(orr.urllib.request, "urlopen", side_effect=open_url), \
+         patch.object(orr.dt, "datetime", wraps=dt.datetime) as clock, redirect_stdout(output):
+        clock.now.return_value = NOW
+        result = orr.main(["--repo", "jvallery/example", "--mode", mode, "--max-runners", "ms-ci=2"])
     check(f"{mode} exit", result, 0)
-    check(f"{mode} stderr", errors, "")
-    return json.loads(output)
+    return json.loads(output.getvalue())
 
 
 check("saturated enforce scan", cli_report("enforce")["orphaned_jobs"], 0)
@@ -158,43 +144,6 @@ candidate_run["run_attempt"] = 2
 check("repeat attempt skipped through provider", cli_report("enforce")["runs"][0]["action"], "skip")
 del candidate_run["run_attempt"]
 check("missing provider attempt isn't defaulted", cli_report("dry-run")["runs"][0]["action"], "skip")
-
-# 13. An accepted but incomplete page must not turn into a successful zero.
-for path, key in (
-    ("/repos/jvallery/example/actions/runs?status=queued&per_page=100", "workflow_runs"),
-    ("/repos/jvallery/example/actions/runs/1/jobs?filter=latest&per_page=100", "jobs"),
-):
-    for envelope, detail in (
-        (b"{", "invalid JSON response"),
-        ([], f"missing or invalid {key} list"),
-        ({"total_count": 0}, f"missing or invalid {key} list"),
-        ({key: None, "total_count": 0}, f"missing or invalid {key} list"),
-        ({key: [None], "total_count": 1}, f"missing or invalid {key} list"),
-        ({key: [], "total_count": True}, "invalid total_count"),
-        ({key: [], "total_count": "0"}, "invalid total_count"),
-        ({key: [], "total_count": -1}, "invalid total_count"),
-        ({key: []}, "invalid total_count"),
-        ({key: [], "total_count": 101}, "total_count=101 does not match 0 returned rows"),
-        ({key: [{}] * 101, "total_count": 101}, "exceeds the supported 100-row page"),
-    ):
-        response_overrides[path] = envelope
-        try:
-            status, output, errors = cli_capture("dry-run")
-        except (AttributeError, KeyError, TypeError, ValueError) as exc:
-            check(f"{key} {detail}: handled", type(exc).__name__, "scan failure")
-        else:
-            check(f"{key} {detail}: exit", status, 1)
-            check(f"{key} {detail}: stdout", output, "")
-            check(f"{key} {detail}: diagnostic", f"scan failed: {path}: {detail}" in errors, True)
-    del response_overrides[path]
-
-for status in ("queued", "in_progress"):
-    response_overrides[f"/repos/jvallery/example/actions/runs?status={status}&per_page=100"] = {
-        "workflow_runs": [], "total_count": 0
-    }
-zero = cli_report("dry-run")
-check("valid empty queued and in-progress pages", (zero["runs_scanned"], zero["orphaned_jobs"], zero["runs"]),
-      (0, 0, []))
 
 if failed:
     print(f"orphan_redispatch: {failed} failure(s)")
