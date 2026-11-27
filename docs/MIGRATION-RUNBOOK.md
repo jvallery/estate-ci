@@ -58,7 +58,7 @@ Owner: jvallery/storage-infra. Follow its zot principal procedure
    auth for `registry-origin.registry-origin.svc.cluster.local:5000`) as
    `secret-zot-push-<r>.enc.yaml` in jvallery/estate-platform
    `secrets/estate-ci/`, added to that bundle's `secret-generator.yaml` and
-   delivered by `estate-ci-secrets` (pinned: move its pin to the merge commit).
+   delivered by `estate-ci-secrets`, which tracks `main`: the merge delivers it.
    The renderer mounts it only into `<r>-build` runner containers. No GitHub
    secrets or environments are involved.
 4. Prove it without reading the value: an upload start to the repo's path is
