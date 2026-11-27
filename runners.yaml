@@ -478,7 +478,7 @@ sets:
         # 2026-11-16T17:26:30Z (Verdify CI capacity): 6 -> 12. +6 pods x (job 350m/512Mi + runner
         # 150m/256Mi) = +3.0 CPU / +4.5Gi requests, +6 ci-runner-slots (both sets: +9.3 CPU, quota 72.6/82).
         max: 12
-        job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:678da404b6d73239d341bf0c6bd72c7c09c661587cdb2367a3edccabc5d5a66d
+        job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:ea9a57fdef3a851bf5ced76ed42733eade01c64574991fbe4cc9f418bba1b122
         job_uid: 1001
         # 2026-11-09: CPU request = job active p50 0.31 CPU, 2026-11-06T12Z..11-10T00Z (500m -> 350m); limits unchanged.
         # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.28 GiB, prometheus 1.28 / replica 0.97, read 2026-11-21T02:15Z); request unchanged.
@@ -553,7 +553,7 @@ sets:
         # runners = +4 CPU / +6Gi requests (job 350m/512Mi + runner 150m/256Mi); live
         # 2026-11-14T22:5xZ estate-ci-runner-pods requests.cpu 31.1/82, memory 20.3/365Gi.
         max: 12
-        job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:678da404b6d73239d341bf0c6bd72c7c09c661587cdb2367a3edccabc5d5a66d
+        job_image: registry.vallery.net/jvallery/estate-ci/ci-tools@sha256:ea9a57fdef3a851bf5ced76ed42733eade01c64574991fbe4cc9f418bba1b122
         job_uid: 1001
         # proxmox-infrastructure#868: job 7-day max working set 0.161 GiB across 12 runners; request 512Mi -> 256Mi, limit unchanged.
         # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.16 GiB, prometheus 0.16 / replica 0.15, read 2026-11-21T02:15Z); request unchanged.
