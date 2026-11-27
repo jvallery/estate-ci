@@ -1,54 +1,11 @@
-# OWNERSHIP: jvallery/estate-ci
+# Ownership
 
-Owner repo for the estate's standard CI/CD substrate. Registered in
-jvallery/estate-platform `ownership/record/` (rendered by
-`python3 ownership/render.py`).
+This repository owns a CI system and everything it declares:
 
-| Item | Where | Health / how to check | Depends on |
-|---|---|---|---|
-| Reusable workflows `checks.yml`, `image-build.yml`, `build-plan.yml`, `kustomize-validate.yml`, `pin-bump.yml`, `lint.yml`, `mirror.yml`, `orphan-redispatch.yml` (estate-ci#296) | `.github/workflows/` | `self-test` workflow green on `main` | GitHub Actions |
-| Runner scripts (`image-build.sh`, `build-plan.py`, `kustomize-validate.sh`, `pin-bump.sh`, `pin-rewrite.py`, `forge-api.sh`, `app-token.py`, `mirror.sh`, `lint-workflows.py`, `lint-images.py`, `lint-version-register.py`, `orphan-redispatch.py` (+ `deploy/foundation/schemas/version-register.schema.json`), `sidecar-run.sh`, `sidecar-agent.sh`, `wait-postgres.sh`, `check-runner-labels.sh`, `job-started-guard.sh`, `hot-guard.py`) | `deploy/foundation/bin/` → ConfigMap `estate-ci-scripts` at `/opt/estate-ci` | `self-test` | — |
-| Repo scripts `render_runners.py` (generator for `deploy/runners/apps/`), `fork-policy.sh` (operator fork-PR approval check/apply), `foundation-check.sh` (deploy/foundation build and schema check), `self-test.sh` | `scripts/` | `self-test` (stale-render check) green on `main` | — |
-| Job image `estate-ci-toolbox` and estate-ci's own base mirrors | `images/estate-ci-toolbox/`, `build.yml`; `mirrors.txt`, `mirror-images.yml` → `registry.vallery.net/jvallery/estate-ci/toolbox` | `build` and `mirror-images` runs green | zot (jvallery/storage-infra), `zot-push-estate-ci` |
-| Namespace `ci-runners` (PSA enforce baseline) | `deploy/foundation/namespace.yaml` | `kubectl get ns ci-runners --show-labels` | Argo `estate-ci-foundation` |
-| ResourceQuotas `estate-ci-runners` (object caps), `estate-ci-runner-pods` (runner envelope), `estate-ci-ops` (hot guard), LimitRange `estate-ci-defaults` | `deploy/foundation/quota.yaml` | `kubectl -n ci-runners describe quota` | — |
-| NetworkPolicies `default-deny`, `runner-egress`, `build-runner-git-mirror-egress` (estate-ci#127) | `deploy/foundation/networkpolicies.yaml` | runner jobs reach GitHub and zot | — |
-| node8 hot guard (D-67): CronJob `ci-runner-hot-guard`, ServiceAccount, Roles/RoleBindings `ci-runner-hot-guard` and `ci-runner-slot-hold-reader` (the slot advertisers read the hold), NetworkPolicy `hot-guard-egress`, ConfigMaps `ci-runner-hot-guard`, `ci-runner-hot-guard-config` and the guard-created `ci-runner-slot-hold` | `deploy/foundation/hot-guard.yaml`, `hold-reader.yaml`, `bin/hot-guard.py`, `hot-guard-config.json`; ADR-0002 addendum | last Job succeeded within 5 min; `kubectl -n ci-runners get cm ci-runner-slot-hold -o yaml`; alerts `EstateCINode8GuardTripped` and `EstateCINode8GuardFailing` | Prometheus `observability/prometheus-ha-query` (monitoring-stack admits it); CronJob `ci-runner-slots` applies the hold to `agentfleet.vallery.net/ci-runner-slot` |
-| Runner-slot advertiser (estate-ci#76, STD-CI-10): CronJob `ci-runner-slots`, ConfigMaps `ci-runner-slots` (node4-7 20, node8 4, node1-3 0) and `ci-runner-slots-advertiser`, ServiceAccount `ci-runner-slots`, ClusterRole/ClusterRoleBinding `estate-ci-runner-slots` (nodes get/list, nodes/status patch), NetworkPolicy `runner-slots-egress`; the hold ConfigMap `ci-runner-slot-hold` is declared here (data written by the hot guard and by one registered foreign writer, the jvallery/cortex-ai-compute GPUStack ROOT operator during `restart-instance`; see ADR-0002) | `deploy/foundation/runner-slots.yaml`, `bin/runner-slots.py`, `hold-reader.yaml` | `kubectl get nodes` `ci-runner-slot` capacity/allocatable equals the ConfigMap (minus holds); managedFields for it name `estate-ci-runner-slots`; last Job succeeded within 5 min | Argo `estate-ci-foundation`; AppProject `estate-ci` allows the ClusterRole/ClusterRoleBinding by name (jvallery/agents); node8 hot guard |
-| ARC controller (estate-ci#192, D-542): Application `arc-controller` (chart `gha-runner-scale-set-controller` at `defaults.chart_version`, release `arc`, 2 replicas, image from the zot origin by digest) and what it renders: the four ARC CRDs, Deployment `arc-systems/arc-gha-rs-controller`, its ServiceAccount, leader-election and listener Roles/RoleBindings, ClusterRole/ClusterRoleBinding `arc-gha-rs-controller`; the listener pods it creates; namespace `arc-systems` (CreateNamespace) | `runners.yaml` `controller` → `deploy/runners/apps/arc-controller.yaml` (AppProject `estate-ci-arc`, delivered by `estate-ci-runners`) | `kubectl -n arc-systems get deploy arc-gha-rs-controller` 2/2; one listener per scale set Running; Argo Synced/Healthy | `ghcr.io/actions/actions-runner-controller-charts`, zot mirror (`mirrors.txt`) |
-| `arc-systems` support objects: LimitRange `arc-systems-container-defaults`, ResourceQuota `arc-systems-budget`, PDB `arc-controller`, NetworkPolicies `allow-controller-metrics-from-prometheus` and `allow-listener-metrics-from-prometheus` | `deploy/arc-systems/` → Application `estate-ci-arc-systems` (`runners.yaml`-rendered, AppProject `estate-ci-arc`, auto-sync `main`) | `kubectl -n arc-systems describe quota arc-systems-budget`; `kubectl -n arc-systems get pdb arc-controller` | — |
-| ARC scale sets (`AutoscalingRunnerSet` + chart SA/Role/RoleBinding), one Argo Application each | `runners.yaml` → `deploy/runners/apps/` | `kubectl -n ci-runners get autoscalingrunnersets`; Argo Synced/Healthy | ARC controller (above), `ghcr.io/actions/actions-runner-controller-charts` |
-| Argo Applications `estate-ci-foundation`, `estate-ci-runners`, `estate-ci-secrets`; AppProjects `estate-ci`, `estate-ci-apps`, `estate-ci-secrets`, `estate-ci-arc` | declared in jvallery/estate-platform `gitops/applications/local-staging/estate-ci-applications.yaml` and `gitops/projects/` | Synced/Healthy | jvallery/estate-platform (Argo CD catalog owner) |
-| Secrets `ci-runners/arc-github-app-jvallery`, `zot-pull`, `zot-push-<repo>` (each the full repo name, as `render_runners.py` derives it unless a set names `push_secret`; 13 live on 2026-11-09, and 15 `build` sets on `main` mount one, for example `zot-push-estate-ci`, `zot-push-monitoring-stack`, `zot-push-storage-infra`) | jvallery/estate-platform `secrets/estate-ci/` | key names only; never values | GitHub App `vallery-ci-runners`; zot `cluster-pull` principal |
-| Per-repo zot push principals (`ci-<repo>`) | zot ACL + htpasswd in jvallery/storage-infra; consumer copy `ci-runners/zot-push-<repo>` in jvallery/estate-platform `secrets/estate-ci/`, mounted only in that repo's `build` set | push from `image-build.yml` | jvallery/storage-infra |
-| Estate version detector (STD-OPS-02, DR-51, estate-ci#110, estate-ci#261, ADR-0013): self-hosted Renovate, scheduled job `renovate` (weekdays 09:17 UTC) | `.github/workflows/renovate.yml`, `scripts/renovate-run.sh`, `scripts/renovate-repos.py`, `renovate/global.json` (estate policy), `renovate.json`, scale set `estate-ci-ci-renovate` (`runners.yaml`, job image mirrored by `mirrors.txt`); covered repositories: the explicit list `renovate/repositories.json` (every active owner repository, by batch; `active_batches` are run; `exception` rows need a STD-OPS-02 exception) | latest `renovate` run green and its log lists every repository in the active batches with its result; its PRs run `self-test` | GitHub App `vallery-pin-bot` (one-repo token per run), zot mirror |
-| Pin-PR identity (D-52): GitHub App `vallery-pin-bot`, Actions secret `PIN_BOT_PRIVATE_KEY` and variable `PIN_BOT_CLIENT_ID` in caller repos | `pin-bump.yml`, `deploy/foundation/bin/app-token.py`; key escrow in jvallery/storage-infra `inventory/recovery-key-custody/pin-pr-app-20261106/` | pin PRs opened by the App run `pull_request` CI | GitHub App installation on `jvallery` |
+- the reusable workflows and this repository's own workflows in `.github/workflows/`;
+- the runner scripts in `deploy/foundation/bin/` (ConfigMap `estate-ci-scripts`);
+- namespaces `ci-runners` and `arc-systems` as declared in `deploy/foundation/` and `deploy/arc-systems/`;
+- the ARC controller and the runner sets generated from `runners.yaml` into `deploy/runners/apps/`;
+- the job images in `images/`, the image mirror list `mirrors.txt` and the Renovate policy in `renovate/`.
 
-Not owned here: the `ci-*` PriorityClasses (the one PriorityClass ladder,
-`estate-scheduling` in jvallery/estate-platform `platform/estate-scheduling`); the
-`arc-systems` namespace default-deny policies (`namespace-ingress-isolation` in
-jvallery/network-infra); zot (jvallery/storage-infra). The legacy ARC foundation and
-the `github-runners` scale sets that jvallery/agents rendered are retired
-(estate-ci#195): no Argo CD Application reads that repository any more, and the
-namespaces `github-runners` and `github-runner-ops` run no workload and hold only leftover
-ConfigMaps and Secrets (read 2026-11-27).
-
-## Accepted exceptions
-
-The standards register (jvallery/estate-platform `docs/estate/STANDARDS.md`)
-holds the authoritative row for each; this list names what estate-ci keeps
-inside the stated bounds.
-
-- **STD-CI-10, slot-free `ci-gate` sets** (D-831 = a, estate-ci#229; review
-  2027-02-17; bound amended 4 -> 5 sets, estate-ci#309):
-  `agents-ci-gate`, `estate-platform-ci-gate`, `monitoring-stack-ci-gate`,
-  `network-infra-ci-gate` and `verdify-platform-ci-gate` request no
-  `ci-runner-slot` (`runners.yaml` profile `ci-gate`, `slot: false`). Bounds:
-  only these five sets; max 4 and min 1-2 each (at most 20 pods); runner
-  container only (toolbox image, no job sidecar or Postgres); request 100m CPU /
-  128Mi and limit 1 CPU / 512Mi per pod (at most 2.0 CPU requested, inside the
-  `estate-ci-runner-pods` quota); PriorityClass `ci-gate` (-850, Never). Check:
-  `kubectl -n ci-runners get autoscalingrunnersets | grep ci-gate`. Another
-  slot-free set or a larger bound changes this exception: update it and the standards register row in the same work.
-- **STD-CI-10, node8 reduced `ci-runner-slot` count** (D-87, D-168 (c); review
-  2027-02-01): node8 advertises 4 slots.
+[AGENTS.md](AGENTS.md) and [README.md](README.md) describe each one. The estate keeps the full item list in its ownership record, which is not public.
