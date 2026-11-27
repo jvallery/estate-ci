@@ -18,9 +18,9 @@
 # archive. versions.sh --assert fails the build on any drift. amd64 only.
 
 # Go tools rebuilt from their module source with go1.27.4 (newest Go; CVE-2026-97054 and the
-# other stdlib rows are fixed in 1.27.4/1.26.11), AMC-CI D-1257 R10/R17 and D-1264 R7. Upstream
+# other stdlib rows are fixed in 1.27.4/1.26.11). Upstream
 # release binaries of helm, kustomize, kubeconform, yq, crane and actionlint are linked with older
-# Go (go1.26.1 to go1.27.3) and none has a newer release (D-889 read 2026-11-22). Same recipe as
+# Go (go1.26.1 to go1.27.3) and none has a newer release (read 2026-11-22). Same recipe as
 # the gitleaks build before it, for all seven: the exact module version, its h1 module sum
 # asserted from `go version -m` (values from sum.golang.org, listed in the README), the version
 # ldflags upstream sets, and go1.27.4 asserted per binary. Module dependencies stay as each
