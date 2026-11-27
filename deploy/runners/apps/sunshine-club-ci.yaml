@@ -71,7 +71,7 @@ spec:
                       - vm-k3s-node8
             containers:
             - name: runner
-              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:ace184aa4dd2ae25159ab7e3ef1d17c02243bc2589c99787309ab5d305554a89
+              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:13eaf09000fd7adc8936b0be76d1e208acf29f75b1d411caabc570f576b4210e
               command:
               - /home/runner/run.sh
               env:
