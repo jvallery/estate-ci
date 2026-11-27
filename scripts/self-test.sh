@@ -21,6 +21,8 @@ python3 tests/origin_images/run.py
 python3 tests/version_register/run.py
 # estate-ci#296: orphaned-job detection and re-dispatch planning.
 python3 tests/orphan_redispatch/run.py
+# estate-platform#1553: child Applications of a nested Argo CD root (identity, no prune, STD-IAC-08).
+python3 tests/owner_root_children/run.py
 # estate-ci#261 (STD-OPS-02): the Renovate repository list is well formed.
 python3 scripts/renovate-repos.py check
 # estate-ci enforces its own R4-tag-only now (callers from TAG_ONLY_ENFORCE_FROM, estate-ci#104).
@@ -28,6 +30,6 @@ python3 deploy/foundation/bin/lint-images.py --tags .
 bash tests/sidecar_run/run.sh
 actionlint -color
 shellcheck deploy/foundation/bin/*.sh scripts/*.sh tests/sidecar_run/*.sh tests/kustomize_validate/*.sh tests/kustomize_exec_guard/*.sh tests/cve_gate/*.sh
-python3 -m py_compile deploy/foundation/bin/hot-guard.py deploy/foundation/bin/runner-slots.py deploy/foundation/bin/pin-rewrite.py deploy/foundation/bin/lint-workflows.py deploy/foundation/bin/lint-images.py deploy/foundation/bin/build-plan.py deploy/foundation/bin/kustomize-exec-guard.py deploy/foundation/bin/lint-version-register.py deploy/foundation/bin/orphan-redispatch.py tests/orphan_redispatch/run.py tests/build_plan/run.py scripts/render_runners.py scripts/check-runner-secrets.py scripts/renovate-repos.py
+python3 -m py_compile deploy/foundation/bin/hot-guard.py deploy/foundation/bin/runner-slots.py deploy/foundation/bin/pin-rewrite.py deploy/foundation/bin/lint-workflows.py deploy/foundation/bin/lint-images.py deploy/foundation/bin/build-plan.py deploy/foundation/bin/kustomize-exec-guard.py deploy/foundation/bin/lint-version-register.py deploy/foundation/bin/orphan-redispatch.py tests/orphan_redispatch/run.py tests/build_plan/run.py scripts/render_runners.py scripts/check-runner-secrets.py scripts/renovate-repos.py deploy/foundation/bin/owner-root-children.py
 python3 scripts/render_runners.py --check
 echo "self-test: OK"
