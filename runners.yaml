@@ -910,7 +910,7 @@ sets:
   - repo: jvallery/immich-config
     profiles:
       ci:
-        max: 2
+        max: 4
         # estate-ci#101 set 4 (low-traffic sets; envelope bounded by ci-runner-slot capacity): work and
         # exchange on ephemeral PVCs on longhorn-v1-disposable-cache-rwo, not boot-disk emptyDirs.
         scratch: pvc
