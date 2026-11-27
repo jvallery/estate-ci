@@ -70,9 +70,15 @@ kubectl --context vallery get applications.argoproj.io -A --field-selector metad
 
 - `TARGET` is `main` and `AUTO` is on: merging deploys. Wait until `REV` is your merge commit or a later one and the application is Synced and Healthy. `AUTO` is off when it shows `<none>` or `enabled:false`.
 - `TARGET` is `main` and `AUTO` is off: merge, then sync the objects you changed, and only those, unless this repository's own section says its application must be synced whole.
-- `TARGET` is a commit SHA: the application is pinned, and its `pin_reason` in `gitops/rings.yaml` says what the pin protects. Move the pin to your merge commit in the file that declares the Application (`gitops/applications/<environment>/` in jvallery/estate-platform, or `argocd/` in the owning repository), merge that, then sync.
+- `TARGET` is a commit SHA: the application is pinned, and its `pin_reason` in `gitops/rings.yaml` says what the pin protects. Move the pin to your merge commit in the file that declares the Application, merge that, then sync the objects you changed.
 
-The guide has the exact commands for a sync and a pin move. Two rules protect the cluster. Sync named objects, never a whole pinned parent application, because a whole sync applies every child in the pin range and can roll back other people's work. Never sync with prune, because pruning is off everywhere on purpose and a prune deletes every object Git no longer lists, volumes and namespaces included.
+A change to an Application's own file (its spec or its pin) is delivered by the root that reads the file. Every catalog root tracks `main`, so there is no root pin to move and nothing to record afterwards:
+
+- `gitops/applications/local-prod/` in jvallery/estate-platform: applied on merge.
+- `gitops/applications/local-staging/` or `local-dev/` there: merge, then sync that environment's root naming the Application.
+- An owner repository's Argo CD directory (`argocd/` in most): merge, then sync the owner's nested root naming the Application, unless the repository's own section says the root is automated.
+
+The guide has the exact commands for a named sync and a pin move. Two rules protect the cluster. Sync named objects, never a whole root or a whole pinned Application, because a whole sync applies every pending change under it and can deliver or roll back other people's work. Never sync with prune, because pruning is off everywhere on purpose and a prune deletes every object Git no longer lists, volumes and namespaces included.
 
 **CI and images.** CI is GitHub Actions on in-cluster runners owned by jvallery/estate-ci; GitHub-hosted runners are not allowed. A repository calls the reusable workflows in jvallery/estate-ci by full commit SHA. Images are built in CI with Kaniko and pushed to `registry.vallery.net`. In most repositories the build then opens a pull request that pins the new digest in the deployment manifests, and merging that pull request is the release; where a repository promotes differently, its own section says how. Manifests reference images by `@sha256` digest only. Upstream images are mirrored into the registry first. Re-run a failed job with `gh run rerun <run-id> --failed`.
 
