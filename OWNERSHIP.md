@@ -24,14 +24,14 @@ jvallery/estate-platform `ownership/record/` (rendered by
 | Estate version detector (STD-OPS-02, DR-51, estate-ci#110, estate-ci#261, ADR-0013): self-hosted Renovate, scheduled job `renovate` (weekdays 09:17 UTC) | `.github/workflows/renovate.yml`, `scripts/renovate-run.sh`, `scripts/renovate-repos.py`, `renovate/global.json` (estate policy), `renovate.json`, scale set `estate-ci-ci-renovate` (`runners.yaml`, job image mirrored by `mirrors.txt`); covered repositories: the explicit list `renovate/repositories.json` (every active owner repository, by batch; `active_batches` are run; `exception` rows need a STD-OPS-02 exception) | latest `renovate` run green and its log lists every repository in the active batches with its result; its PRs run `self-test` | GitHub App `vallery-pin-bot` (one-repo token per run), zot mirror |
 | Pin-PR identity (D-52): GitHub App `vallery-pin-bot`, Actions secret `PIN_BOT_PRIVATE_KEY` and variable `PIN_BOT_CLIENT_ID` in caller repos | `pin-bump.yml`, `deploy/foundation/bin/app-token.py`; key escrow in jvallery/storage-infra `inventory/recovery-key-custody/pin-pr-app-20261106/` | pin PRs opened by the App run `pull_request` CI | GitHub App installation on `jvallery` |
 
-Not owned here: the rest of the legacy ARC foundation (`arc-runner-foundation`
-in jvallery/agents: the `github-runners` and `github-runner-ops` objects, the
-`arc-*` PriorityClasses and the admission policies), which retires with the
-legacy sets (estate-ci#195); the `ci-*` PriorityClasses (the one PriorityClass
-ladder, `estate-scheduling` in jvallery/agents, moving to jvallery/estate-platform
-with estate-platform#177); the `arc-systems` namespace default-deny policies
-(`namespace-ingress-isolation`); the legacy `github-runners` scale sets (jvallery/agents, planned
-for decommission); zot (jvallery/storage-infra).
+Not owned here: the `ci-*` PriorityClasses (the one PriorityClass ladder,
+`estate-scheduling` in jvallery/estate-platform `platform/estate-scheduling`); the
+`arc-systems` namespace default-deny policies (`namespace-ingress-isolation` in
+jvallery/network-infra); zot (jvallery/storage-infra). The legacy ARC foundation and
+the `github-runners` scale sets that jvallery/agents rendered are retired
+(estate-ci#195): no Argo CD Application reads that repository any more, and the
+namespaces `github-runners` and `github-runner-ops` run no workload and hold only leftover
+ConfigMaps and Secrets (read 2026-11-27).
 
 ## Accepted exceptions
 

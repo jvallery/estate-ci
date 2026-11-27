@@ -75,8 +75,8 @@ defaults:
   # delivery needs its gitops/ catalog and its runners waited ~74 min at -1000.
   infra_repos: [jvallery/agents, jvallery/estate-platform, jvallery/monitoring-stack, jvallery/storage-infra, jvallery/network-infra, jvallery/proxmox-infrastructure, jvallery/estate-ci, jvallery/sentinel, jvallery/homeassistant, jvallery/cortex-ai-compute, jvallery/research-vault]
   # estate-ci#179: incident-critical scale sets use ci-incident (-800,
-  # preemptionPolicy PreemptLowerPriority; PriorityClass in jvallery/agents
-  # platform/kubernetes/estate-scheduling). When ci-runner-slot is saturated the
+  # preemptionPolicy PreemptLowerPriority; PriorityClass in jvallery/estate-platform
+  # platform/estate-scheduling). When ci-runner-slot is saturated the
   # scheduler evicts lower-priority runner Pods (ci-preemptible-infra -900,
   # ci-preemptible -1000) to place them; production tiers still preempt them.
   # The list is explicit scale-set names (the renderer refuses an unknown name).
@@ -91,8 +91,8 @@ defaults:
   incident_priority_class: ci-incident
   incident_sets: []
   # estate-ci#249 (option a): a NON-preempting gate tier between infra and incident.
-  # ci-gate (-850, preemptionPolicy Never; PriorityClass in jvallery/agents
-  # platform/kubernetes/estate-scheduling) never evicts a running runner, but when a
+  # ci-gate (-850, preemptionPolicy Never; PriorityClass in jvallery/estate-platform
+  # platform/estate-scheduling) never evicts a running runner, but when a
   # ci-runner-slot frees, its Pending runners schedule ahead of ci-preemptible-infra
   # (-900) and ci-preemptible (-1000) runners. Use it for sets whose checks every
   # other merge waits on during CI saturation (2026-11-17: estate-platform-ci waited
@@ -120,8 +120,8 @@ defaults:
 # arc-controller (chart gha-runner-scale-set-controller at defaults.chart_version, so the
 # controller and every scale set stay on one ARC release) and Application
 # estate-ci-arc-systems (deploy/arc-systems: LimitRange, ResourceQuota, PDB and the two
-# metrics NetworkPolicies). Both use AppProject estate-ci-arc (declared in jvallery/agents
-# platform/gitops/projects/estate-ci.yaml) and are delivered by the estate-ci-runners
+# metrics NetworkPolicies). Both use AppProject estate-ci-arc (declared in jvallery/estate-platform
+# gitops/projects/estate-ci.yaml) and are delivered by the estate-ci-runners
 # nested root. Values were copied value for value from jvallery/agents
 # platform/gitops/applications/local-staging/github-runners-arc.yaml (agents 03cb6df) so
 # Argo adopts the live release in place with no controller restart:
