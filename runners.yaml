@@ -243,7 +243,7 @@ sets:
         # 2026-11-07: +4 vCPU on node6 -> 16 -> 18.
         # 2026-11-17: 18 -> 6 for node7/node5 CPU starvation (Longhorn RWX false failover, Argo repo-server lag); never raised back.
         max: 6
-        job_image: registry.vallery.net/jvallery/vault-ci@sha256:5aa9ce134834104c594e2dd0883c3a8443534eee9659b3cb59022a153be14412
+        job_image: registry.vallery.net/jvallery/vault-ci@sha256:22a07071e423313ee42a1fdb0fba902f54200133fcc887f42a6b624092235a8c
         job_uid: 1001
         # 2026-11-06 ~20:0xZ (accelerate RV2 CI): 'unit' took 30-36 min
         # pinned at ~1 core under limit 2 / 4Gi. Was 500m / 768Mi req, 2 / 4Gi lim.
@@ -257,7 +257,7 @@ sets:
         # 2026-11-06 ~22:43Z: 9 -> 12 (running+pending hit 9; queue p90 7.5 min).
         # 2026-11-17: 12 -> 4, same reason as research-vault-ci; never raised back.
         max: 4
-        job_image: registry.vallery.net/jvallery/vault-ci@sha256:5aa9ce134834104c594e2dd0883c3a8443534eee9659b3cb59022a153be14412
+        job_image: registry.vallery.net/jvallery/vault-ci@sha256:22a07071e423313ee42a1fdb0fba902f54200133fcc887f42a6b624092235a8c
         job_uid: 1001
         # 2026-11-09: CPU request = job active p50 0.74 CPU, 2026-11-06T12Z..11-10T00Z (800m -> 750m); limits unchanged.
         # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.48 GiB, prometheus 0.48 / replica 0.46, read 2026-11-21T02:15Z); request unchanged.
