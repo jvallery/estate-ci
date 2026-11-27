@@ -125,6 +125,8 @@ The only Actions secret the lint allows is `PIN_BOT_PRIVATE_KEY`, with variable 
 - `secret-scan.yml`: gitleaks over the caller repository.
 - `orphan-redispatch.yml`: find jobs left queued with no runner after a listener restart and re-run them.
 
+One check has no workflow of its own: `$ESTATE_CI/owner-root-children.py --config <file>` checks the child Applications that a nested Argo CD root reads from the calling repository (their names, projects, source repository, no prune, and STD-IAC-08). A repository with such a root runs it as one step of a check that is already required, so no ruleset changes; its header documents the config file.
+
 A caller pins these by SHA and moves the pin itself; Renovate is configured not to. Change a workflow's interface by adding an input or a new file, not by changing the meaning of an existing input, so that a caller can move its pin without reading the diff.
 
 ## Build, test, deploy, verify
