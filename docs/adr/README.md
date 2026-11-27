@@ -29,7 +29,8 @@ jvallery/agents#6254, merged 2026-11-07; D-141 completed the fleet CI
 decommission), so statements about moving quota from native CI and about
 parallel runs next to native CI are history, not current rules.
 
-The per-repo dependency matrix carries internal detail (namespaces, credential
-names, pin files), so it lives in the private jvallery/agents repository at
-`docs/estate/ci-refactor/DEPENDENCY-MATRIX.md`, not in this public repository.
-These ADRs keep to design and name no addresses or credential values.
+These records are the history of the design, dated 2026-11. The current rules
+and procedures are in [AGENTS.md](../../AGENTS.md), [README.md](../../README.md)
+and [docs/runbooks/](../runbooks/README.md); where a record disagrees with them,
+they win. The records stay because scripts, `runners.yaml` and the job images cite
+them by number. They keep to design and name no credential values.

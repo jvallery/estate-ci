@@ -20,7 +20,7 @@ Image tags and registry retention classes: [`docs/image-tags-and-retention.md`](
 | `.github/workflows/image-build.yml` | Thin reusable wrapper over `image-build.sh`. |
 | `.github/workflows/build-plan.yml` | Thin reusable wrapper over `build-plan.py`, the one image build planner: the caller's `ci/images.tsv` plus changed paths or dispatched names in, the `image-build.yml` matrix JSON out (estate-ci#156). |
 | `.github/workflows/kustomize-validate.yml` | Thin reusable wrapper over `kustomize-validate.sh`: kustomize build + kubeconform `-strict` of the given roots (estate-ci#156). |
-| `.github/workflows/secret-scan.yml` | gitleaks over the caller repo with the toolbox binary (runner container or `job` sidecar), the caller's exact-value `.gitleaks.toml`, redacted output. Context `<job> / gitleaks`; required on STD-CI-01 repos, unrequired or scheduled elsewhere (STD-EXP-13, estate-ci#126). |
+| `.github/workflows/secret-scan.yml` | gitleaks over the caller repo with the toolbox binary (runner container or `job` sidecar), the caller's exact-value `.gitleaks.toml`, redacted output. Context `<job> / gitleaks`; required on STD-CI-01 repos, unrequired or scheduled elsewhere (STD-EXP-04, estate-ci#126). |
 | `.github/workflows/pin-bump.yml` | Thin reusable wrapper over `pin-bump.sh`. |
 | `.github/workflows/lint.yml` | Reusable R1-R3 workflow lint (`deploy/foundation/bin/lint-workflows.py`, stdlib Python; fixtures in `tests/lint/`; recorded exceptions in the caller's `.estate-ci/workflow-lint-allow.txt`, one `<path glob> <rule> <expiry> <issue URL>` row per dated exception row in the estate GitHub security baseline, tests in `tests/lint_allow/`), plus R4 image lint (`deploy/foundation/bin/lint-images.py`: `imagePullPolicy: Always` on an image outside registry.vallery.net fails, and so does an image or Helm `repository`/`tag` pair with no `@sha256` digest (`R4-tag-only`, a warning until `TAG_ONLY_ENFORCE_FROM` in `lint-workflows.py`, estate-ci#104); allowlist `.estate-ci/image-lint-allow.txt` rows carry an expiry and an issue; fixtures in `tests/lint-images/`), plus the STD-OPS-02 component version register check (`deploy/foundation/bin/lint-version-register.py`, schema `deploy/foundation/schemas/version-register.schema.json`, estate-ci#121): opt-in, it runs only when the caller has a `version-register.json` at its root; fixtures in `tests/version_register/`. |
 | `scripts/fork-policy.sh` | Operator check/apply of the fork-PR approval policy for onboarded repos. |
@@ -43,21 +43,28 @@ with its `arc-systems` support objects in `deploy/arc-systems/` (estate-ci#192).
 values rendered from `runners.yaml`; sets scale from 0. `jvallery` is a user
 account, so its sets are per repository. Only jvallery repositories get sets;
 VerdifyConsultancy repositories move to jvallery before they use CI. The scale-set name is the
-`runs-on` label: `<repo>-ci`, `<repo>-pg`, `<repo>-build`.
+`runs-on` label: `<repo>-ci`, `<repo>-pg`, `<repo>-build`, `<repo>-buildcheck`, `<repo>-ops` or
+`<repo>-ci-<variant>`.
 
 | Profile | Pod | Use |
 |---|---|---|
 | `ci` | runner (1 CPU / 1Gi → 4 CPU / 4Gi); optional `job` sidecar running the repo's own CI image | lint, unit tests, render/regen checks |
-| `pg` | runner + Postgres sidecar on `127.0.0.1:5432` (emptyDir, fsync off; CNPG image with pgvector) [+ job] | database-backed suites; no PVC or CNPG cluster per run |
+| `pg` | runner + Postgres sidecar on `127.0.0.1:5432` (data on the set's scratch volume, fsync off; CNPG image with pgvector) [+ job] | database-backed suites; no PVC or CNPG cluster per run |
 | `build` | runner + Kaniko sidecar + the repo's zot push secret | image build + push; default-branch push/dispatch only |
 | `buildcheck` | runner + Kaniko sidecar, no credential | PR image builds (no push) |
 
 There is no Docker daemon, container socket, privileged container, hostPath,
 Kubernetes API token or RBAC in a runner Pod. Sidecars are driven through a
 Pod-local file exchange (`deploy/foundation/bin/sidecar-agent.sh`, client `sidecar-run.sh`): the
-runner writes a script into a shared emptyDir, the sidecar runs it and streams
+runner writes a script into a shared scratch volume, the sidecar runs it and streams
 the log and exit code back. That gives "run this step in my CI image" and
 "build this image" without Docker-in-Docker or Kubernetes container mode.
+
+**Scratch.** A set's work, exchange and Postgres volumes are kubelet `emptyDir`s on
+the worker's boot disk by default. A set with `scratch: pvc` in `runners.yaml` gets
+generic ephemeral volumes on the disposable Longhorn class instead (estate-ci#101), and
+never schedules to a worker listed in `defaults.scratch_pvc_exclude_nodes` (the comment
+there says why each one is excluded).
 
 **Admission.** `ci-runners` enforces Pod Security `baseline` (warn/audit
 `restricted`). Only the Kaniko sidecar runs as root, with the default
@@ -73,8 +80,8 @@ ranges excluded), the split-horizon apps ingress on 443 (how
 `registry.vallery.net` resolves in-cluster), and the zot origin on 5000.
 
 **Capacity.** The gate is node allocatable CPU plus the per-node
-`agentfleet.vallery.net/ci-runner-slot` cap (ADR-0010; live 2026-11-09:
-node4-7 20, node8 4). Runner Pods request measured use per class. The quotas
+`agentfleet.vallery.net/ci-runner-slot` cap (ADR-0010; the counts are ConfigMap
+`ci-runner-slots` in `deploy/foundation/runner-slots.yaml`). Runner Pods request measured use per class. The quotas
 in `deploy/foundation/quota.yaml` are sized to every set at `maxRunners`:
 `estate-ci-runner-pods` is the compute envelope for runner Pods,
 `estate-ci-runners` holds the namespace object and ephemeral caps, and
@@ -128,16 +135,10 @@ credential is `ci-runners/arc-github-app-jvallery` in jvallery/estate-platform
 `secrets/estate-ci/`. A repository must be covered by that installation. ARC is
 jvallery only: there is no VerdifyConsultancy installation or org-level set.
 
-**Delivery.** Argo CD Applications `estate-ci-foundation` (AppProject
-`estate-ci`), `estate-ci-runners` (app-of-apps over `deploy/runners/apps`,
-AppProject `estate-ci-apps`; the per-set `estate-ci-runner-*` Applications are
-in `estate-ci`, and `arc-controller` and `estate-ci-arc-systems` in
-`estate-ci-arc`, destination `arc-systems` only) and `estate-ci-secrets` (the runner Secrets, AppProject
-`estate-ci-secrets`) are declared in jvallery/estate-platform
-`gitops/applications/local-staging/estate-ci-applications.yaml`.
-`estate-ci-foundation` and `estate-ci-arc-systems` sync automatically from
-`main`. `estate-ci-runners` is pinned to an estate-ci commit and an explicit
-file list there, so a `runners.yaml` change is live only after that pin moves.
+**Delivery.** Argo CD applies `deploy/foundation` and `deploy/arc-systems` from
+`main`; the runner sets in `deploy/runners/apps` come from a pinned estate-ci commit
+and an explicit file list, so a `runners.yaml` change is live only after that pin
+moves. See "Delivery" in [AGENTS.md](AGENTS.md).
 
 **Concurrency.** Callers set
 `concurrency: {group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}, cancel-in-progress: ${{ github.event_name == 'pull_request' }}}`,
@@ -146,13 +147,10 @@ instead of cancelling each other.
 
 ## Estate CI rules
 
-- **R1** Every job runs on an ARC set; no GitHub-hosted runner labels anywhere
-  (this repo's own `self-test` runs on `estate-ci-ci`). `check-runner-labels.sh`
-  enforces it: every repo's CI should call `"$ESTATE_CI/check-runner-labels.sh" .`.
-- **R2** Workflow YAML stays thin: `actions/checkout` plus these reusable
-  workflows only; logic lives in repo scripts and `/opt/estate-ci`.
-- **R3** Each workflow file states its Forgejo/Gitea Actions notes; the runbook
-  has the portability checklist.
+R1 (estate runner sets only), R2 (thin workflow YAML, `uses:` pinned by SHA) and R3
+(forge portability) are enforced by `lint.yml`; the exact rules are "The three CI
+rules" in [AGENTS.md](AGENTS.md). `check-runner-labels.sh` is a stand-alone R1 check
+a repository's own CI can also call: `"$ESTATE_CI/check-runner-labels.sh" .`.
 
 ## Using it
 
