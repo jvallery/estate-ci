@@ -71,7 +71,7 @@ spec:
                       - vm-k3s-node8
             initContainers:
             - name: estate-ci-tools
-              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:1d82186b3374c1e441b21726f95f380df6cb20e161f56c8be389ad68d4288694
+              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:a94c90d3bd30eb26d1dc99ee028dfc3ededc2c80da1531da3fd8d0b8b7748329
               command:
               - /bin/sh
               - -ec
@@ -97,7 +97,7 @@ spec:
               - name: estate-ci-tools
                 mountPath: /tools
             - name: estate-ci-nss
-              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:1d82186b3374c1e441b21726f95f380df6cb20e161f56c8be389ad68d4288694
+              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:a94c90d3bd30eb26d1dc99ee028dfc3ededc2c80da1531da3fd8d0b8b7748329
               command:
               - /bin/sh
               - -ec
@@ -170,7 +170,7 @@ spec:
                 mountPath: /opt/estate-ci
                 readOnly: true
             - name: job
-              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:1d82186b3374c1e441b21726f95f380df6cb20e161f56c8be389ad68d4288694
+              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:a94c90d3bd30eb26d1dc99ee028dfc3ededc2c80da1531da3fd8d0b8b7748329
               command:
               - /bin/sh
               - /opt/estate-ci/sidecar-agent.sh

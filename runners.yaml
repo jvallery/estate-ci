@@ -36,7 +36,7 @@ defaults:
   # job is the only writer of this digest (STD-CI-13): it opens the pin PR
   # (commit trailer Estate-CI-Source names the built commit). FROM the stock
   # runner (uid 1001), so it serves as runner_image and as job_image.
-  toolbox: &toolbox registry.vallery.net/jvallery/estate-ci/toolbox@sha256:1d82186b3374c1e441b21726f95f380df6cb20e161f56c8be389ad68d4288694
+  toolbox: &toolbox registry.vallery.net/jvallery/estate-ci/toolbox@sha256:a94c90d3bd30eb26d1dc99ee028dfc3ededc2c80da1531da3fd8d0b8b7748329
   # gha-runner-scale-set chart of every scale set. The controller chart is controller.chart_version.
   # ARC 0.14 -> 0.15 moves in two pins, scale sets first while the 0.14.2 controller
   # cleans up its own sets, then the controller (upstream #4706: one pin for both strands the
