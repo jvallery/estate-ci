@@ -11,7 +11,7 @@
 #
 # Secret-free. Every downloaded release binary or archive is pinned by version and
 # sha256 (upstream checksum files, except shellcheck, which publishes none: its
-# digest was recorded from the release asset). The seven Go tools of the go-build
+# digest was recorded from the release asset). The eight Go tools of the go-build
 # stage are pinned by module version and h1 module sum (from sum.golang.org,
 # asserted with `go version -m`), downloaded through proxy.golang.org and verified
 # against sum.golang.org at build time. Ubuntu packages come from the signed noble
@@ -21,7 +21,7 @@
 # other stdlib rows are fixed in 1.27.4/1.26.11). Upstream
 # release binaries of helm, kustomize, kubeconform, yq, crane and actionlint are linked with older
 # Go (go1.26.1 to go1.27.3) and none has a newer release (read 2026-11-22). Same recipe as
-# the gitleaks build before it, for all seven: the exact module version, its h1 module sum
+# the gitleaks build before it, for all eight (cosign added for estate-ci#125): the exact module version, its h1 module sum
 # asserted from `go version -m` (values from sum.golang.org, listed in the README), the version
 # ldflags upstream sets, and go1.27.4 asserted per binary. Module dependencies stay as each
 # release pins them (go install never bumps them), so x/net, x/crypto and x/text rows remain
@@ -42,6 +42,10 @@ ARG CRANE_VERSION=v0.22.1
 ARG CRANE_MODULE_SUM=h1:RZuuSYhTvlDvtsK+NkutoCZ//C0X2ebLK8X8l3ULs84=
 ARG ACTIONLINT_VERSION=1.7.12
 ARG ACTIONLINT_MODULE_SUM=h1:vQ4GeJN86C0QH+gTUQcs8McmK62OLT3kmakPMtEWYnY=
+# cosign v3.1.6 (estate-ci#125, ADR-0012): the sign sidecar of build sets signs with it, and
+# verify-image.sh verifies. Module sum from sum.golang.org; version ldflag as upstream's Makefile.
+ARG COSIGN_VERSION=v3.1.6
+ARG COSIGN_MODULE_SUM=h1:8RiFff6JGIysokSck6pZo7uuuiYoYPZq31CRCVBOUDc=
 ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOBIN=/out
 RUN set -eu; \
     test "$(go env GOVERSION)" = "${GO_VERSION}"; \
@@ -69,6 +73,8 @@ RUN set -eu; \
       "-X github.com/google/go-containerregistry/cmd/crane/cmd.Version=${CRANE_VERSION#v}"; \
     build actionlint github.com/rhysd/actionlint/cmd/actionlint github.com/rhysd/actionlint "v${ACTIONLINT_VERSION}" "${ACTIONLINT_MODULE_SUM}" \
       "-X github.com/rhysd/actionlint.version=${ACTIONLINT_VERSION}"; \
+    build cosign github.com/sigstore/cosign/v3/cmd/cosign github.com/sigstore/cosign/v3 "${COSIGN_VERSION}" "${COSIGN_MODULE_SUM}" \
+      "-X sigs.k8s.io/release-utils/version.gitVersion=${COSIGN_VERSION}"; \
     ls -l /out
 
 # Stock ARC runner 2.338.2 (Ubuntu 24.04 noble: python 3.12, ruby 3.2, php 8.3);
@@ -188,7 +194,7 @@ RUN set -eu; \
     archive tempo 3.0.2 "https://github.com/grafana/tempo/releases/download/v3.0.2/tempo_3.0.2_linux_amd64.tar.gz" d2b95c01774c81c4494c4162e2f3511699a66b46506c96028745f5d4f0a78086; \
     archive blackbox_exporter 0.29.1 "https://github.com/prometheus/blackbox_exporter/releases/download/v0.29.1/blackbox_exporter-0.29.1.linux-amd64.tar.gz" b82b81839e6317e84fdd367f46d7ddd3b773fa09cbe2e3d5633a59171d741e76
 
-COPY --from=go-build /out/gitleaks /out/helm /out/kustomize /out/kubeconform /out/yq /out/crane /out/actionlint /usr/local/bin/
+COPY --from=go-build /out/gitleaks /out/helm /out/kustomize /out/kubeconform /out/yq /out/crane /out/actionlint /out/cosign /usr/local/bin/
 
 # Hosted-runner parity (as the fleet toolbox): UTF-8 locale and pip installs
 # into the PEP 668 system python. No other env change.

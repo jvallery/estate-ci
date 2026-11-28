@@ -29,7 +29,7 @@ Run it locally from an estate-ci checkout: `python3 deploy/foundation/bin/lint-w
 
 - `checks.yml`: check out and run one repository command, optionally inside the repository's CI image or with a Postgres sidecar.
 - `lint.yml`: the three rules above, the image lint and the version register check.
-- `image-build.yml`: Kaniko build, Trivy scan with the CVE gate, and SBOM; it pushes only on a `<repo>-build` set.
+- `image-build.yml`: Kaniko build, Trivy scan with the CVE gate, SBOM and signature; it pushes only on a `<repo>-build` set, whose `sign` sidecar signs a digest that passed the gate with the estate image-signing key (ADR-0012). Verify a digest with `deploy/foundation/bin/verify-image.sh <host>/<image>@sha256:...`.
 - `build-plan.yml`: choose which images to build from the caller's `ci/images.tsv` and the changed paths.
 - `pin-bump.yml`: open the pull request that pins a new image digest in the caller's manifests.
 - `mirror.yml`: copy the upstream images listed in the caller's `mirrors.txt` into the registry, keeping their digests.

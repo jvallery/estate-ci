@@ -6,8 +6,8 @@
 #   sbom-attach.sh --trivy BIN --oras BIN --cache DIR --registry-config FILE --ref ORIGIN/IMAGE@sha256:...
 #
 # Warn mode: every failure logs "sbom: warn ..." and exits 0, so no build fails on this step until
-# ADR-0012 step 5 commits an enforce date. Signing (cosign, key-based) is a later step: it needs the
-# estate image-signing key (keys/README.md).
+# ADR-0012 commits an enforce date. The signature is a separate step (sign-image.sh, run by the sign
+# sidecar of build sets), and a signing failure does fail the build.
 set -uo pipefail
 
 trivy="" oras="" cache="" regcfg="" ref=""

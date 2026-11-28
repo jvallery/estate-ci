@@ -23,6 +23,10 @@ configMapGenerator:
       - bin/job-started-guard.sh
       - bin/image-build.sh
       - bin/sbom-attach.sh
+      # estate-ci#125: the sign sidecar of build sets, its signing step and the owners' verifier.
+      - bin/sign-agent.sh
+      - bin/sign-image.sh
+      - bin/verify-image.sh
       - bin/cve-gate.sh
       - bin/pin-bump.sh
       - bin/pin-rewrite.py
