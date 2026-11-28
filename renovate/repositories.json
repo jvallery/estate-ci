@@ -29,10 +29,10 @@
     {"repo": "jvallery/wordpress", "batch": 2, "lane": "application", "note": "hosted Dependabot Updates stays only under its STD-OPS-02 / STD-CI-02 exception row (D-373, review 2027-02-01)"},
     {"repo": "jvallery/sunshine_club", "batch": 2, "lane": "application"},
 
-    {"repo": "jvallery/AI_presentation", "batch": "exception", "lane": "content", "note": "batch 3: joins after the first batch-2 run has settled, so one run does not open every first pull request at once (estate-ci#261)"},
-    {"repo": "jvallery/vallery-family", "batch": "exception", "lane": "content", "note": "batch 3: joins after the first batch-2 run has settled, so one run does not open every first pull request at once (estate-ci#261)"},
-    {"repo": "jvallery/radio", "batch": "exception", "lane": "content", "note": "batch 3: joins after the first batch-2 run has settled, so one run does not open every first pull request at once (estate-ci#261)"},
-    {"repo": "jvallery/sunshine-research", "batch": "exception", "lane": "personal (dormant)", "note": "batch 3: joins after the first batch-2 run has settled, so one run does not open every first pull request at once (estate-ci#261)"},
+    {"repo": "jvallery/AI_presentation", "batch": "exception", "lane": "content", "note": "batch 3: a later pull request moves it back to batch 3 once the first batch-2 run has settled, so one run does not open every first pull request at once; estate-ci#261 stays open until that pull request merges and its run has settled"},
+    {"repo": "jvallery/vallery-family", "batch": "exception", "lane": "content", "note": "batch 3: a later pull request moves it back to batch 3 once the first batch-2 run has settled, so one run does not open every first pull request at once; estate-ci#261 stays open until that pull request merges and its run has settled"},
+    {"repo": "jvallery/radio", "batch": "exception", "lane": "content", "note": "batch 3: a later pull request moves it back to batch 3 once the first batch-2 run has settled, so one run does not open every first pull request at once; estate-ci#261 stays open until that pull request merges and its run has settled"},
+    {"repo": "jvallery/sunshine-research", "batch": "exception", "lane": "personal (dormant)", "note": "batch 3: a later pull request moves it back to batch 3 once the first batch-2 run has settled, so one run does not open every first pull request at once; estate-ci#261 stays open until that pull request merges and its run has settled"},
 
     {"repo": "jvallery/agents", "batch": "exception", "lane": "fleet control plane (retiring)", "note": "retiring: the change that archives the repository removes this entry; vallery-pin-bot is not installed there"},
     {"repo": "jvallery/home-dotfiles", "batch": "exception", "lane": "Mac workstation", "note": "vallery-pin-bot stays off it (no write reach); joins with a lookup-only pass (dryRun lookup) with a read-only deploy key (estate-ci#393)"},

@@ -17,7 +17,8 @@
 #
 # PR budget: one run opens at most RENOVATE_RUN_PR_BUDGET (default 10) new pull
 # requests across every repository, so activating a batch cannot flood the
-# runners. Each pass gets prHourlyLimit = min(2, what is left) and is charged
+# runners. Each pass gets prHourlyLimit = min(2, what is left) as a forced
+# option (RENOVATE_FORCE, which no repository config or preset overrides) and is charged
 # what it opened (renovate-repos.py opened); once the budget is spent, the
 # remaining repositories still get their pass, as dryRun=lookup (detection
 # only, no branches or pull requests), and the next run continues.
@@ -83,8 +84,10 @@ for repo in "${repos[@]}"; do
     export RENOVATE_TOKEN RENOVATE_REPOSITORIES="$repo"
     names="RENOVATE_TOKEN RENOVATE_PLATFORM RENOVATE_REPOSITORIES RENOVATE_CONFIG_FILE LOG_LEVEL"
     if (( budget > 0 )); then
-      export RENOVATE_PR_HOURLY_LIMIT=$(( budget < 2 ? budget : 2 ))
-      names+=" RENOVATE_PR_HOURLY_LIMIT"; pass=scanned
+      limit=$(( budget < 2 ? budget : 2 ))
+      RENOVATE_FORCE="$(python3 "$here/scripts/renovate-repos.py" force "$limit")"
+      export RENOVATE_FORCE
+      names+=" RENOVATE_FORCE"; pass=scanned
     else
       export RENOVATE_DRY_RUN=lookup
       names+=" RENOVATE_DRY_RUN"; pass="scanned (lookup only: run PR budget spent)"
@@ -94,11 +97,11 @@ for repo in "${repos[@]}"; do
       TIMEOUT_MINUTES=20 "$ESTATE_CI/sidecar-run.sh" job <<< 'cd /tmp && /usr/local/sbin/renovate-entrypoint.sh renovate' || rc=$?
     if (( budget > 0 )); then
       # Charge what the pass opened; if the count cannot be read, charge the whole pass limit.
-      n="$(python3 "$here/scripts/renovate-repos.py" opened "$repo" "$run_start")" || n="$RENOVATE_PR_HOURLY_LIMIT"
+      n="$(python3 "$here/scripts/renovate-repos.py" opened "$repo" "$run_start")" || n="$limit"
       budget=$(( budget > n ? budget - n : 0 ))
       echo "renovate: $repo opened $n pull request(s); run PR budget left: $budget"
     fi
-    unset RENOVATE_PR_HOURLY_LIMIT RENOVATE_DRY_RUN
+    unset RENOVATE_FORCE RENOVATE_DRY_RUN
     revoke
     if (( rc == 0 )); then
       result="$pass"; scanned=$((scanned + 1))

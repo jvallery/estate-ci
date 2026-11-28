@@ -6,6 +6,8 @@
 3. An exception entry without a note: exit 1.
 4. The real renovate/repositories.json passes.
 5. count_opened charges only renovate/ pull requests created at or after the run start.
+6. The forced per-pass limit wins over a repository-level prHourlyLimit, and
+   `force 0` (unlimited to Renovate) is refused.
 """
 import importlib.util
 import json
@@ -60,10 +62,19 @@ got = rr.count_opened(prs, "2026-11-28T09:17:00Z")
 if got != 2:
     failed += 1
     print(f"FAIL count_opened: got {got}, want 2")
+out = subprocess.run([sys.executable, str(script), "force", "1"], capture_output=True, text=True)
+forced = json.loads(out.stdout or "{}")
+eff = rr.apply_force({"prHourlyLimit": 50, "prConcurrentLimit": 20}, forced)
+if out.returncode != 0 or forced != {"prHourlyLimit": 1} or eff["prHourlyLimit"] != 1:
+    failed += 1
+    print(f"FAIL force 1: rc {out.returncode}, force {forced}, effective {eff}")
+if subprocess.run([sys.executable, str(script), "force", "0"], capture_output=True).returncode == 0:
+    failed += 1
+    print("FAIL force 0 was accepted (prHourlyLimit 0 is unlimited)")
 r = subprocess.run([sys.executable, str(script), "check"], capture_output=True, text=True)
 if r.returncode != 0:
     failed += 1
     print(f"FAIL renovate/repositories.json: {r.stderr.strip()}")
 if failed:
     sys.exit(1)
-print(f"renovate_repos: OK ({len(cases)} fixtures, the PR budget count and renovate/repositories.json)")
+print(f"renovate_repos: OK ({len(cases)} fixtures, the PR budget count, the forced limit and renovate/repositories.json)")

@@ -13,6 +13,10 @@
       print how many pull requests from a renovate/ branch were created in the
       repository at or after SINCE (ISO 8601 UTC). Reads the pass token from
       RENOVATE_TOKEN; renovate-run.sh charges the count to the run's PR budget.
+  renovate-repos.py force LIMIT
+      print the RENOVATE_FORCE JSON for one pass: prHourlyLimit LIMIT (1 or more;
+      0 would mean unlimited to Renovate). Renovate applies force after every
+      repository config and preset, so no repository can raise the limit.
 
 stdlib only. FILE defaults to renovate/repositories.json next to this script.
 """
@@ -101,6 +105,18 @@ def opened(repo, since):
     return 0
 
 
+def force_config(limit):
+    """The RENOVATE_FORCE object for one pass of the run's PR budget."""
+    if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
+        raise ValueError(f"prHourlyLimit must be a positive integer, got {limit!r} (0 is unlimited)")
+    return {"prHourlyLimit": limit}
+
+
+def apply_force(repo_config, force):
+    """Renovate's order for one option: repository config and presets first, force last."""
+    return {**repo_config, **force}
+
+
 def installed(repo):
     path = Path(os.environ["ESTATE_CI"]) / "app-token.py"
     spec = importlib.util.spec_from_file_location("app_token", path)
@@ -122,7 +138,7 @@ def installed(repo):
 
 
 def main(argv):
-    if not argv or argv[0] not in ("check", "active", "all", "installed", "opened"):
+    if not argv or argv[0] not in ("check", "active", "all", "installed", "opened", "force"):
         print(__doc__, file=sys.stderr)
         return 2
     cmd = argv[0]
@@ -131,6 +147,12 @@ def main(argv):
             print("usage: renovate-repos.py installed OWNER/REPO", file=sys.stderr)
             return 2
         return installed(argv[1])
+    if cmd == "force":
+        if len(argv) != 2 or not argv[1].isdigit() or int(argv[1]) < 1:
+            print("usage: renovate-repos.py force LIMIT (a positive integer)", file=sys.stderr)
+            return 2
+        print(json.dumps(force_config(int(argv[1]))))
+        return 0
     if cmd == "opened":
         if len(argv) != 3 or not REPO_RE.match(argv[1]):
             print("usage: renovate-repos.py opened OWNER/REPO SINCE", file=sys.stderr)
