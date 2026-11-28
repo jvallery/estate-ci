@@ -401,7 +401,7 @@ sets:
         # D-39 (Jason 2026-11-06 ~21:15Z): 1 -> 2.
         max: 2
         # D-1359: Home Assistant rebuilds the ESPHome image with security fixes.
-        job_image: registry.vallery.net/jvallery/homeassistant-ci-esphome@sha256:568a8a6ab1c6a038fe92a0a9d9a0a826a069cfeecd93c5717ee52db94e321464
+        job_image: registry.vallery.net/jvallery/homeassistant-ci-esphome@sha256:b16da928231322926b8a6ed9cea6e33f60ed8e7a5e3bd8cabf36b5260392de9c
         job_uid: 1001
         # D-488 (Jason 2026-11-09): CPU request = job active p50 1.73 CPU, 2026-11-06T12Z..11-10T00Z (2150m -> 1750m); limits unchanged.
         # NodeMemoryLimitOvercommitHigh (COORD 2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 1.41 GiB, prometheus 1.34 / replica 1.41, read 2026-11-21T02:15Z); request unchanged.
