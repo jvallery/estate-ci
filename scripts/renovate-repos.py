@@ -59,6 +59,11 @@ def problems(doc):
     for b in active:
         if b not in batches:
             out.append(f"active batch {b} has no repositories")
+    # A listed repository is either scanned or an exception with a reason: a batch
+    # that is never activated leaves its repositories silently unscanned.
+    for b in sorted(batches - set(active)):
+        repos = [e["repo"] for e in doc.get("repositories") or [] if e.get("batch") == b]
+        out.append(f"batch {b} is not in active_batches, so {', '.join(repos)} would never be scanned")
     return out
 
 

@@ -1,6 +1,6 @@
 {
-  "description": "estate-ci#261 (STD-OPS-02, DR-51): the repositories the estate version detector covers. renovate.yml runs one Renovate pass per repository whose batch is in active_batches, each with its own one-repository vallery-pin-bot token. A repository joins by moving its batch into active_batches after its own renovate.json PR merges (until then Renovate skips it: requireConfig=required). Entries with batch \"exception\" are not run; each needs a Jason decision and a STD-OPS-02 exception row in estate-platform docs/estate/STANDARDS.md naming estate-ci#261. Every active (non-archived) owner repository from the root AGENTS.md lane table appears exactly once.",
-  "active_batches": [0, 1, 4],
+  "description": "estate-ci#261 (STD-OPS-02, DR-51): the repositories the estate version detector covers. renovate.yml runs one Renovate pass per repository whose batch is in active_batches, each with its own one-repository vallery-pin-bot token. Every integer batch must be in active_batches (renovate-repos.py check). A repository joins by getting its own renovate.json (until then Renovate skips it: requireConfig=required), being covered by the vallery-pin-bot installation (renovate.yml mode=probe), and being listed in an active batch. batch \"exception\" marks an entry that cannot be scanned yet; its note names what is missing and the issue that moves it into a batch. Every active (non-archived) owner repository appears exactly once.",
+  "active_batches": [0, 1, 2, 3, 4],
   "repositories": [
     {"repo": "jvallery/estate-ci", "batch": 0, "lane": "CI/CD", "note": "pilot since estate-ci#110"},
 
@@ -32,12 +32,12 @@
     {"repo": "jvallery/AI_presentation", "batch": 3, "lane": "content"},
     {"repo": "jvallery/vallery-family", "batch": 3, "lane": "content"},
     {"repo": "jvallery/radio", "batch": 3, "lane": "content"},
+    {"repo": "jvallery/sunshine-research", "batch": 3, "lane": "personal (dormant)"},
 
-    {"repo": "jvallery/agents", "batch": "exception", "lane": "fleet control plane (retiring)", "note": "proposed exception: retiring under home-dotfiles#77, Actions dormant (D-78); D-52 kept vallery-pin-bot's write reach off it"},
-    {"repo": "jvallery/home-dotfiles", "batch": "exception", "lane": "Mac workstation", "note": "proposed exception: D-52 kept vallery-pin-bot's write reach off it"},
-    {"repo": "jvallery/vault-personal", "batch": "exception", "lane": "personal (dormant)", "note": "proposed exception: dormant; D-52 kept vallery-pin-bot's write reach off it"},
-    {"repo": "jvallery/sunshine-research", "batch": "exception", "lane": "personal (dormant)", "note": "proposed exception: dormant"},
-    {"repo": "VerdifyConsultancy/research-template", "batch": "exception", "lane": "content/template", "note": "proposed exception: vallery-pin-bot is not installed in the VerdifyConsultancy organization"},
-    {"repo": "VerdifyConsultancy/.github", "batch": "exception", "lane": "content/template", "note": "proposed exception: vallery-pin-bot is not installed in the VerdifyConsultancy organization"}
+    {"repo": "jvallery/agents", "batch": "exception", "lane": "fleet control plane (retiring)", "note": "retiring: the change that archives the repository removes this entry; vallery-pin-bot is not installed there"},
+    {"repo": "jvallery/home-dotfiles", "batch": "exception", "lane": "Mac workstation", "note": "vallery-pin-bot stays off it (no write reach); joins with a lookup-only pass (dryRun lookup) once a read-only credential exists (estate-ci#261)"},
+    {"repo": "jvallery/vault-personal", "batch": "exception", "lane": "personal (dormant)", "note": "vallery-pin-bot stays off it (no write reach); joins with a lookup-only pass (dryRun lookup) once a read-only credential exists (estate-ci#261)"},
+    {"repo": "VerdifyConsultancy/research-template", "batch": "exception", "lane": "content/template", "note": "vallery-pin-bot is not installed in the VerdifyConsultancy organization yet; estate-ci#391 moves it into a batch"},
+    {"repo": "VerdifyConsultancy/.github", "batch": "exception", "lane": "content/template", "note": "vallery-pin-bot is not installed in the VerdifyConsultancy organization yet; estate-ci#391 moves it into a batch"}
   ]
 }

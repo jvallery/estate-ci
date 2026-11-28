@@ -23,8 +23,8 @@ python3 tests/version_register/run.py
 python3 tests/orphan_redispatch/run.py
 # estate-platform#1553: child Applications of a nested Argo CD root (identity, no prune, STD-IAC-08).
 python3 tests/owner_root_children/run.py
-# estate-ci#261 (STD-OPS-02): the Renovate repository list is well formed.
-python3 scripts/renovate-repos.py check
+# estate-ci#261 (STD-OPS-02): the Renovate repository list is well formed and every batch is active.
+python3 tests/renovate_repos/run.py
 # estate-ci enforces its own R4-tag-only now (callers from TAG_ONLY_ENFORCE_FROM, estate-ci#104).
 python3 deploy/foundation/bin/lint-images.py --tags .
 bash tests/sidecar_run/run.sh
