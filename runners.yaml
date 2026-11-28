@@ -463,9 +463,10 @@ sets:
         # kepler/sentinel/sunshine_club use, so the bare-run "ci / secret-scan" job has
         # gitleaks; the python job sidecar is unchanged.
         runner_image: *toolbox
-        # python:3.13-bookworm (3.13.18, 2026-11-05 bookworm updates: perl/brotli/imagemagick/linux-libc-dev criticals),
-        # mirrored by mirrors.txt (same index digest as docker.io/library/python).
-        job_image: registry.vallery.net/jvallery/estate-ci/mirror/docker.io/library/python@sha256:cc55e4ded9c95f6ce2133b3d096db43f214d280c2a8af65d83e246c8fa7d168c
+        # estate-ci#229: verdify-ci-validate (verdify-platform ci/validate.Dockerfile, build.yml profile
+        # ci-validate, built from 451e09e8): python:3.13-bookworm mirror with Debian packages upgraded
+        # and PostgreSQL 16 preinstalled, so validate downloads no PGDG packages. CVE gate pass, signed.
+        job_image: registry.vallery.net/verdifyconsultancy/verdify-ci-validate@sha256:88006805dc2f28bc685d50003898d77ce7b9707ce2c1e9f0c04ee71436931eff
         job_uid: 1001
         # 2026-11-09: CPU request = job active p50 0.76 CPU, 2026-11-06T12Z..11-10T00Z (950m -> 800m); limits unchanged.
         # NodeMemoryLimitOvercommitHigh (2026-11-21): job memory limit 8Gi -> 4Gi = max(4Gi, 2 x 7-day max working set 0.80 GiB, prometheus 0.80 / replica 0.80, read 2026-11-21T02:15Z); request unchanged.
