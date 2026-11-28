@@ -35,8 +35,8 @@
     {"repo": "jvallery/sunshine-research", "batch": 3, "lane": "personal (dormant)"},
 
     {"repo": "jvallery/agents", "batch": "exception", "lane": "fleet control plane (retiring)", "note": "retiring: the change that archives the repository removes this entry; vallery-pin-bot is not installed there"},
-    {"repo": "jvallery/home-dotfiles", "batch": "exception", "lane": "Mac workstation", "note": "vallery-pin-bot stays off it (no write reach); joins with a lookup-only pass (dryRun lookup) once a read-only credential exists (estate-ci#261)"},
-    {"repo": "jvallery/vault-personal", "batch": "exception", "lane": "personal (dormant)", "note": "vallery-pin-bot stays off it (no write reach); joins with a lookup-only pass (dryRun lookup) once a read-only credential exists (estate-ci#261)"},
+    {"repo": "jvallery/home-dotfiles", "batch": "exception", "lane": "Mac workstation", "note": "vallery-pin-bot stays off it (no write reach); joins with a lookup-only pass (dryRun lookup) with a read-only deploy key (estate-ci#393)"},
+    {"repo": "jvallery/vault-personal", "batch": "exception", "lane": "personal (dormant)", "note": "vallery-pin-bot stays off it (no write reach); joins with a lookup-only pass (dryRun lookup) with a read-only deploy key (estate-ci#393)"},
     {"repo": "VerdifyConsultancy/research-template", "batch": "exception", "lane": "content/template", "note": "vallery-pin-bot is not installed in the VerdifyConsultancy organization yet; estate-ci#391 moves it into a batch"},
     {"repo": "VerdifyConsultancy/.github", "batch": "exception", "lane": "content/template", "note": "vallery-pin-bot is not installed in the VerdifyConsultancy organization yet; estate-ci#391 moves it into a batch"}
   ]

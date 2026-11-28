@@ -115,7 +115,7 @@ closing its open `renovate/` PRs.
 | 2 | sentinel, immich-config, docs, orbit, kepler, options-tracker, weather, tictactoe, research-vault, verdify-platform, verdify-www, ImagineProposals, crm, memoryos, wordpress, sunshine_club | Active since 2026-11-28 |
 | 3 | AI_presentation, vallery-family, radio, sunshine-research | Active since 2026-11-28 |
 | 4 | homeassistant | Enable its version detector independently after its repository configuration merges |
-| exception | agents, home-dotfiles, vault-personal, VerdifyConsultancy/research-template, VerdifyConsultancy/.github | Not scannable yet; the entry's note names the gap and its issue. agents is removed when it is archived. home-dotfiles and vault-personal join with a lookup-only pass (`dryRun: "lookup"`, no pull requests) under a credential that cannot write to them. The VerdifyConsultancy pair joins once the App is installed in that organization (estate-ci#391) |
+| exception | agents, home-dotfiles, vault-personal, VerdifyConsultancy/research-template, VerdifyConsultancy/.github | Not scannable yet; the entry's note names the gap and its issue. agents is removed when it is archived. home-dotfiles and vault-personal join with a lookup-only pass (`dryRun: "lookup"`, no pull requests) under read-only deploy keys (estate-ci#393). The VerdifyConsultancy pair joins once the App is installed in that organization (estate-ci#391) |
 
 **How a repository joins.** (1) Its own `renovate.json` merges in that
 repository. (2) The `vallery-pin-bot` installation covers it (`mode=probe` shows
