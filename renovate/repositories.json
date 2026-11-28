@@ -1,6 +1,6 @@
 {
   "description": "estate-ci#261 (STD-OPS-02, DR-51): the repositories the estate version detector covers. renovate.yml runs one Renovate pass per repository whose batch is in active_batches, each with its own one-repository vallery-pin-bot token. Every integer batch must be in active_batches (renovate-repos.py check). A repository joins by getting its own renovate.json (until then Renovate skips it: requireConfig=required), being covered by the vallery-pin-bot installation (renovate.yml mode=probe), and being listed in an active batch. batch \"exception\" marks an entry that cannot be scanned yet; its note names what is missing and the issue that moves it into a batch. Every active (non-archived) owner repository appears exactly once.",
-  "active_batches": [0, 1, 2, 3, 4],
+  "active_batches": [0, 1, 2, 4],
   "repositories": [
     {"repo": "jvallery/estate-ci", "batch": 0, "lane": "CI/CD", "note": "pilot since estate-ci#110"},
 
@@ -29,10 +29,10 @@
     {"repo": "jvallery/wordpress", "batch": 2, "lane": "application", "note": "hosted Dependabot Updates stays only under its STD-OPS-02 / STD-CI-02 exception row (D-373, review 2027-02-01)"},
     {"repo": "jvallery/sunshine_club", "batch": 2, "lane": "application"},
 
-    {"repo": "jvallery/AI_presentation", "batch": 3, "lane": "content"},
-    {"repo": "jvallery/vallery-family", "batch": 3, "lane": "content"},
-    {"repo": "jvallery/radio", "batch": 3, "lane": "content"},
-    {"repo": "jvallery/sunshine-research", "batch": 3, "lane": "personal (dormant)"},
+    {"repo": "jvallery/AI_presentation", "batch": "exception", "lane": "content", "note": "batch 3: joins after the first batch-2 run has settled, so one run does not open every first pull request at once (estate-ci#261)"},
+    {"repo": "jvallery/vallery-family", "batch": "exception", "lane": "content", "note": "batch 3: joins after the first batch-2 run has settled, so one run does not open every first pull request at once (estate-ci#261)"},
+    {"repo": "jvallery/radio", "batch": "exception", "lane": "content", "note": "batch 3: joins after the first batch-2 run has settled, so one run does not open every first pull request at once (estate-ci#261)"},
+    {"repo": "jvallery/sunshine-research", "batch": "exception", "lane": "personal (dormant)", "note": "batch 3: joins after the first batch-2 run has settled, so one run does not open every first pull request at once (estate-ci#261)"},
 
     {"repo": "jvallery/agents", "batch": "exception", "lane": "fleet control plane (retiring)", "note": "retiring: the change that archives the repository removes this entry; vallery-pin-bot is not installed there"},
     {"repo": "jvallery/home-dotfiles", "batch": "exception", "lane": "Mac workstation", "note": "vallery-pin-bot stays off it (no write reach); joins with a lookup-only pass (dryRun lookup) with a read-only deploy key (estate-ci#393)"},

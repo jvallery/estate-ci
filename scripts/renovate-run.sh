@@ -14,6 +14,13 @@
 # it when the pass ends. Needs APP_CLIENT_ID and APP_PRIVATE_KEY in the env; the
 # App key never enters the sidecar. Renovate only opens PRs: it never merges,
 # pins digests or touches Argo (renovate/global.json).
+#
+# PR budget: one run opens at most RENOVATE_RUN_PR_BUDGET (default 10) new pull
+# requests across every repository, so activating a batch cannot flood the
+# runners. Each pass gets prHourlyLimit = min(2, what is left) and is charged
+# what it opened (renovate-repos.py opened); once the budget is spent, the
+# remaining repositories still get their pass, as dryRun=lookup (detection
+# only, no branches or pull requests), and the next run continues.
 set -euo pipefail
 mode="${1:-run}"
 here="$(cd "$(dirname "$0")/.." && pwd)"
@@ -59,6 +66,8 @@ trap revoke EXIT
 export RENOVATE_PLATFORM=github RENOVATE_CONFIG_FILE="$here/renovate/global.json"
 export LOG_LEVEL="${RENOVATE_LOG_LEVEL:-info}"
 failed=0 uncovered=0 scanned=0
+budget="${RENOVATE_RUN_PR_BUDGET:-10}"
+run_start="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 for repo in "${repos[@]}"; do
   echo "::group::renovate $repo"
   rc=0; python3 "$here/scripts/renovate-repos.py" installed "$repo" || rc=$?
@@ -72,12 +81,27 @@ for repo in "${repos[@]}"; do
     RENOVATE_TOKEN="$(APP_TOKEN_EXTRA_PERMISSIONS=issues=read python3 "$ESTATE_CI/app-token.py" "$repo")"
     echo "::add-mask::$RENOVATE_TOKEN"
     export RENOVATE_TOKEN RENOVATE_REPOSITORIES="$repo"
+    names="RENOVATE_TOKEN RENOVATE_PLATFORM RENOVATE_REPOSITORIES RENOVATE_CONFIG_FILE LOG_LEVEL"
+    if (( budget > 0 )); then
+      export RENOVATE_PR_HOURLY_LIMIT=$(( budget < 2 ? budget : 2 ))
+      names+=" RENOVATE_PR_HOURLY_LIMIT"; pass=scanned
+    else
+      export RENOVATE_DRY_RUN=lookup
+      names+=" RENOVATE_DRY_RUN"; pass="scanned (lookup only: run PR budget spent)"
+    fi
     rc=0
-    ENV_NAMES="RENOVATE_TOKEN RENOVATE_PLATFORM RENOVATE_REPOSITORIES RENOVATE_CONFIG_FILE LOG_LEVEL" \
+    ENV_NAMES="$names" \
       TIMEOUT_MINUTES=20 "$ESTATE_CI/sidecar-run.sh" job <<< 'cd /tmp && /usr/local/sbin/renovate-entrypoint.sh renovate' || rc=$?
+    if (( budget > 0 )); then
+      # Charge what the pass opened; if the count cannot be read, charge the whole pass limit.
+      n="$(python3 "$here/scripts/renovate-repos.py" opened "$repo" "$run_start")" || n="$RENOVATE_PR_HOURLY_LIMIT"
+      budget=$(( budget > n ? budget - n : 0 ))
+      echo "renovate: $repo opened $n pull request(s); run PR budget left: $budget"
+    fi
+    unset RENOVATE_PR_HOURLY_LIMIT RENOVATE_DRY_RUN
     revoke
     if (( rc == 0 )); then
-      result=scanned; scanned=$((scanned + 1))
+      result="$pass"; scanned=$((scanned + 1))
     else
       result="renovate failed (exit $rc)"; failed=$((failed + 1))
       echo "::error title=renovate::$repo $result"

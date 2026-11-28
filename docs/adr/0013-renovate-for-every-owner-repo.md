@@ -1,7 +1,7 @@
 # ADR-0013: Renovate for every owner repository
 
-Status: Accepted (2026-11-18, estate-ci#261); batches 0 to 4 active since
-2026-11-28. Owner: estate-ci.
+Status: Accepted (2026-11-18, estate-ci#261); batches 0, 1, 2 and 4 active
+since 2026-11-28, batch 3 after batch 2's first run. Owner: estate-ci.
 
 ## Context
 
@@ -58,6 +58,15 @@ every repository with its result. The job runs serially on the existing
 At about 20 s to a few minutes per repository, the full list fits in the 180 min
 job timeout with a wide margin.
 
+**A PR budget for each run** (added 2026-11-28). One run opens at most
+`RENOVATE_RUN_PR_BUDGET` (default 10) new pull requests across all
+repositories. Each pass runs with `prHourlyLimit` set to the smaller of 2 and
+what is left, and is charged the `renovate/` pull requests it opened. Once the
+budget is spent, the remaining repositories still get their pass with
+`dryRun=lookup`, which detects but opens nothing, and the next run continues.
+Activating a batch therefore cannot open every repository's first pull requests
+at once.
+
 **Probe before each batch.** `workflow_dispatch` with `mode=probe` reports, for
 every non-exception repository, whether the App is installed. It mints no token
 and does not run Renovate. Its output is the exact list for widening the
@@ -113,9 +122,9 @@ closing its open `renovate/` PRs.
 | 0 | estate-ci | Live since estate-ci#110; widened to github-actions here |
 | 1 | estate-platform, storage-infra, network-infra, proxmox-infrastructure, monitoring-stack, cortex-ai-compute | Active from this PR. Each is skipped until its `renovate.json` PR merges; a `not-covered` row needs the App installed (Jason) |
 | 2 | sentinel, immich-config, docs, orbit, kepler, options-tracker, weather, tictactoe, research-vault, verdify-platform, verdify-www, ImagineProposals, crm, memoryos, wordpress, sunshine_club | Active since 2026-11-28 |
-| 3 | AI_presentation, vallery-family, radio, sunshine-research | Active since 2026-11-28 |
+| 3 | AI_presentation, vallery-family, radio, sunshine-research | Listed as `exception` until batch 2's first run has settled; then one PR restores batch 3 and activates it |
 | 4 | homeassistant | Enable its version detector independently after its repository configuration merges |
-| exception | agents, home-dotfiles, vault-personal, VerdifyConsultancy/research-template, VerdifyConsultancy/.github | Not scannable yet; the entry's note names the gap and its issue. agents is removed when it is archived. home-dotfiles and vault-personal join with a lookup-only pass (`dryRun: "lookup"`, no pull requests) under read-only deploy keys (estate-ci#393). The VerdifyConsultancy pair joins once the App is installed in that organization (estate-ci#391) |
+| exception | agents, home-dotfiles, vault-personal, VerdifyConsultancy/research-template, VerdifyConsultancy/.github | Not scannable yet; the entry's note names the gap and its issue. agents is removed when it is archived. home-dotfiles and vault-personal: decided 2026-11-28, they join with a lookup-only pass (`dryRun: "lookup"`, no pull requests) whose credential is one read-only deploy key per repository, delivered to the renovate runner as a sealed Secret; `vallery-pin-bot` stays off them (estate-ci#393). The VerdifyConsultancy pair joins once the App is installed in that organization (estate-ci#391) |
 
 **How a repository joins.** (1) Its own `renovate.json` merges in that
 repository. (2) The `vallery-pin-bot` installation covers it (`mode=probe` shows

@@ -9,6 +9,10 @@
       3 if it is not (HTTP 404), 1 on any other error. Needs APP_CLIENT_ID,
       APP_PRIVATE_KEY and $ESTATE_CI/app-token.py; mints no installation token
       and prints nothing secret.
+  renovate-repos.py opened OWNER/REPO SINCE
+      print how many pull requests from a renovate/ branch were created in the
+      repository at or after SINCE (ISO 8601 UTC). Reads the pass token from
+      RENOVATE_TOKEN; renovate-run.sh charges the count to the run's PR budget.
 
 stdlib only. FILE defaults to renovate/repositories.json next to this script.
 """
@@ -18,6 +22,7 @@ import os
 import re
 import sys
 import urllib.error
+import urllib.request
 from pathlib import Path
 
 DEFAULT = Path(__file__).resolve().parent.parent / "renovate" / "repositories.json"
@@ -78,6 +83,24 @@ def selected(doc, only_active):
         yield e["repo"]
 
 
+def count_opened(prs, since):
+    """Pull requests from a renovate/ branch created at or after since (ISO 8601 Z strings sort)."""
+    return sum(1 for pr in prs
+               if str((pr.get("head") or {}).get("ref", "")).startswith("renovate/")
+               and str(pr.get("created_at", "")) >= since)
+
+
+def opened(repo, since):
+    req = urllib.request.Request(
+        f"{os.environ.get('GITHUB_API_URL', 'https://api.github.com').rstrip('/')}/repos/{repo}/pulls"
+        "?state=all&sort=created&direction=desc&per_page=50",
+        headers={"Authorization": f"Bearer {os.environ['RENOVATE_TOKEN']}",
+                 "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        print(count_opened(json.loads(r.read()), since))
+    return 0
+
+
 def installed(repo):
     path = Path(os.environ["ESTATE_CI"]) / "app-token.py"
     spec = importlib.util.spec_from_file_location("app_token", path)
@@ -99,7 +122,7 @@ def installed(repo):
 
 
 def main(argv):
-    if not argv or argv[0] not in ("check", "active", "all", "installed"):
+    if not argv or argv[0] not in ("check", "active", "all", "installed", "opened"):
         print(__doc__, file=sys.stderr)
         return 2
     cmd = argv[0]
@@ -108,6 +131,11 @@ def main(argv):
             print("usage: renovate-repos.py installed OWNER/REPO", file=sys.stderr)
             return 2
         return installed(argv[1])
+    if cmd == "opened":
+        if len(argv) != 3 or not REPO_RE.match(argv[1]):
+            print("usage: renovate-repos.py opened OWNER/REPO SINCE", file=sys.stderr)
+            return 2
+        return opened(argv[1], argv[2])
     doc = load(argv[1] if len(argv) > 1 else DEFAULT)
     errs = problems(doc)
     if errs:
