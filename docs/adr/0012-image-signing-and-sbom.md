@@ -1,7 +1,7 @@
 # ADR-0012: Image signatures and SBOMs at the image-build chokepoint
 
-Status: Proposed (2026-11-16, estate-ci#125). Owner: estate-ci. This is the plan
-PR for estate-ci#125. Implementation follows in separate PRs after review.
+Status: Accepted (2026-11-27, estate-ci#125; proposed 2026-11-16). Owner: estate-ci.
+Signing is in force with no warn period; the SBOM attach stays in warn mode.
 
 ## Context
 
@@ -18,7 +18,7 @@ Admission enforcement raises no work until a verifier is named (STD-CI-14 is a
 proposal). ADR-0003 forbids OIDC in the build path, so keyless (Fulcio) signing
 is out and signing must be key-based.
 
-## Decision (proposed)
+## Decision
 
 **One place.** Generation goes into `image-build.sh`, after the digest readback
 and after the CVE gate passes, so a blocked digest is never signed. Every caller
@@ -35,20 +35,25 @@ The attach uses `oras attach` (pinned by version and checksum), followed by an
 `oras discover` readback; this is implemented in `deploy/foundation/bin/sbom-attach.sh`
 (step 3, warn mode).
 
-**Signature and provenance.** `cosign sign --key` signs the pushed digest. A
-`cosign attest --type cyclonedx` attestation carries the SBOM, and a minimal
-in-toto provenance predicate records:
-- source repository and commit (the OCI labels Kaniko already sets);
-- workflow run URL;
-- builder: the estate-ci reusable workflow and its SHA.
+**Signature.** `cosign sign --key` signs the pushed digest after a pass verdict
+of the CVE gate, only with `--push`; a block verdict (in warn mode too) signs
+nothing. The signing config names no transparency log and no timestamp
+authority, so nothing about estate images leaves the registry, and verifiers pass
+`--insecure-ignore-tlog`. The signature is stored as an OCI referrer of the
+digest in zot and read back with `cosign verify` before the digest is output.
+cosign v3.1.6 ships in the estate-ci toolbox, built from module source and pinned
+by module version and sum like crane. Provenance attestations (`cosign attest`
+of the SBOM and an in-toto predicate) are not built yet and are a later decision.
 
-Signatures and attestations are stored as OCI referrers next to the image. The
-cosign binary is pinned by version and checksum, the same way as trivy and crane.
-
-**Key custody.** One estate image-signing key pair. The private key is a
-KSOPS-encrypted Secret in `ci-runners`, mounted only into the `build` profile's
-Kaniko-free signing step: the job sidecar, never the runner container, so
-workflow steps cannot read it. Jason generates and seals it through the
+**Key custody.** One estate image-signing key pair. The private key is the
+KSOPS-encrypted Secret `estate-image-signing-key` in `ci-runners`, mounted only
+into the `sign` sidecar of `<repo>-build` sets (rendered by
+`scripts/render_runners.py`), never the runner container. That sidecar runs
+`sign-agent.sh`, which runs no script: it accepts only a request naming one
+origin digest ref and runs `sign-image.sh` on it, so a workflow step can ask for
+a signature but cannot read the key. The runner container carries
+`CI_IMAGE_SIGNING=required`, which makes `image-build.sh` fail a push it cannot
+sign. Jason generates and seals it through the
 hidden-prompt helper (no agent mints it). Its escrow follows the age-identity
 escrow in home-dotfiles. The public key is published in this repository and in
 the estate-platform ownership record, so any verifier can pin it. Rotation
@@ -60,33 +65,34 @@ control stays the upstream digest pin and the zot push ACL. If a later decision
 includes mirrors, the same step goes into `mirror.sh` and signs the copied
 upstream digest.
 
-**Failure mode.** Warn first, like the CVE gate. A missing key or a signing
-failure logs and passes until a committed `sign_enforce_after` date, then fails
-the build, so no pin PR is opened for an unsigned digest. SBOM generation
-failure follows the same rule.
+**Failure mode.** No warn period for signatures (estate-ci#125): the key exists
+and nothing consumes signatures yet, so a signing failure fails the build and
+blocks only that digest's pin PR. A runner Pod rendered before the sign sidecar
+existed has no `CI_IMAGE_SIGNING` and logs that it skipped signing. SBOM
+generation stays warn mode (`sbom-attach.sh`) until an enforce date is committed.
 
-**Verification (no admission yet).** A reusable `verify-image.yml` and the script
-`verify-image.sh` run `cosign verify` and `cosign verify-attestation` against the
-published public key. Owners and the security report use them. Admission
-enforcement (a policy controller with the zot origin down) is a separate
-decision under STD-CI-14.
+**Verification (no admission yet).** `deploy/foundation/bin/verify-image.sh`
+runs `cosign verify --key keys/estate-image-signing.pub` for one or more digest
+refs. Owners and the security report use it. Admission enforcement (a policy
+controller with the zot origin down) is a separate decision under STD-CI-14,
+tracked in the estate's platform repository.
 
 ## Rollout
 
 1. This ADR (plan PR). Review against STD-CI-04 and D-455.
 2. The signing key is sealed into the estate-ci secrets bundle; the public key PR follows.
-3. image-build.sh change in warn mode, proven on one builder (docs or
-   estate-ci's own images). A digest from that builder must verify, and its SBOM
-   must be retrievable from zot.
-4. Builder repos bump the reusable pin through their own lanes. The estate-ci#125
-   acceptance names four running images to verify after their owners bump:
-   vault-server, kube-vip, a verdify-prod image and teslamate.
-5. Enforce after the committed date.
+3. SBOM attach in warn mode (done).
+4. Signing in `image-build.sh` with the sign sidecar, enforced from the start
+   (estate-ci#125). Builders need no pin bump: every runner mounts the scripts
+   from `main`, and the sign sidecar arrives with the runner-set pin. Every
+   first-party digest running at the time is signed once by a one-off run.
+5. SBOM enforce after a committed date; provenance attestations; admission.
 
 ## Rollback
 
-Revert the image-build.sh change. Pins and images are unaffected; existing
-signatures and SBOM referrers stay in zot and are ignored.
+Revert the image-build.sh change (live within minutes) or move the runner-set
+pin back. Pins and images are unaffected; existing signatures and SBOM referrers
+stay in zot and are ignored.
 
 ## Not decided here
 

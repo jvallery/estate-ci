@@ -78,6 +78,8 @@ spec:
                 value: /exchange
               - name: ESTATE_CI
                 value: /opt/estate-ci
+              - name: CI_IMAGE_SIGNING
+                value: required
               resources:
                 requests:
                   cpu: 100m
@@ -140,6 +142,43 @@ spec:
               - name: registry-pull
                 mountPath: /kaniko/.docker
                 readOnly: true
+            - name: sign
+              image: registry.vallery.net/jvallery/estate-ci/toolbox@sha256:13eaf09000fd7adc8936b0be76d1e208acf29f75b1d411caabc570f576b4210e
+              command:
+              - /bin/bash
+              - /opt/estate-ci/sign-agent.sh
+              env:
+              - name: CI_EXCHANGE_DIR
+                value: /exchange
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                  ephemeral-storage: 64Mi
+                limits:
+                  cpu: '1'
+                  memory: 512Mi
+                  ephemeral-storage: 1Gi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                  - ALL
+                runAsNonRoot: true
+                runAsUser: 1001
+                runAsGroup: 1001
+              volumeMounts:
+              - name: exchange
+                mountPath: /exchange
+              - name: estate-ci-scripts
+                mountPath: /opt/estate-ci
+                readOnly: true
+              - name: zot-push
+                mountPath: /run/secrets/zot-push
+                readOnly: true
+              - name: estate-image-signing-key
+                mountPath: /run/secrets/image-signing
+                readOnly: true
             volumes:
             - name: work
               emptyDir:
@@ -163,6 +202,17 @@ spec:
                 items:
                 - key: .dockerconfigjson
                   path: config.json
+            - name: estate-image-signing-key
+              secret:
+                secretName: estate-image-signing-key
+                defaultMode: 288
+                items:
+                - key: cosign.key
+                  path: cosign.key
+                - key: cosign.password
+                  path: cosign.password
+                - key: cosign.pub
+                  path: cosign.pub
         listenerConfig: null
   destination:
     server: https://kubernetes.default.svc

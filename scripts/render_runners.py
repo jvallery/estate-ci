@@ -69,6 +69,9 @@ QUOTA_FILE = ROOT / "deploy" / "foundation" / "quota.yaml"
 # Per-set spread domain (set_spread). It must differ from the all-runner spread's hostname key:
 # a Pod spec may not hold two constraints with the same (topologyKey, whenUnsatisfiable).
 SET_SPREAD_TOPOLOGY_KEY = "topology.vallery.net/proxmox-host"
+# estate-ci#125 (ADR-0012): the estate image-signing key (KSOPS Secret in ci-runners), mounted into the
+# sign sidecar of build sets only. keys/estate-image-signing.pub is its public half.
+SIGNING_SECRET = "estate-image-signing-key"
 FRIGATE_TOLERATION = {"key": "dedicated", "operator": "Equal", "value": "frigate", "effect": "NoSchedule"}
 
 
@@ -313,6 +316,26 @@ def pod_template(d: dict, profile: str, opts: dict, expected: str, base: str, la
         runner["volumeMounts"].append({"name": "zot-push", "mountPath": "/run/secrets/zot-push", "readOnly": True})
         volumes.append({"name": "zot-push", "secret": {
             "secretName": push_secret, "items": [{"key": ".dockerconfigjson", "path": "config.json"}]}})
+        # estate-ci#125 (ADR-0012): the estate image-signing key is mounted only into the "sign"
+        # sidecar, never the runner container. sign-agent.sh accepts one request shape (an origin
+        # digest ref, written by image-build.sh after the CVE gate passes) and runs no script.
+        # CI_IMAGE_SIGNING=required makes image-build.sh fail a push it cannot sign.
+        runner["env"].append({"name": "CI_IMAGE_SIGNING", "value": "required"})
+        containers.append({
+            "name": "sign",
+            "image": pinned(d["toolbox"], "toolbox"),
+            "command": ["/bin/bash", "/opt/estate-ci/sign-agent.sh"],
+            "env": [{"name": "CI_EXCHANGE_DIR", "value": "/exchange"}],
+            "resources": res("50m", "64Mi", "1", "512Mi", "64Mi", "1Gi"),
+            "securityContext": restricted(1001),
+            "volumeMounts": [exchange, scripts,
+                             {"name": "zot-push", "mountPath": "/run/secrets/zot-push", "readOnly": True},
+                             {"name": SIGNING_SECRET, "mountPath": "/run/secrets/image-signing", "readOnly": True}],
+        })
+        # 0440 + fsGroup 1001: readable by the sign sidecar's uid only (the runner does not mount it).
+        volumes.append({"name": SIGNING_SECRET, "secret": {
+            "secretName": SIGNING_SECRET, "defaultMode": 0o440,
+            "items": [{"key": k, "path": k} for k in ("cosign.key", "cosign.password", "cosign.pub")]}})
     labels = {"estate-ci.vallery.net/profile": label, RUNNER_LABEL: "true"}
     if profile == "ops":
         labels["estate-ci.vallery.net/set"] = f"{base}-ops"

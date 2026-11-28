@@ -14,6 +14,8 @@
 # default-branch push/dispatch only) the runner container pushes the tarball with
 # crane using the repo's own zot principal mounted at /run/secrets/zot-push.
 # Dockerfile RUN steps never see that credential.
+# After a pass verdict of the CVE gate the digest is signed by the set's sign sidecar
+# (sign-agent.sh, estate-ci#125); verify with verify-image.sh.
 #
 # Output: prints "digest=sha256:..." and "image-ref=registry.vallery.net/<image>@sha256:..."
 # and appends them to $GITHUB_OUTPUT when set (Forgejo Actions honours it too).
@@ -187,9 +189,13 @@ if ! git clone -q --depth 1 --filter=blob:none --no-checkout "$EXCEPTIONS_GIT" "
 fi
 echo "cve-gate: scanner trivy ${TRIVY_VERSION}, db ${db_updated:-unknown}, report sha256 $(sha256sum "$gate_dir/report.json" 2>/dev/null | cut -c1-64)"
 owner="${GITHUB_REPOSITORY:-$(sed -E 's#^https?://[^/]+/##' <<<"$source_url")}"
-gate_rc=0
-bash "$(dirname "$0")/cve-gate.sh" --report "$gate_dir/report.json" --digest "$digest" --owner "$owner" \
-  --exceptions "$gate_dir/exceptions.json" --db-updated-at "$db_updated" || gate_rc=$?
+gate_rc=0 gate_out=""
+gate_out="$(bash "$(dirname "$0")/cve-gate.sh" --report "$gate_dir/report.json" --digest "$digest" --owner "$owner" \
+  --exceptions "$gate_dir/exceptions.json" --db-updated-at "$db_updated")" || gate_rc=$?
+[[ -z "$gate_out" ]] || printf '%s\n' "$gate_out"
+# Signed only on a pass verdict: in warn mode a would-block digest still exits 0 and is output, unsigned.
+gate_pass=false
+((gate_rc == 0)) && grep -q ' verdict=pass ' <<<"$gate_out" && gate_pass=true
 if ((gate_rc == 0)); then
   # SBOM after the gate passes, so a blocked digest gets none; warn mode, never fails the build.
   if [[ ! -x "$bin/oras" ]]; then
@@ -204,6 +210,18 @@ if ((gate_rc == 0)); then
 fi
 rm -rf "$gate_dir"
 ((gate_rc == 0)) || { echo "cve-gate blocked ${ref}: no digest output, so no pin PR" >&2; exit 1; }
+# --- signature (estate-ci#125, ADR-0012): the sign sidecar of the <repo>-build set signs the digest
+# with the estate image-signing key, which the runner container never holds. A set rendered with it
+# sets CI_IMAGE_SIGNING=required, and then a signing failure fails the build (no digest output, no pin).
+if ! $gate_pass; then
+  echo "sign: not signed: the cve-gate verdict was not pass"
+elif [[ "${CI_IMAGE_SIGNING:-}" == required ]]; then
+  SIGN_REF="${ORIGIN}/${image}@${digest}" ENV_NAMES=SIGN_REF TIMEOUT_MINUTES=10 \
+    "$(dirname "$0")/sidecar-run.sh" sign </dev/null \
+    || { echo "sign: signing ${ref} failed: no digest output, so no pin PR" >&2; exit 1; }
+else
+  echo "sign: skipped: this runner set has no sign sidecar (CI_IMAGE_SIGNING is not required)"
+fi
 echo "digest=${digest}"
 echo "image-ref=${ref}"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then

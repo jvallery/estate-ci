@@ -27,6 +27,7 @@ on dispatch; its `pin` job then opens the digest pin PR) and published as
 | jq, git, curl, make, zip/unzip, xz, sqlite3, g++, openssh-client, file | apt | noble archive |
 | zsh | 5.9 (apt) | noble archive (`zsh -f -n` syntax checks and zsh self-tests; home-dotfiles#104 retires the workflow's inline package download) |
 | crane | v0.22.1 | built from module source with go1.27.4, module sum `h1:RZuuSYhTvlDvtsK+NkutoCZ//C0X2ebLK8X8l3ULs84=` asserted (`go version -m`) (same pin as `image-build.sh`) |
+| cosign | v3.1.6 | built from module source with go1.27.4, module sum `h1:8RiFff6JGIysokSck6pZo7uuuiYoYPZq31CRCVBOUDc=` asserted (`go version -m`) (estate-ci#125: the sign sidecar of build sets and `verify-image.sh`) |
 | gitleaks | 8.30.1 | built from module source with go1.27.4, module sum `h1:PmEvCfVI7ti9dV3s5aMZUY7sS2GxRvG3yzih7E+cS3w=` asserted (`go version -m`) (fleet recipe) |
 | shellcheck | v0.11.0 | GitHub release, sha256 recorded from the asset |
 | actionlint | 1.7.12 | built from module source with go1.27.4, module sum `h1:vQ4GeJN86C0QH+gTUQcs8McmK62OLT3kmakPMtEWYnY=` asserted (`go version -m`) |
