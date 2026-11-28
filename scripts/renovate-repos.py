@@ -9,6 +9,14 @@
       3 if it is not (HTTP 404), 1 on any other error. Needs APP_CLIENT_ID,
       APP_PRIVATE_KEY and $ESTATE_CI/app-token.py; mints no installation token
       and prints nothing secret.
+  renovate-repos.py opened OWNER/REPO SINCE
+      print how many pull requests from a renovate/ branch were created in the
+      repository at or after SINCE (ISO 8601 UTC). Reads the pass token from
+      RENOVATE_TOKEN; renovate-run.sh charges the count to the run's PR budget.
+  renovate-repos.py force LIMIT
+      print the RENOVATE_FORCE JSON for one pass: prHourlyLimit LIMIT (1 or more;
+      0 would mean unlimited to Renovate). Renovate applies force after every
+      repository config and preset, so no repository can raise the limit.
 
 stdlib only. FILE defaults to renovate/repositories.json next to this script.
 """
@@ -18,6 +26,7 @@ import os
 import re
 import sys
 import urllib.error
+import urllib.request
 from pathlib import Path
 
 DEFAULT = Path(__file__).resolve().parent.parent / "renovate" / "repositories.json"
@@ -59,6 +68,11 @@ def problems(doc):
     for b in active:
         if b not in batches:
             out.append(f"active batch {b} has no repositories")
+    # A listed repository is either scanned or an exception with a reason: a batch
+    # that is never activated leaves its repositories silently unscanned.
+    for b in sorted(batches - set(active)):
+        repos = [e["repo"] for e in doc.get("repositories") or [] if e.get("batch") == b]
+        out.append(f"batch {b} is not in active_batches, so {', '.join(repos)} would never be scanned")
     return out
 
 
@@ -71,6 +85,36 @@ def selected(doc, only_active):
         if only_active and b not in active:
             continue
         yield e["repo"]
+
+
+def count_opened(prs, since):
+    """Pull requests from a renovate/ branch created at or after since (ISO 8601 Z strings sort)."""
+    return sum(1 for pr in prs
+               if str((pr.get("head") or {}).get("ref", "")).startswith("renovate/")
+               and str(pr.get("created_at", "")) >= since)
+
+
+def opened(repo, since):
+    req = urllib.request.Request(
+        f"{os.environ.get('GITHUB_API_URL', 'https://api.github.com').rstrip('/')}/repos/{repo}/pulls"
+        "?state=all&sort=created&direction=desc&per_page=50",
+        headers={"Authorization": f"Bearer {os.environ['RENOVATE_TOKEN']}",
+                 "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        print(count_opened(json.loads(r.read()), since))
+    return 0
+
+
+def force_config(limit):
+    """The RENOVATE_FORCE object for one pass of the run's PR budget."""
+    if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
+        raise ValueError(f"prHourlyLimit must be a positive integer, got {limit!r} (0 is unlimited)")
+    return {"prHourlyLimit": limit}
+
+
+def apply_force(repo_config, force):
+    """Renovate's order for one option: repository config and presets first, force last."""
+    return {**repo_config, **force}
 
 
 def installed(repo):
@@ -94,7 +138,7 @@ def installed(repo):
 
 
 def main(argv):
-    if not argv or argv[0] not in ("check", "active", "all", "installed"):
+    if not argv or argv[0] not in ("check", "active", "all", "installed", "opened", "force"):
         print(__doc__, file=sys.stderr)
         return 2
     cmd = argv[0]
@@ -103,6 +147,17 @@ def main(argv):
             print("usage: renovate-repos.py installed OWNER/REPO", file=sys.stderr)
             return 2
         return installed(argv[1])
+    if cmd == "force":
+        if len(argv) != 2 or not argv[1].isdigit() or int(argv[1]) < 1:
+            print("usage: renovate-repos.py force LIMIT (a positive integer)", file=sys.stderr)
+            return 2
+        print(json.dumps(force_config(int(argv[1]))))
+        return 0
+    if cmd == "opened":
+        if len(argv) != 3 or not REPO_RE.match(argv[1]):
+            print("usage: renovate-repos.py opened OWNER/REPO SINCE", file=sys.stderr)
+            return 2
+        return opened(argv[1], argv[2])
     doc = load(argv[1] if len(argv) > 1 else DEFAULT)
     errs = problems(doc)
     if errs:
